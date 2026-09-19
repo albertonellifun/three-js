@@ -1,0 +1,4169 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Urban Blox Crossing - Rocky Graffietto Edition</title>
+  <style>
+    html, body {
+      margin: 0;
+      overflow: hidden;
+      background: #111;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      user-select: none;
+      touch-action: none;
+      overscroll-behavior: none;
+    }
+    #score-board {
+      position: absolute;
+      top: 25px;
+      left: 25px;
+      color: #ffffff;
+      font-size: 42px;
+      font-weight: 900;
+      text-shadow: 3px 3px 0px rgba(0,0,0,0.4);
+      z-index: 10;
+    }
+    #instructions {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 16px;
+      font-weight: bold;
+      background: rgba(0,0,0,0.5);
+      padding: 8px 16px;
+      border-radius: 8px;
+      z-index: 10;
+      text-align: center;
+	  width: auto;
+    }
+
+    /* --- POPUP INIZIALE --- */
+    #start-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(8, 12, 20, 0.82);
+      backdrop-filter: blur(3px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      text-align: center;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    #start-overlay h1 {
+      color: #ffffff;
+      font-size: 42px;
+      font-weight: 900;
+      margin: 0 0 6px 0;
+      text-shadow: 3px 3px 0px rgba(0,0,0,0.5);
+      letter-spacing: -1px;
+    }
+    #start-overlay .edition {
+      color: #ffd54f;
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 34px;
+      text-shadow: 2px 2px 0px rgba(0,0,0,0.5);
+    }
+    #play-btn {
+      background: linear-gradient(145deg, #2ecc71, #27ae60);
+      color: #ffffff;
+      border: none;
+      padding: 18px 56px;
+      font-size: 26px;
+      font-weight: 900;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 6px 0 #1e8449, 0 12px 22px rgba(0,0,0,0.4);
+      transition: transform 0.08s ease;
+    }
+    #play-btn:active {
+      transform: translateY(5px);
+      box-shadow: 0 1px 0 #1e8449, 0 4px 10px rgba(0,0,0,0.4);
+    }
+
+			#info-overlay {
+			position: fixed;
+			inset: 0;
+			background: rgba(8, 12, 20, 0.76);
+			backdrop-filter: blur(3px);
+			display: none;
+			align-items: center;
+			justify-content: center;
+			z-index: 1001;
+			padding: 20px;
+			box-sizing: border-box;
+		}
+		#info-overlay.visible {
+			display: flex;
+		}
+		#info-modal {
+			width: min(460px, 100%);
+			background: linear-gradient(180deg, rgba(32, 40, 55, 0.96), rgba(16, 21, 31, 0.96));
+			color: #ffffff;
+			border: 1px solid rgba(255,255,255,0.16);
+			border-radius: 22px;
+			box-shadow: 0 18px 44px rgba(0,0,0,0.42);
+			padding: 24px 22px 20px;
+			position: relative;
+		}
+		#info-modal h2 {
+			margin: 0;
+			font-size: 28px;
+			font-weight: 900;
+			letter-spacing: -1px;
+		}
+		#info-modal small {
+			margin-top: -10px;
+		}
+		#info-modal p {
+			margin: 0 0 14px 0;
+			font-size: 15px;
+			line-height: 1.5;
+			color: rgba(255,255,255,0.9);
+		}
+		#info-modal .info-label {
+			display: block;
+			margin-top: 20px;
+			margin-bottom: 4px;
+			color: #ffd54f;
+			font-size: 13px;
+			font-weight: 800;
+			text-transform: uppercase;
+		}
+		#info-close-btn {
+			position: absolute;
+			top: 12px;
+			right: 12px;
+			width: 38px;
+			height: 38px;
+			border: none;
+			border-radius: 50%;
+			background: rgba(255,255,255,0.12);
+			color: #ffffff;
+			font-size: 22px;
+			cursor: pointer;
+		}
+		#info-close-btn:active {
+			background: rgba(255,255,255,0.26);
+		}
+			 
+    /* --- FEEDBACK VISIVO TAP DI MOVIMENTO --- */
+    .tap-ripple {
+      position: fixed;
+      width: 46px;
+      height: 46px;
+      margin-left: -23px;
+      margin-top: -23px;
+      border-radius: 50%;
+      border: 3px solid rgba(255,255,255,0.85);
+      pointer-events: none;
+      z-index: 40;
+      animation: tap-ripple-anim 0.35s ease-out forwards;
+    }
+    @keyframes tap-ripple-anim {
+      from { transform: scale(0.3); opacity: 1; }
+      to   { transform: scale(1.4); opacity: 0; }
+    }
+
+    /* --- CONTROLLI AZIONE: ROTAZIONE, NEBBIA, PLAYER --- */
+    #action-controls {
+      position: fixed;
+      right: 10px;
+      bottom: 10px;
+      z-index: 50;
+      display: flex;
+      gap: 8px;
+      user-select: none;
+    }
+    .action-btn {
+      background: rgba(255,255,255,0.18);
+      border: 2px solid rgba(255,255,255,0.4);
+      border-radius: 12.5%;
+      color: #ffffff;
+      font-size: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+	  width: 50px;
+	  height: 50px;
+    }	
+    .action-btn:active {
+      background: rgba(255,255,255,0.45);
+    }
+    .action-btn.toggled-on {
+      background: rgba(46, 204, 113, 0.55);
+      border-color: #2ecc71;
+    }
+	
+    @media (max-width: 700px) {
+      #instructions { display: none; }
+    }
+	
+	.score-pop {
+	  position: fixed;
+	  color: #ffd54f;
+	  font-size: 28px;
+	  font-weight: 900;
+	  text-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+	  pointer-events: none;
+	  z-index: 45;
+	  animation: score-pop-anim 0.8s ease-out forwards;
+	}
+	@keyframes score-pop-anim {
+	  from { transform: translate(-50%, -50%) scale(0.6); opacity: 1; }
+	  to   { transform: translate(-50%, -160%) scale(1.3); opacity: 0; }
+	}
+	#fps-counter {
+	  position: fixed;
+	  top: 8px;
+	  right: 10px;
+	  z-index: 60;
+	  display: none;
+	  color: #0f0;
+	  font: bold 12px monospace;
+	  white-space: pre;
+	  background: rgba(0,0,0,0.55);
+	  padding: 4px 8px;
+	  border-radius: 6px;
+	  pointer-events: none;
+	}
+  </style>
+  <!-- Three.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+  <div id="score-board">0</div>
+  <div id="instructions">WASD/Arrows/Tap = Move Player &nbsp;•&nbsp; Q/E = Rotate View &nbsp;•&nbsp; P = Change Player</div>
+  <div id="fps-counter"></div>
+  
+  <div id="action-controls">
+    <button class="action-btn" id="btn-rot-left"  aria-label="Rotate view">↻</button>
+    <button class="action-btn" id="btn-rot-right" aria-label="Rotate view">↺</button>
+    <!--button class="action-btn" id="btn-fog"       aria-label="Fog toggle">🌫️</button-->
+	<button class="action-btn" id="btn-wireframe" aria-label="Wireframe toggle">📐</button>
+	<button class="action-btn" id="btn-godmode"   aria-label="GodMode toggle">🛡️</button>
+	<button class="action-btn" id="btn-mute"      aria-label="Mute toggle">🎵</button>
+    <button class="action-btn" id="btn-info"      aria-label="Game info">?</button>
+    <button class="action-btn" id="btn-player"    aria-label="Change player">🥊</button>
+  </div>
+
+  <div id="start-overlay">
+    <h1>Urban Blox Crossing</h1>
+    <div class="edition">🥊😼Rocky Graffietto Edition</div>
+    <button id="play-btn">▶ PLAY</button>
+  </div>
+  
+	<div id="info-overlay" aria-hidden="true">
+		<div id="info-modal" role="dialog" aria-modal="true" aria-labelledby="info-title">
+			<button id="info-close-btn" aria-label="Close info popup">×</button>
+			<h2 id="info-title">Urban Blox Crossing</h2>
+			<small>🥊😼Rocky Graffietto Edition</small>
+			<span class="info-label">Quick Guide</span>
+			<p>Rocky Graffietto is a street-smart cat with 9 lives and a desperate need for personal space. Navigate the urban chaos one block at a time: dodge speed-demon commuters, leap across river logs, and play high-stakes chicken with incoming trains. Push as far away from home as your paws can carry you—partly for the ultimate bragging rights, but mostly because the vet is still looking for you. One wrong jump and it's right back to the scratching post!</p>
+			<span class="info-label">Disclaimer</span>
+			<p>This mini-game is built with Three.js and uses simple stylized 3D visuals for a playful arcade experience. Performance and rendering quality may vary depending on your device and graphics support.</p>
+		</div>
+	</div>				
+	
+  <audio id="musicSound1" loop preload="auto">
+    <source src="./crossy-music1.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="musicSound2" loop preload="auto">
+    <source src="./crossy-music2.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="deadSoundCat" preload="auto">
+    <source src="./crossy-dead-cat.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="deadSoundChicken" preload="auto">
+    <source src="./crossy-dead-chicken.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="deadSoundDuck" preload="auto">
+    <source src="./crossy-dead-duck.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="deadSoundFrog" preload="auto">
+    <source src="./crossy-dead-frog.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="deadSoundPig" preload="auto">
+    <source src="./crossy-dead-pig.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="deadSoundBender" preload="auto">
+    <source src="./crossy-dead-bender.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="deadSoundOwl" preload="auto">
+    <source src="./crossy-dead-owl.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="deadSoundSnail" preload="auto">
+    <source src="./crossy-dead-snail.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="deadSoundTurtle" preload="auto">
+    <source src="./crossy-dead-turtle.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="deadSoundMinion" preload="auto">
+    <source src="./crossy-dead-minion.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="deadSoundHorse" preload="auto">
+    <source src="./crossy-dead-horse.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="trainSound" preload="auto">
+    <source src="./crossy-train.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="policeSound" preload="auto">
+    <source src="./crossy-police.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="splashSound" preload="auto">
+    <source src="./crossy-splash.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="bonusSound" preload="auto">
+    <source src="./crossy-bonus.mp3" type="audio/mpeg">
+  </audio>
+
+  <script>
+    // --- COSTANTI DI GIOCO ---
+    const GRID = 1;
+    const BOARD_WIDTH = 18.45; 
+    const X_LIMIT = Math.floor(BOARD_WIDTH / 2) - 1; // Limiti laterali
+	const MIN_LANE = 5;
+	const MAX_LANE = -30;
+    
+    // --- SCENA, CAMERA, RENDERER ---
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87ceeb);
+    // Nebbia: nasconde corsie/ostacoli lontani non ancora "scoperti" dal giocatore
+    //scene.fog = new THREE.Fog(0x87ceeb, BOARD_WIDTH, -MAX_LANE);
+
+    const aspect = window.innerWidth / window.innerHeight;
+    const d = 5; // Zoom ridotto
+    let camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
+	/*camera = new THREE.PerspectiveCamera( 
+		40, // FOV alto == 120-150 == prospettiva distorta, basso == 40-60 == normale
+		aspect,
+		0.1,
+		1000
+	);*/
+	
+
+    // Offset base della camera rispetto al player, con stato di rotazione "a caldo"
+    const baseCameraOffset = new THREE.Vector3(6, 8, 6);
+    let cameraAngle = 0;
+    let targetCameraAngle = 0;
+
+    function getRotatedCameraOffset() {
+      return {
+        x: baseCameraOffset.x * Math.cos(cameraAngle) - baseCameraOffset.z * Math.sin(cameraAngle),
+        z: baseCameraOffset.x * Math.sin(cameraAngle) + baseCameraOffset.z * Math.cos(cameraAngle)
+      };
+    }
+
+    camera.position.copy(baseCameraOffset);
+    camera.lookAt(0, 0, 0);
+
+    
+	const renderer = new THREE.WebGLRenderer({ antialias: true });
+	renderer.setSize(window.innerWidth, window.innerHeight);
+	renderer.shadowMap.enabled = true;
+	renderer.shadowMap.type = THREE.PCFShadowMap;//THREE.PCFSoftShadowMap;
+	document.body.appendChild(renderer.domElement);
+
+	
+	// --- CLIPPING: nasconde tutto ciò che è fuori dall'area di gioco ---
+	const VISIBLE_AHEAD  = BOARD_WIDTH * 1; // quanto si vede avanti (verso z negativo, non ancora scoperto)
+	const VISIBLE_BEHIND = BOARD_WIDTH * 1; // quanto si vede indietro (verso z positivo)
+	const VISIBLE_SIDE   = BOARD_WIDTH * 0.51; // margine oltre i bordi della plancia
+	
+	const clipFront = new THREE.Plane(new THREE.Vector3(0, 0, 1), VISIBLE_AHEAD);
+	const clipBack  = new THREE.Plane(new THREE.Vector3(0, 0, -1), VISIBLE_BEHIND);
+	const clipLeft  = new THREE.Plane(new THREE.Vector3(1, 0, 0), VISIBLE_SIDE);
+	const clipRight = new THREE.Plane(new THREE.Vector3(-1, 0, 0), VISIBLE_SIDE);
+	
+	renderer.clippingPlanes = [clipFront, clipBack, clipLeft, clipRight];
+
+    // Resize Finestra
+    window.addEventListener('resize', () => {
+      const aspect = window.innerWidth / window.innerHeight;
+      camera.left = -d * aspect;
+      camera.right = d * aspect;
+      camera.top = d;
+      camera.bottom = -d;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // --- LUCI ---
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.65);
+    dirLight.position.set(15, 25, 10);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    const dShadow = 15;
+    dirLight.shadow.camera.left = -dShadow;
+    dirLight.shadow.camera.right = dShadow;
+    dirLight.shadow.camera.top = dShadow;
+    dirLight.shadow.camera.bottom = -dShadow;
+    scene.add(dirLight);
+
+    const dirLightTarget = new THREE.Object3D();
+    scene.add(dirLightTarget);
+    dirLight.target = dirLightTarget;
+
+    // --- VARIABILI DI STATO ---
+    let player;
+    let playerPos = { x: 0, z: 0 };
+    let targetPos = { x: 0, z: 0 };
+	let targetPlayerRotationY = 0;
+    let isJumping = false;
+    let jumpProgress = 0;
+    let score = 0;
+    let maxZReached = 0;
+    let isDying = false;
+    let gameStarted = false;
+
+	let isMute = true;//////false;
+	let isWireframe = false;
+	let immediateRotation = true;
+	let isGod = false;
+
+    // Cronologia mosse sicure
+    let moveHistory = [{ x: 0, z: 0 }];
+
+    const lanes = [];
+    const cars = [];
+    const logs = [];
+
+	let currentPlayerType = 'rockygraffietto'; // tiene traccia del modello attivo
+	let currentPlayerDeadSound = 'deadSoundCat';
+
+	function togglePlayerModel() {
+	  const pos = player.position.clone();
+	  const rotY = player.rotation.y;
+	  const wasVisible = player.visible;
+
+	  scene.remove(player);
+	  disposeObject3D(player);
+
+	  switch(currentPlayerType) {
+	    case 'chicken': 
+			currentPlayerType = 'frog'; player = createPlayerFrog(); document.getElementById('btn-player').innerText = '🐸'; 
+			currentPlayerDeadSound = 'deadSoundFrog';
+			break;
+	    
+		case 'frog' : 
+			currentPlayerType = 'duck'; player = createPlayerDuck(); document.getElementById('btn-player').innerText = '🦆'; 
+			currentPlayerDeadSound = 'deadSoundDuck';
+			break;
+		
+		case 'duck' : 
+			currentPlayerType = 'snail'; player = createPlayerSnail(); document.getElementById('btn-player').innerText = '🐌'; 
+			currentPlayerDeadSound = 'deadSoundSnail';
+			break;
+			
+		case 'snail': 
+			currentPlayerType = 'turtle'; player = createPlayerTurtle(); document.getElementById('btn-player').innerText = '🐢'; 
+			currentPlayerDeadSound = 'deadSoundTurtle';
+			break;
+		
+		case 'turtle': 
+			currentPlayerType = 'pig'; player = createPlayerPig(); document.getElementById('btn-player').innerText = '🐷'; 
+			currentPlayerDeadSound = 'deadSoundPig';
+			break;
+		
+		case 'pig': 	
+			currentPlayerType = 'horse'; player = createPlayerHorse(); document.getElementById('btn-player').innerText = '🐴'; 
+			currentPlayerDeadSound = 'deadSoundHorse';
+			break;
+			
+		case 'horse':
+			currentPlayerType = 'bender'; player = createPlayerBender(); document.getElementById('btn-player').innerText = '🤖'; 
+			currentPlayerDeadSound = 'deadSoundBender';
+			break;
+			
+		case 'bender': 
+			currentPlayerType = 'minion'; player = createPlayerMinion(); document.getElementById('btn-player').innerText = '🤓'; 
+			currentPlayerDeadSound = 'deadSoundMinion';
+			break;
+		
+		case 'minion':
+			currentPlayerType = 'owl'; player = createPlayerOwl(); document.getElementById('btn-player').innerText = '🦉'; 
+			currentPlayerDeadSound = 'deadSoundOwl';
+			break;
+		
+		case 'owl': 
+			currentPlayerType = 'unicorn'; player = createPlayerUnicorn(); document.getElementById('btn-player').innerText = '🦄';
+			currentPlayerDeadSound = 'deadSoundHorse';
+			break;
+		
+		case 'unicorn':
+			currentPlayerType = 'rockygraffietto'; player = createPlayerRockyGraffietto(); document.getElementById('btn-player').innerText = '🥊'; 
+			currentPlayerDeadSound = 'deadSoundCat';
+			break;
+		
+		case 'rockygraffietto': 
+			currentPlayerType = 'siamese'; player = createPlayerSiamese(); document.getElementById('btn-player').innerText = '😸'; 
+			currentPlayerDeadSound = 'deadSoundCat';
+			break;
+		
+		case 'siamese': 
+			currentPlayerType = 'chicken'; player = createPlayerChicken(); document.getElementById('btn-player').innerText = '🐔'; 
+			currentPlayerDeadSound = 'deadSoundChicken';
+			break;
+	  }
+	  
+	  player.position.copy(pos);
+	  player.rotation.y = rotY;
+	  player.visible = wasVisible;
+	}
+	
+	// UNICORNO PER AURORA
+	function createPlayerUnicorn() {
+	  const group = new THREE.Group();
+
+	  // --- MATERIALI UNICORNO ---
+	  const whiteBodyMat = new THREE.MeshLambertMaterial({ color: 0xF8F8FF }); // Bianco candido
+	  const pinkManeMat = new THREE.MeshLambertMaterial({ color: 0xDAA4BA });  // Rosa chiaro
+	  const blueHornMat = new THREE.MeshLambertMaterial({ color: 0x00BFFF });  // Azzurro brillante
+	  const muzzleMat = new THREE.MeshLambertMaterial({ color: 0xEAEAEA });    // Grigio chiarissimo/panna per il musetto
+	  const darkGreyMat = new THREE.MeshLambertMaterial({ color: 0x555555 });  // Narici
+	  const eyeWhiteMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF });
+	  const pupilMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+	  const baseMat = new THREE.MeshLambertMaterial({ color: 0xDAA4BA });
+
+	  // --- BASE ---
+	  const base = new THREE.Mesh(
+		new THREE.CylinderGeometry(0.34, 0.38, 0.16, 6),
+		baseMat
+	  );
+	  base.position.set(0, 0.08, 0);
+	  base.castShadow = true;
+	  group.add(base);
+
+	  const collar = new THREE.Mesh(
+		new THREE.CylinderGeometry(0.26, 0.30, 0.12, 6),
+		baseMat
+	  );
+	  collar.position.set(0, 0.22, 0);
+	  group.add(collar);
+
+	  // --- COLLO ---
+	  const neck = new THREE.Mesh(
+		new THREE.BoxGeometry(0.48, 0.40, 0.48),
+		whiteBodyMat
+	  );
+	  neck.position.set(0, 0.48, 0.0);
+	  neck.rotation.x = -0.2;
+	  neck.castShadow = true;
+	  group.add(neck);
+
+	  // --- TESTA ---
+	  const head = new THREE.Mesh(
+		new THREE.BoxGeometry(0.40, 0.36, 0.42),
+		whiteBodyMat
+	  );
+	  head.position.set(0, 0.74, -0.20);
+	  head.rotation.x = -0.1;
+	  head.castShadow = true;
+	  group.add(head);
+
+	  // --- CORNO AZZURRO (Aggiunto) ---
+	  const horn = new THREE.Mesh(
+		new THREE.ConeGeometry(0.1, 0.50, 4),
+		blueHornMat
+	  );
+	  horn.position.set(0, 0.98, -0.26);
+	  horn.rotation.x = -0.3; // Inclinato leggermente in avanti
+	  horn.castShadow = true;
+	  group.add(horn);
+
+	  // --- MUSETTO ---
+	  const muzzle = new THREE.Mesh(
+		new THREE.BoxGeometry(0.34, 0.26, 0.26),
+		muzzleMat
+	  );
+	  muzzle.position.set(0, 0.68, -0.42);
+	  muzzle.rotation.x = -0.1;
+	  muzzle.castShadow = true;
+	  group.add(muzzle);
+
+	  // --- NARICI ---
+	  const nostrilGeo = new THREE.BoxGeometry(0.08, 0.10, 0.03);
+	  const leftNostril = new THREE.Mesh(nostrilGeo, darkGreyMat);
+	  leftNostril.position.set(-0.10, 0.66, -0.55);
+	  group.add(leftNostril);
+	  const rightNostril = new THREE.Mesh(nostrilGeo, darkGreyMat);
+	  rightNostril.position.set(0.10, 0.66, -0.55);
+	  group.add(rightNostril);
+
+	  // --- OCCHI ---
+	  const eyeWhiteGeo = new THREE.BoxGeometry(0.11, 0.11, 0.04);
+	  const pupilGeo = new THREE.BoxGeometry(0.06, 0.06, 0.03);
+
+	  const leftEyeWhite = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
+	  leftEyeWhite.position.set(-0.19, 0.78, -0.14);
+	  leftEyeWhite.rotation.y = Math.PI / 7;
+	  group.add(leftEyeWhite);
+	  const leftPupil = new THREE.Mesh(pupilGeo, pupilMat);
+	  leftPupil.position.set(-0.20, 0.78, -0.17);
+	  group.add(leftPupil);
+
+	  const rightEyeWhite = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
+	  rightEyeWhite.position.set(0.19, 0.78, -0.14);
+	  rightEyeWhite.rotation.y = -Math.PI / 7;
+	  group.add(rightEyeWhite);
+	  const rightPupil = new THREE.Mesh(pupilGeo, pupilMat);
+	  rightPupil.position.set(0.20, 0.78, -0.17);
+	  group.add(rightPupil);
+
+	  // --- ORECCHIE ---
+	  const earGeo = new THREE.BoxGeometry(0.09, 0.20, 0.10);
+	  const leftEar = new THREE.Mesh(earGeo, whiteBodyMat);
+	  leftEar.position.set(-0.13, 0.98, -0.06);
+	  leftEar.rotation.z = 0.12;
+	  group.add(leftEar);
+	  const rightEar = new THREE.Mesh(earGeo, whiteBodyMat);
+	  rightEar.position.set(0.13, 0.98, -0.06);
+	  rightEar.rotation.z = -0.12;
+	  group.add(rightEar);
+
+	  // --- CRINIERA ROSA ---
+	  const maneSegGeo = new THREE.BoxGeometry(0.12, 0.14, 0.20);
+	  const manePositions = [
+		[0, 0.88, 0.06],
+		[0, 0.64, 0.16],
+	  ];
+	  manePositions.forEach(([x, y, z], i) => {
+		const seg = new THREE.Mesh(maneSegGeo, pinkManeMat);
+		seg.position.set(x, y, z);
+		seg.rotation.x = -0.2 - i * 0.08;
+		group.add(seg);
+	  });
+
+	  // --- Setup finale del gruppo ---
+	  group.position.set(0, 0, 0);
+	  
+	  applyCurrentVisualMode(group);
+	  
+	  scene.add(group);
+	  
+	  return group;
+	}
+	
+	// CAVALLO PAZZO
+	function createPlayerHorse() {
+	  const group = new THREE.Group();
+
+	  // --- MATERIALI ---
+	  const brownMainMat = new THREE.MeshLambertMaterial({ color: 0x814E30 });
+	  const darkBrownMat = new THREE.MeshLambertMaterial({ color: 0x613A1F });
+	  const greyMuzzleMat = new THREE.MeshLambertMaterial({ color: 0x666666 });
+	  const darkGreyMat = new THREE.MeshLambertMaterial({ color: 0x333333 });
+	  const eyeWhiteMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF });
+	  const pupilMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+	  const baseMat = new THREE.MeshLambertMaterial({ color: 0x4A2E1A });
+
+	  // --- BASE ---
+	  const base = new THREE.Mesh(
+		new THREE.BoxGeometry(0.64, 0.16, 0.64),
+		baseMat
+	  );
+	  base.position.set(0, 0.08, 0);
+	  base.castShadow = true;
+	  group.add(base);
+
+	  const collar = new THREE.Mesh(
+		new THREE.BoxGeometry(0.56, 0.12, 0.56),
+		baseMat
+	  );
+	  collar.position.set(0, 0.22, 0);
+	  group.add(collar);
+
+	  // --- COLLO (basso e tozzo) ---
+	  const neck = new THREE.Mesh(
+		new THREE.BoxGeometry(0.48, 0.40, 0.48),
+		brownMainMat
+	  );
+	  neck.position.set(0, 0.48, 0.0);
+	  neck.rotation.x = -0.2;
+	  neck.castShadow = true;
+	  group.add(neck);
+
+	  // --- TESTA (grande, molto vicina al collo) ---
+	  const head = new THREE.Mesh(
+		new THREE.BoxGeometry(0.40, 0.36, 0.42),
+		brownMainMat
+	  );
+	  head.position.set(0, 0.74, -0.20);
+	  head.rotation.x = -0.1;
+	  head.castShadow = true;
+	  group.add(head);
+
+	  // --- MUSO ---
+	  const muzzle = new THREE.Mesh(
+		new THREE.BoxGeometry(0.34, 0.26, 0.26),
+		greyMuzzleMat
+	  );
+	  muzzle.position.set(0, 0.68, -0.42);
+	  muzzle.rotation.x = -0.1;
+	  muzzle.castShadow = true;
+	  group.add(muzzle);
+
+	  // --- NARICI ---
+	  const nostrilGeo = new THREE.BoxGeometry(0.08, 0.10, 0.03);
+	  const leftNostril = new THREE.Mesh(nostrilGeo, darkGreyMat);
+	  leftNostril.position.set(-0.10, 0.66, -0.55);
+	  group.add(leftNostril);
+	  const rightNostril = new THREE.Mesh(nostrilGeo, darkGreyMat);
+	  rightNostril.position.set(0.10, 0.66, -0.55);
+	  group.add(rightNostril);
+
+	  // --- OCCHI ---
+	  const eyeWhiteGeo = new THREE.BoxGeometry(0.11, 0.11, 0.04);
+	  const pupilGeo = new THREE.BoxGeometry(0.06, 0.06, 0.03);
+
+	  const leftEyeWhite = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
+	  leftEyeWhite.position.set(-0.19, 0.78, -0.14);
+	  leftEyeWhite.rotation.y = Math.PI / 7;
+	  group.add(leftEyeWhite);
+	  const leftPupil = new THREE.Mesh(pupilGeo, pupilMat);
+	  leftPupil.position.set(-0.20, 0.78, -0.17);
+	  group.add(leftPupil);
+
+	  const rightEyeWhite = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
+	  rightEyeWhite.position.set(0.19, 0.78, -0.14);
+	  rightEyeWhite.rotation.y = -Math.PI / 7;
+	  group.add(rightEyeWhite);
+	  const rightPupil = new THREE.Mesh(pupilGeo, pupilMat);
+	  rightPupil.position.set(0.20, 0.78, -0.17);
+	  group.add(rightPupil);
+
+	  // --- ORECCHIE ---
+	  const earGeo = new THREE.BoxGeometry(0.09, 0.20, 0.10);
+	  const leftEar = new THREE.Mesh(earGeo, brownMainMat);
+	  leftEar.position.set(-0.13, 0.98, -0.06);
+	  leftEar.rotation.z = 0.12;
+	  group.add(leftEar);
+	  const rightEar = new THREE.Mesh(earGeo, brownMainMat);
+	  rightEar.position.set(0.13, 0.98, -0.06);
+	  rightEar.rotation.z = -0.12;
+	  group.add(rightEar);
+
+	  // --- CRINIERA (cresta corta) ---
+	  const maneSegGeo = new THREE.BoxGeometry(0.12, 0.14, 0.20);
+	  const manePositions = [
+		[0, 0.88, 0.06],
+		[0, 0.64, 0.16],
+	  ];
+	  manePositions.forEach(([x, y, z], i) => {
+		const seg = new THREE.Mesh(maneSegGeo, darkBrownMat);
+		seg.position.set(x, y, z);
+		seg.rotation.x = -0.2 - i * 0.08;
+		group.add(seg);
+	  });
+
+	  // --- Setup finale del gruppo ---
+	  group.position.set(0, 0, 0);
+	  
+	  applyCurrentVisualMode(group);
+	  
+	  scene.add(group);
+	  
+	  return group;
+	}
+
+	
+	// GUFO ANACLETO
+	function createPlayerOwl() {
+	  const group = new THREE.Group();
+
+	  // --- MATERIALI ---
+	  const brownMat = new THREE.MeshLambertMaterial({ color: 0x814E30 });     // Marrone principale (Testa/Ali)
+	  const tanMat = new THREE.MeshLambertMaterial({ color: 0xD2B48C });       // Beige/crema (Faccia/Petto)
+	  const eyeScleraMat = new THREE.MeshLambertMaterial({ color: 0xFFD700 }); // Giallo acceso (Occhi grandi)
+	  const pupilMat = new THREE.MeshLambertMaterial({ color: 0x111111 });     // Nero (Pupille)
+	  const beakMat = new THREE.MeshLambertMaterial({ color: 0xFFA500 });      // Arancione (Becco)
+	  const clawMat = new THREE.MeshLambertMaterial({ color: 0x555555 });      // Grigio scuro (Zampa/Artigli)
+	  const spotMat = new THREE.MeshLambertMaterial({ color: 0x613A1F });      // Marrone scuro (Macchie petto)
+
+	  // --- CORPO E TESTA (Un unico blocco principale) ---
+	  const body = new THREE.Mesh(
+		new THREE.BoxGeometry(0.55, 0.65, 0.5),
+		brownMat
+	  );
+	  body.position.y = 0.325; // Sollevato da terra
+	  body.castShadow = true;
+	  group.add(body);
+
+	  // --- DETTAGLI FACCIA / PETTO (Maschera chiara) ---
+	  // Un blocco beige che copre la parte anteriore del petto
+	  const facePanel = new THREE.Mesh(
+		new THREE.BoxGeometry(0.48, 0.30, 0.05),
+		tanMat
+	  );
+	  facePanel.position.set(0.00, 0.10, -0.26); // Posizionato davanti
+	  group.add(facePanel);
+
+	  // --- "CORNA" DI PIUME (Ciuffi auricolari) ---
+	  const earFeatherGeo = new THREE.BoxGeometry(0.12, 0.15, 0.12);
+
+	  const leftEar = new THREE.Mesh(earFeatherGeo, brownMat);
+	  leftEar.position.set(-0.20, 0.68, -0.15); // Sopra la testa a sinistra
+	  group.add(leftEar);
+
+	  const rightEar = new THREE.Mesh(earFeatherGeo, brownMat);
+	  rightEar.position.set(0.20, 0.68, -0.15); // Sopra la testa a destra
+	  group.add(rightEar);
+
+	  // --- OCCHI GRANDI (Stile Emoji) ---
+	  const eyeGeo = new THREE.BoxGeometry(0.18, 0.18, 0.04);
+	  const pupilGeo = new THREE.BoxGeometry(0.10, 0.10, 0.03);
+
+	  // Occhio Sinistro (Giallo)
+	  const leftEyeSclera = new THREE.Mesh(eyeGeo, eyeScleraMat);
+	  leftEyeSclera.position.set(-0.13, 0.48, -0.26);
+	  group.add(leftEyeSclera);
+
+	  // Pupilla Sinistra (Nera)
+	  const leftPupil = new THREE.Mesh(pupilGeo, pupilMat);
+	  leftPupil.position.set(-0.13, 0.48, -0.30); // Leggermente più avanti della sclera
+	  group.add(leftPupil);
+
+	  // Occhio Destro (Giallo)
+	  const rightEyeSclera = new THREE.Mesh(eyeGeo, eyeScleraMat);
+	  rightEyeSclera.position.set(0.13, 0.48, -0.26);
+	  group.add(rightEyeSclera);
+
+	  // Pupilla Destra (Nera)
+	  const rightPupil = new THREE.Mesh(pupilGeo, pupilMat);
+	  rightPupil.position.set(0.13, 0.48, -0.30);
+	  group.add(rightPupil);
+
+	  // --- BECCO (Piccolo e centrale) ---
+	  const beak = new THREE.Mesh(
+		new THREE.BoxGeometry(0.08, 0.12, 0.10),
+		beakMat
+	  );
+	  beak.position.set(0, 0.38, -0.30); // Sotto gli occhi
+	  group.add(beak);
+
+	  // --- MACCHIE SUL PETTO (Piccoli blocchi scuri tamponati) ---
+	  const spotGeo = new THREE.BoxGeometry(0.04, 0.04, 0.01);
+	  const spotPositions = [
+		[-0.10, 0.22, -0.29], [0.0, 0.24, -0.29], [0.10, 0.22, -0.29],
+		[-0.05, 0.16, -0.29], [0.05, 0.16, -0.29],
+		[0.0, 0.10, -0.29]
+	  ];
+
+	  spotPositions.forEach(pos => {
+		const spot = new THREE.Mesh(spotGeo, spotMat);
+		spot.position.set(pos[0], pos[1], pos[2]);
+		group.add(spot);
+	  });
+
+	  // --- ALI (Chiuse ai lati) ---
+	  const wingGeo = new THREE.BoxGeometry(0.08, 0.45, 0.30);
+
+	  const leftWing = new THREE.Mesh(wingGeo, brownMat);
+	  leftWing.position.set(-0.31, 0.32, 0.0); // Lato sinistro
+	  group.add(leftWing);
+
+	  const rightWing = new THREE.Mesh(wingGeo, brownMat);
+	  rightWing.position.set(0.31, 0.32, 0.0); // Lato destro
+	  group.add(rightWing);
+
+	  // --- ZAMPE / ARTIGLI (Piccoli blocchi grigi sotto) ---
+	  const footGeo = new THREE.BoxGeometry(0.12, 0.05, 0.15);
+
+	  const leftFoot = new THREE.Mesh(footGeo, clawMat);
+	  leftFoot.position.set(-0.15, 0.0, -0.15); // Sotto a sinistra
+	  group.add(leftFoot);
+
+	  const rightFoot = new THREE.Mesh(footGeo, clawMat);
+	  rightFoot.position.set(0.15, 0.0, -0.15); // Sotto a destra
+	  group.add(rightFoot);
+
+	  // --- Setup finale del gruppo ---
+	  group.position.set(0, 0, 0);
+	  
+	  applyCurrentVisualMode(group);
+	  
+	  scene.add(group);
+	  return group;
+	}
+	
+	// SONO BENDER CHE TI OFFENDER!
+	function createPlayerBender() {
+	  const group = new THREE.Group();
+
+	  // --- MATERIALI ---
+	  const metalMat = new THREE.MeshLambertMaterial({ color: 0x8a9ba8 });      // Grigio metallico Bender
+	  const darkMetalMat = new THREE.MeshLambertMaterial({ color: 0x5a6975 });  // Dettagli metallo scuro
+	  const visorMat = new THREE.MeshLambertMaterial({ color: 0x5a6975 });      // Visore grigio
+	  const eyeBgMat = new THREE.MeshLambertMaterial({ color: 0x050505 });     // Sfondo nero rettangolare per gli occhi
+	  const eyeMat = new THREE.MeshLambertMaterial({ color: 0xffffff });        // Occhi BIANCHI
+	  const pupilMat = new THREE.MeshLambertMaterial({ color: 0x000000 });     // Pupille NERE
+	  const teethMat = new THREE.MeshLambertMaterial({ color: 0xffffee });      // Griglia denti
+	  const lineMat = new THREE.MeshLambertMaterial({ color: 0x222222 });       // Linee denti
+	  const cigarMat = new THREE.MeshLambertMaterial({ color: 0x5c4033 });      // Marrone sigaro
+	  const glowMat = new THREE.MeshLambertMaterial({ color: 0xff3300 });       // Punta sigaro accesa
+
+	  // 1. COLLO
+	  const neck = new THREE.Mesh(
+		new THREE.BoxGeometry(0.5, 0.12, 0.5),
+		darkMetalMat
+	  );
+	  neck.position.y = 0.06;
+	  group.add(neck);
+
+	  // 2. TESTA PRINCIPALE (Blocco centrale)
+	  const head = new THREE.Mesh(
+		new THREE.BoxGeometry(0.6, 0.7, 0.6),
+		metalMat
+	  );
+	  head.position.y = 0.47;
+	  head.castShadow = true;
+	  group.add(head);
+
+	  // Parte superiore della testa
+	  const headTopBase = new THREE.Mesh(
+		new THREE.BoxGeometry(0.5, 0.1, 0.5),
+		metalMat
+	  );
+	  headTopBase.position.y = 0.87;
+	  group.add(headTopBase);
+
+	  // 3. ANTENNA SQUADRATA
+	  const antennaBase = new THREE.Mesh(
+		new THREE.BoxGeometry(0.2, 0.08, 0.2),
+		darkMetalMat
+	  );
+	  antennaBase.position.y = 0.96;
+	  group.add(antennaBase);
+
+	  const antennaRod = new THREE.Mesh(
+		new THREE.BoxGeometry(0.08, 0.28, 0.08),
+		metalMat
+	  );
+	  antennaRod.position.y = 1.14;
+	  group.add(antennaRod);
+
+	  const antennaTip = new THREE.Mesh(
+		new THREE.BoxGeometry(0.16, 0.16, 0.16),
+		metalMat
+	  );
+	  antennaTip.position.y = 1.34;
+	  group.add(antennaTip);
+
+	  // 4. VISORE GRIGIO CON SFONDO NERO E OCCHI BIANCHI
+	  // Structural Visor (Grigio)
+	  const visor = new THREE.Mesh(
+		new THREE.BoxGeometry(0.68, 0.26, 0.18),
+		visorMat
+	  );
+	  visor.position.set(0, 0.58, -0.28);
+	  group.add(visor);
+
+	  // Sfondo Nero Rettangolare incassato nel visore
+	  const eyeBg = new THREE.Mesh(
+		new THREE.BoxGeometry(0.56, 0.20, 0.04),
+		eyeBgMat
+	  );
+	  eyeBg.position.set(0, 0.58, -0.36);
+	  group.add(eyeBg);
+
+	  // Occhi Bianchi (Rettangolari)
+	  const eyeGeo = new THREE.BoxGeometry(0.18, 0.14, 0.04);
+
+	  const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+	  leftEye.position.set(-0.13, 0.58, -0.38);
+	  group.add(leftEye);
+
+	  const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+	  rightEye.position.set(0.13, 0.58, -0.38);
+	  group.add(rightEye);
+
+	  // Pupille Nere (Piccoli blocchi al centro degli occhi bianchi)
+	  const pupilGeo = new THREE.BoxGeometry(0.06, 0.06, 0.02);
+
+	  const leftPupil = new THREE.Mesh(pupilGeo, pupilMat);
+	  leftPupil.position.set(-0.13, 0.58, -0.40);
+	  group.add(leftPupil);
+
+	  const rightPupil = new THREE.Mesh(pupilGeo, pupilMat);
+	  rightPupil.position.set(0.13, 0.58, -0.40);
+	  group.add(rightPupil);
+
+	  // 5. BOCCA / GRIGLIA DENTI (1 orizzontale, 4 verticali)
+	  const mouthPlate = new THREE.Mesh(
+		new THREE.BoxGeometry(0.37, 0.22, 0.12),
+		teethMat
+	  );
+	  mouthPlate.position.set(0, 0.28, -0.28);
+	  group.add(mouthPlate);
+
+	  // Linea orizzontale centrale dei denti
+	  const teethHLine = new THREE.Mesh(
+		new THREE.BoxGeometry(0.37, 0.025, 0.13),
+		lineMat
+	  );
+	  teethHLine.position.set(0, 0.28, -0.28);
+	  group.add(teethHLine);
+
+	  // 4 Linee verticali dei denti
+	  const teethVLineGeo = new THREE.BoxGeometry(0.025, 0.22, 0.13);
+	  const xPositions = [-0.22, -0.12, 0, 0.12, 0.22]; // Distanziamento uniforme per 6 denti (4 righe)
+
+	  xPositions.forEach(x => {
+		const vLine = new THREE.Mesh(teethVLineGeo, lineMat);
+		vLine.position.set(x, 0.28, -0.28);
+		group.add(vLine);
+	  });
+
+	  // 6. SIGARO MASSICCIO
+	  const cigar = new THREE.Mesh(
+		new THREE.BoxGeometry(0.14, 0.14, 0.36),
+		cigarMat
+	  );
+	  cigar.position.set(0.18, 0.24, -0.38);
+	  cigar.rotation.y = -0.25;
+	  group.add(cigar);
+
+	  // Punta accesa del sigaro massiccio
+	  const cigarTip = new THREE.Mesh(
+		new THREE.BoxGeometry(0.145, 0.145, 0.07),
+		glowMat
+	  );
+	  cigarTip.position.set(0.23, 0.24, -0.54);
+	  cigarTip.rotation.y = -0.25;
+	  group.add(cigarTip);
+
+	  group.position.set(0, 0, 0);
+
+	  applyCurrentVisualMode(group);
+
+	  scene.add(group);
+	  return group;
+	}
+
+	// MODELLO RANOCCHION!
+	function createPlayerFrog() {
+	  const group = new THREE.Group();
+
+	  // Materiali
+	  const greenMat = new THREE.MeshLambertMaterial({ color: 0x2ecc71 }); // Verde rana
+	  const lightGreenMat = new THREE.MeshLambertMaterial({ color: 0xabebc6 }); // Pancia/dettagli
+	  const eyeMat = new THREE.MeshLambertMaterial({ color: 0x111111 }); // Pupille nere
+
+	  // Corpo principale
+	  const body = new THREE.Mesh(
+		new THREE.BoxGeometry(0.5, 0.5, 0.6),
+		greenMat
+	  );
+	  body.position.y = 0.25;
+	  body.castShadow = true;
+	  group.add(body);
+
+	  // Pancia (dettaglio chiaro)
+	  const belly = new THREE.Mesh(
+		new THREE.BoxGeometry(0.4, 0.3, 0.05),
+		lightGreenMat
+	  );
+	  belly.position.set(0, 0.2, -0.3);
+	  group.add(belly);
+
+	  // Orbite occhi sporgenti
+	  const eyeSocketGeo = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+	  
+	  const leftSocket = new THREE.Mesh(eyeSocketGeo, greenMat);
+	  leftSocket.position.set(-0.2, 0.55, -0.15);
+	  group.add(leftSocket);
+
+	  const rightSocket = new THREE.Mesh(eyeSocketGeo, greenMat);
+	  rightSocket.position.set(0.2, 0.55, -0.15);
+	  group.add(rightSocket);
+
+	  // Pupille
+	  const pupilGeo = new THREE.BoxGeometry(0.1, 0.1, 0.05);
+
+	  const leftEye = new THREE.Mesh(pupilGeo, eyeMat);
+	  leftEye.position.set(-0.2, 0.55, -0.23);
+	  group.add(leftEye);
+
+	  const rightEye = new THREE.Mesh(pupilGeo, eyeMat);
+	  rightEye.position.set(0.2, 0.55, -0.23);
+	  group.add(rightEye);
+
+	  // ZAMPE POSTERIORI (Piegate ai lati)
+	  const backLegGeo = new THREE.BoxGeometry(0.18, 0.3, 0.4);
+	  
+	  const leftBackLeg = new THREE.Mesh(backLegGeo, greenMat);
+	  leftBackLeg.position.set(-0.30, 0.18, 0.08);
+	  group.add(leftBackLeg);
+
+	  const rightBackLeg = new THREE.Mesh(backLegGeo, greenMat);
+	  rightBackLeg.position.set(0.30, 0.18, 0.08);
+	  group.add(rightBackLeg);
+
+	  // ZAMPE ANTERIORI (Piccole zampe davanti)
+	  const frontLegGeo = new THREE.BoxGeometry(0.12, 0.18, 0.12);
+
+	  const leftFrontLeg = new THREE.Mesh(frontLegGeo, greenMat);
+	  leftFrontLeg.position.set(-0.22, 0.09, -0.28);
+	  group.add(leftFrontLeg);
+
+	  const rightFrontLeg = new THREE.Mesh(frontLegGeo, greenMat);
+	  rightFrontLeg.position.set(0.22, 0.09, -0.28);
+	  group.add(rightFrontLeg);
+
+	  group.position.set(0, 0, 0);
+	  
+	  applyCurrentVisualMode(group);
+	  
+	  scene.add(group);
+	  return group;
+	}
+
+	// ANATRA SELVATICA
+	function createPlayerDuck() {
+      const group = new THREE.Group();
+
+      const body = new THREE.Mesh(
+        new THREE.BoxGeometry(0.6, 0.4, 0.6),
+        new THREE.MeshLambertMaterial({ color: 0x55aa55 })
+      );
+      body.position.y = 0.45;
+      body.castShadow = true;
+      group.add(body);
+	  
+	  const bodyWhite = new THREE.Mesh(
+        new THREE.BoxGeometry(0.6, 0.1, 0.6),
+        new THREE.MeshLambertMaterial({ color: 0xffffff })
+      );
+      bodyWhite.position.y = 0.2;
+      bodyWhite.castShadow = true;
+      group.add(bodyWhite);
+	  
+	  const bodyBrown = new THREE.Mesh(
+        new THREE.BoxGeometry(0.6, 0.2, 0.6),
+        new THREE.MeshLambertMaterial({ color: 0x664422 })
+      );
+      bodyBrown.position.y = 0.0;
+      bodyBrown.castShadow = true;
+      group.add(bodyBrown);
+
+      const beak = new THREE.Mesh(
+        new THREE.BoxGeometry(0.4, 0.15, 0.25),
+        new THREE.MeshLambertMaterial({ color: 0xf39c12 })
+      );
+      beak.position.set(0, 0.38, -0.4);
+      group.add(beak);
+
+      const wattle = new THREE.Mesh(
+        new THREE.BoxGeometry(0.12, 0.15, 0.12),
+        new THREE.MeshLambertMaterial({ color: 0xe74c3c })
+      );
+      wattle.position.set(0, 0.22, -0.36);
+      group.add(wattle);
+
+      const eyeGeo = new THREE.BoxGeometry(0.04, 0.24, 0.24);
+      const eyeMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+
+      const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+      leftEye.position.set(-0.31, 0.42, -0.15);
+      group.add(leftEye);
+
+      const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+      rightEye.position.set(0.31, 0.42, -0.15);
+      group.add(rightEye);
+	  
+	  const pupilGeo = new THREE.BoxGeometry(0.08, 0.12, 0.08);
+      const pupilMat = new THREE.MeshLambertMaterial({ color: 0x000000 });
+
+	  const leftEyePupil = new THREE.Mesh(pupilGeo, pupilMat);
+      leftEyePupil.position.set(-0.32, 0.42, -0.15);
+      group.add(leftEyePupil);
+
+      const rightEyePupil = new THREE.Mesh(pupilGeo, pupilMat);
+      rightEyePupil.position.set(0.32, 0.42, -0.15);
+      group.add(rightEyePupil);
+
+      group.position.set(0, 0, 0);
+	  
+	  applyCurrentVisualMode(group);
+	  
+      scene.add(group);
+      return group;
+    }
+
+    // --- MODELLO POLLO CON MUSO ---
+    function createPlayerChicken() {
+      const group = new THREE.Group();
+
+      const body = new THREE.Mesh(
+        new THREE.BoxGeometry(0.6, 0.6, 0.6),
+        new THREE.MeshLambertMaterial({ color: 0xffffff })
+      );
+      body.position.y = 0.3;
+      body.castShadow = true;
+      group.add(body);
+
+      const crest = new THREE.Mesh(
+        new THREE.BoxGeometry(0.15, 0.2, 0.3),
+        new THREE.MeshLambertMaterial({ color: 0xe74c3c })
+      );
+      crest.position.set(0, 0.7, 0);
+      group.add(crest);
+
+      const beak = new THREE.Mesh(
+        new THREE.BoxGeometry(0.2, 0.15, 0.25),
+        new THREE.MeshLambertMaterial({ color: 0xf39c12 })
+      );
+      beak.position.set(0, 0.38, -0.4);
+      group.add(beak);
+
+      const wattle = new THREE.Mesh(
+        new THREE.BoxGeometry(0.12, 0.15, 0.12),
+        new THREE.MeshLambertMaterial({ color: 0xe74c3c })
+      );
+      wattle.position.set(0, 0.22, -0.36);
+      group.add(wattle);
+
+      const eyeGeo = new THREE.BoxGeometry(0.08, 0.12, 0.08);
+      const eyeMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+
+      const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+      leftEye.position.set(-0.31, 0.42, -0.15);
+      group.add(leftEye);
+
+      const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+      rightEye.position.set(0.31, 0.42, -0.15);
+      group.add(rightEye);
+
+      group.position.set(0, 0, 0);
+	  
+	  applyCurrentVisualMode(group);
+	  
+      scene.add(group);
+      return group;
+    }
+	
+	// LUMACA!!!
+	function createPlayerSnail() {
+	  const group = new THREE.Group();
+
+	  // Materiali
+	  const bodyMat = new THREE.MeshLambertMaterial({ color: 0xd4ac0d });       // Corpo (Beige)
+	  const shellMat = new THREE.MeshLambertMaterial({ color: 0x7e5109 });      // Guscio base (Marrone scuro)
+	  const spiralMat = new THREE.MeshLambertMaterial({ color: 0xb9770e });     // Spirale (Marrone chiaro)
+	  const eyeMat = new THREE.MeshLambertMaterial({ color: 0x111111 });        // Occhi (Nero)
+
+	  // 1. Corpo base
+	  const body = new THREE.Mesh(
+		new THREE.BoxGeometry(0.4, 0.2, 1.0),
+		bodyMat
+	  );
+	  body.position.set(0, 0.1, 0);
+	  body.castShadow = true;
+	  group.add(body);
+
+	  // 2. Testa
+	  const head = new THREE.Mesh(
+		new THREE.BoxGeometry(0.4, 0.35, 0.35),
+		bodyMat
+	  );
+	  head.position.set(0, 0.175, -0.4);
+	  head.castShadow = true;
+	  group.add(head);
+
+	  // 3. Guscio principale
+	  const shell = new THREE.Mesh(
+		new THREE.BoxGeometry(0.55, 0.65, 0.6),
+		shellMat
+	  );
+	  shell.position.set(0, 0.425, 0.1);
+	  shell.castShadow = true;
+	  group.add(shell);
+
+	  // --- SPIRALE SIMPLIFICATA SUI LATI DEL GUSCIO ---
+	  const spiralGeo = new THREE.BoxGeometry(0.61, 0.35, 0.35); // Più largo del guscio (0.61 > 0.55) per sporgere dai lati
+	  const spiralDetail = new THREE.Mesh(spiralGeo, spiralMat);
+	  spiralDetail.position.set(0, 0.425, 0.1); // Stessa posizione centrale del guscio
+	  group.add(spiralDetail);
+
+	  // Centro della spirale (blocco ancora più piccolo e leggermente sporgente)
+	  const spiralCenterGeo = new THREE.BoxGeometry(0.67, 0.18, 0.18);
+	  const spiralCenter = new THREE.Mesh(spiralCenterGeo, shellMat);
+	  spiralCenter.position.set(0, 0.425, 0.1);
+	  group.add(spiralCenter);
+	  // --------------------------------------------------
+
+	  // 4. Antenne / Steli oculari
+	  const stalkGeo = new THREE.BoxGeometry(0.06, 0.25, 0.06);
+
+	  const leftStalk = new THREE.Mesh(stalkGeo, bodyMat);
+	  leftStalk.position.set(-0.12, 0.45, -0.45);
+	  group.add(leftStalk);
+
+	  const rightStalk = new THREE.Mesh(stalkGeo, bodyMat);
+	  rightStalk.position.set(0.12, 0.45, -0.45);
+	  group.add(rightStalk);
+
+	  // 5. Occhi
+	  const eyeGeo = new THREE.BoxGeometry(0.08, 0.08, 0.08);
+
+	  const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+	  leftEye.position.set(-0.12, 0.58, -0.45);
+	  group.add(leftEye);
+
+	  const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+	  rightEye.position.set(0.12, 0.58, -0.45);
+	  group.add(rightEye);
+
+	  group.position.set(0, 0, 0);
+	  
+	  applyCurrentVisualMode(group);
+	  
+	  scene.add(group);
+	  return group;
+	}
+	
+	// U PUORC
+	function createPlayerPig() {
+	  const group = new THREE.Group();
+
+	  // Materiali
+	  const bodyMat = new THREE.MeshLambertMaterial({ color: 0xffb6c1 });    // Rosa chiaro (Corpo)
+	  const snoutMat = new THREE.MeshLambertMaterial({ color: 0xff8da1 });   // Rosa scuro (Muso/Orecchie)
+	  const hoofMat = new THREE.MeshLambertMaterial({ color: 0x8d5b4c });    // Marrone (Zoccoli)
+	  const eyeMat = new THREE.MeshLambertMaterial({ color: 0x111111 });     // Nero (Occhi)
+
+	  // 1. Corpo base (rettangolare e cicciottello)
+	  const body = new THREE.Mesh(
+		new THREE.BoxGeometry(0.6, 0.5, 0.8),
+		bodyMat
+	  );
+	  body.position.set(0, 0.35, 0);
+	  body.castShadow = true;
+	  group.add(body);
+
+	  // 2. Testa
+	  const head = new THREE.Mesh(
+		new THREE.BoxGeometry(0.5, 0.45, 0.4),
+		bodyMat
+	  );
+	  head.position.set(0, 0.425, -0.45);
+	  head.castShadow = true;
+	  group.add(head);
+
+	  // 3. Muso / Grugno (sporgente)
+	  const snout = new THREE.Mesh(
+		new THREE.BoxGeometry(0.25, 0.18, 0.12),
+		snoutMat
+	  );
+	  snout.position.set(0, 0.38, -0.68);
+	  group.add(snout);
+
+	  // 4. Orecchie (due piccoli blocchi in cima inclinati verso l'esterno)
+	  const earGeo = new THREE.BoxGeometry(0.12, 0.15, 0.08);
+
+	  const leftEar = new THREE.Mesh(earGeo, snoutMat);
+	  leftEar.position.set(-0.22, 0.65, -0.45);
+	  leftEar.rotation.z = -0.2;
+	  group.add(leftEar);
+
+	  const rightEar = new THREE.Mesh(earGeo, snoutMat);
+	  rightEar.position.set(0.22, 0.65, -0.45);
+	  rightEar.rotation.z = 0.2;
+	  group.add(rightEar);
+
+	  // 5. Occhi (sui lati frontali)
+	  const eyeGeo = new THREE.BoxGeometry(0.06, 0.08, 0.06);
+
+	  const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+	  leftEye.position.set(-0.26, 0.48, -0.52);
+	  group.add(leftEye);
+
+	  const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+	  rightEye.position.set(0.26, 0.48, -0.52);
+	  group.add(rightEye);
+
+	  // 6. Zampe con zoccoli
+	  const legGeo = new THREE.BoxGeometry(0.16, 0.2, 0.16);
+	  const hoofGeo = new THREE.BoxGeometry(0.16, 0.08, 0.16);
+
+	  const legPositions = [
+		[-0.2, -0.25], // Anteriore Sinistra
+		[0.2, -0.25],  // Anteriore Destra
+		[-0.2, 0.25],  // Posteriore Sinistra
+		[0.2, 0.25]    // Posteriore Destra
+	  ];
+
+	  legPositions.forEach(([x, z]) => {
+		// Parte rosa della zampa
+		const leg = new THREE.Mesh(legGeo, bodyMat);
+		leg.position.set(x, 0.18, z);
+		group.add(leg);
+
+		// Zoccolo scuro
+		const hoof = new THREE.Mesh(hoofGeo, hoofMat);
+		hoof.position.set(x, 0.04, z);
+		group.add(hoof);
+	  });
+
+	  // 7. Coda a cavaturaccioli (rappresentata da piccoli cubi sfalsati)
+	  const tailBase = new THREE.Mesh(
+		new THREE.BoxGeometry(0.06, 0.06, 0.1),
+		bodyMat
+	  );
+	  tailBase.position.set(0, 0.4, 0.43);
+	  group.add(tailBase);
+
+	  const tailCurl = new THREE.Mesh(
+		new THREE.BoxGeometry(0.08, 0.08, 0.06),
+		snoutMat
+	  );
+	  tailCurl.position.set(0.04, 0.44, 0.47);
+	  group.add(tailCurl);
+
+	  group.position.set(0, 0, 0);
+	  
+	  applyCurrentVisualMode(group);
+	  
+	  scene.add(group);
+	  return group;
+	}
+	
+	// OH NO... ROCKY GRAFFIETTO!!!
+	function createPlayerRockyGraffietto() {
+		const group = new THREE.Group();
+
+		// Palette Colori Siamese Seal Point
+		const creamMat = new THREE.MeshLambertMaterial({ color: 0xe5d6c3 });   // Crema/Avorio base
+		const sealMat = new THREE.MeshLambertMaterial({ color: 0x3d2b1f });    // Seal scuro intenso
+		const eyeMat = new THREE.MeshLambertMaterial({ color: 0x00a8ff });     // Azzurro ciano brillante
+		const innerEarMat = new THREE.MeshLambertMaterial({ color: 0xE8A7B8 });// Rosa interno orecchie
+		const whiskerMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF }); // Baffi bianchi
+		const noseMat = new THREE.MeshLambertMaterial({ color: 0x150A05 });    // Tartufo scuro
+
+		// 1. Testa principale (Dimensioni: 0.6 x 0.5 x 0.5)
+		const head = new THREE.Mesh(
+			new THREE.BoxGeometry(0.6, 0.5, 0.5),
+			creamMat
+		);
+		head.position.set(0, 0.45, 0);
+		head.castShadow = true;
+		group.add(head);
+		
+		const base = new THREE.Mesh(
+			new THREE.BoxGeometry(0.5, 0.2, 0.4),
+			sealMat
+		);
+		base.position.set(0,0.1,0);
+		base.castShadow = true;
+		group.add(base);
+
+		// 2. Maschera scura facciale
+		const mask = new THREE.Mesh(
+			new THREE.BoxGeometry(0.50, 0.36, 0.04),
+			sealMat
+		);
+		mask.position.set(0, 0.48, -0.255);
+		group.add(mask);
+
+		// 3. Occhi azzurri a mandorla
+		const eyeGeo = new THREE.BoxGeometry(0.12, 0.07, 0.04);
+
+		const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+		leftEye.position.set(-0.15, 0.52, -0.26);
+		leftEye.rotation.z = -0.18;
+		group.add(leftEye);
+
+		const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+		rightEye.position.set(0.15, 0.52, -0.26);
+		rightEye.rotation.z = 0.18;
+		group.add(rightEye);
+
+		// 4. Musetto e Tartufo
+		const muzzle = new THREE.Mesh(
+			new THREE.BoxGeometry(0.26, 0.15, 0.12),
+			sealMat
+		);
+		muzzle.position.set(0, 0.40, -0.30);
+		group.add(muzzle);
+
+		const nose = new THREE.Mesh(
+			new THREE.BoxGeometry(0.08, 0.05, 0.04),
+			noseMat
+		);
+		nose.position.set(0, 0.44, -0.36);
+		group.add(nose);
+
+		// 5. Baffi (3 per lato)
+		const whiskerGeo = new THREE.BoxGeometry(0.22, 0.012, 0.012);
+
+		const whiskerAngles = [-0.15, 0, 0.15];
+		const whiskerYOffsets = [0.03, 0, -0.03];
+
+		whiskerAngles.forEach((angle, i) => {
+			// Baffo Sinistro
+			const leftWhisker = new THREE.Mesh(whiskerGeo, whiskerMat);
+			leftWhisker.position.set(-0.22, 0.39 + whiskerYOffsets[i], -0.31);
+			leftWhisker.rotation.z = angle;
+			leftWhisker.rotation.y = -0.15;
+			group.add(leftWhisker);
+
+			// Baffo Destro
+			const rightWhisker = new THREE.Mesh(whiskerGeo, whiskerMat);
+			rightWhisker.position.set(0.22, 0.39 + whiskerYOffsets[i], -0.31);
+			rightWhisker.rotation.z = -angle;
+			rightWhisker.rotation.y = 0.15;
+			group.add(rightWhisker);
+		});
+
+		// 6. Orecchie appuntite piramidali (Forma felina)
+		const earOuterGeo = new THREE.ConeGeometry(0.14, 0.30, 4);
+		const earInnerGeo = new THREE.ConeGeometry(0.09, 0.22, 4);
+
+		// Orecchia Sinistra
+		const leftEar = new THREE.Group();
+		const leftEarOuter = new THREE.Mesh(earOuterGeo, sealMat);
+		leftEarOuter.rotation.y = Math.PI / 4;
+		
+		const leftEarInner = new THREE.Mesh(earInnerGeo, innerEarMat);
+		leftEarInner.rotation.y = Math.PI / 4;
+		leftEarInner.position.set(0, -0.02, -0.025);
+		
+		leftEar.add(leftEarOuter, leftEarInner);
+		leftEar.position.set(0.24, 0.81, -0.04);
+		leftEar.rotation.z = -0.35; // Inclinazione esterna
+		leftEar.rotation.x = -0.08;
+		group.add(leftEar);
+
+		// Orecchia Destra
+		const rightEar = new THREE.Group();
+		const rightEarOuter = new THREE.Mesh(earOuterGeo, sealMat);
+		rightEarOuter.rotation.y = Math.PI / 4;
+
+		const rightEarInner = new THREE.Mesh(earInnerGeo, innerEarMat);
+		rightEarInner.rotation.y = Math.PI / 4;
+		rightEarInner.position.set(0, -0.02, -0.025);
+
+		rightEar.add(rightEarOuter, rightEarInner);
+		rightEar.position.set(-0.24, 0.81, -0.04);
+		rightEar.rotation.z = 0.35;
+		rightEar.rotation.x = -0.08;
+		group.add(rightEar);
+
+		// 7. Sfumature / Guance laterali a cuneo
+		const cheekGeo = new THREE.BoxGeometry(0.08, 0.22, 0.24);
+		
+		const leftCheek = new THREE.Mesh(cheekGeo, sealMat);
+		leftCheek.position.set(-0.28, 0.44, -0.12);
+		group.add(leftCheek);
+
+		const rightCheek = new THREE.Mesh(cheekGeo, sealMat);
+		rightCheek.position.set(0.28, 0.44, -0.12);
+		group.add(rightCheek);
+
+		const tail = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.35, 0.08), sealMat);
+		tail.position.set(0, 0.35, 0.30);
+		group.add(tail);
+	
+		group.position.set(0, 0, 0);
+		
+		applyCurrentVisualMode(group);
+		
+		scene.add(group);
+		return group;
+	}
+	
+	// minion!
+	function createPlayerMinion() {
+		const group = new THREE.Group();
+
+		// Materiali
+		const yellowMat = new THREE.MeshLambertMaterial({ color: 0xFFD500 }); // Giallo Minion
+		const blueMat   = new THREE.MeshLambertMaterial({ color: 0x0055B8 }); // Blu Salopette
+		const blackMat  = new THREE.MeshLambertMaterial({ color: 0x111111 }); // Nero (Fascia, guanti, scarpe)
+		const silverMat = new THREE.MeshLambertMaterial({ color: 0x888888 }); // Grigio (Montatura occhiale)
+		const whiteMat  = new THREE.MeshLambertMaterial({ color: 0xFFFFFF }); // Bianco (Sclera occhio)
+		const eyeMat    = new THREE.MeshLambertMaterial({ color: 0x5D4037 }); // Marrone (Iride/Occhio)
+		const buttonMat = new THREE.MeshLambertMaterial({ color: 0x222222 }); // Nero/Nocciola (Bottoni)
+
+		// 1. Corpo principale (Giallo)
+		const body = new THREE.Mesh(
+			new THREE.BoxGeometry(0.5, 0.7, 0.5),
+			yellowMat
+		);
+		body.position.set(0, 0.55, 0);
+		body.castShadow = true;
+		group.add(body);
+
+		// 2. Salopette (Parte inferiore blu)
+		const pants = new THREE.Mesh(
+			new THREE.BoxGeometry(0.52, 0.3, 0.52),
+			blueMat
+		);
+		pants.position.set(0, 0.35, 0);
+		group.add(pants);
+
+		// Pettorina frontale della salopette
+		const bibFront = new THREE.Mesh(
+			new THREE.BoxGeometry(0.36, 0.16, 0.04),
+			blueMat
+		);
+		bibFront.position.set(0, 0.53, -0.25);
+		group.add(bibFront);
+
+		// Pettorina posteriore della salopette
+		const bibBack = new THREE.Mesh(
+			new THREE.BoxGeometry(0.36, 0.16, 0.04),
+			blueMat
+		);
+		bibBack.position.set(0, 0.53, 0.25);
+		group.add(bibBack);
+
+		// Bretelle della salopette
+		const strapGeo = new THREE.BoxGeometry(0.06, 0.18, 0.52);
+		const leftStrap = new THREE.Mesh(strapGeo, blueMat);
+		leftStrap.position.set(-0.19, 0.58, 0);
+		group.add(leftStrap);
+
+		const rightStrap = new THREE.Mesh(strapGeo, blueMat);
+		rightStrap.position.set(0.19, 0.58, 0);
+		group.add(rightStrap);
+
+		// Bottoni neri sulle bretelle
+		const buttonGeo = new THREE.BoxGeometry(0.05, 0.05, 0.04);
+		const leftButton = new THREE.Mesh(buttonGeo, buttonMat);
+		leftButton.position.set(-0.16, 0.48, -0.27);
+		group.add(leftButton);
+
+		const rightButton = new THREE.Mesh(buttonGeo, buttonMat);
+		rightButton.position.set(0.16, 0.48, -0.27);
+		group.add(rightButton);
+
+		// 3. Fascia nera degli occhiali
+		const strapBand = new THREE.Mesh(
+			new THREE.BoxGeometry(0.54, 0.08, 0.54),
+			blackMat
+		);
+		strapBand.position.set(0, 0.73, 0);
+		group.add(strapBand);
+
+		// 4. Occhio e Occhiale (Singolo occhione stile Stuart o doppio occhio)
+		// Montatura occhiale (grigio metallico)
+		const goggle = new THREE.Mesh(
+			new THREE.BoxGeometry(0.24, 0.24, 0.08),
+			silverMat
+		);
+		goggle.position.set(0, 0.73, -0.26);
+		group.add(goggle);
+
+		// Bianco dell'occhio
+		const eyeWhite = new THREE.Mesh(
+			new THREE.BoxGeometry(0.16, 0.16, 0.04),
+			whiteMat
+		);
+		eyeWhite.position.set(0, 0.73, -0.29);
+		group.add(eyeWhite);
+
+		// Pupilla / Iride
+		const iris = new THREE.Mesh(
+			new THREE.BoxGeometry(0.07, 0.07, 0.04),
+			eyeMat
+		);
+		iris.position.set(0, 0.73, -0.31);
+		group.add(iris);
+
+		// 5. Sorriso / Bocca (un piccolo blocco nero sotterraneo al goggle)
+		const mouth = new THREE.Mesh(
+			new THREE.BoxGeometry(0.14, 0.03, 0.02),
+			blackMat
+		);
+		mouth.position.set(0, 0.59, -0.26);
+		group.add(mouth);
+
+		// 6. Braccia e Mani (Guanti neri)
+		const armGeo = new THREE.BoxGeometry(0.08, 0.22, 0.08);
+		const gloveGeo = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+
+		// Braccio Sinistro
+		const leftArm = new THREE.Mesh(armGeo, yellowMat);
+		leftArm.position.set(-0.29, 0.48, 0);
+		group.add(leftArm);
+
+		const leftGlove = new THREE.Mesh(gloveGeo, blackMat);
+		leftGlove.position.set(-0.29, 0.33, 0);
+		group.add(leftGlove);
+
+		// Braccio Destro
+		const rightArm = new THREE.Mesh(armGeo, yellowMat);
+		rightArm.position.set(0.29, 0.48, 0);
+		group.add(rightArm);
+
+		const rightGlove = new THREE.Mesh(gloveGeo, blackMat);
+		rightGlove.position.set(0.29, 0.33, 0);
+		group.add(rightGlove);
+
+		// 7. Gambe e Scarpe
+		const legGeo = new THREE.BoxGeometry(0.12, 0.12, 0.12);
+		const shoeGeo = new THREE.BoxGeometry(0.14, 0.08, 0.18);
+
+		// Gamba Sinistra
+		const leftLeg = new THREE.Mesh(legGeo, blueMat);
+		leftLeg.position.set(-0.12, 0.14, 0);
+		group.add(leftLeg);
+
+		const leftShoe = new THREE.Mesh(shoeGeo, blackMat);
+		leftShoe.position.set(-0.12, 0.04, -0.02);
+		group.add(leftShoe);
+
+		// Gamba Destra
+		const rightLeg = new THREE.Mesh(legGeo, blueMat);
+		rightLeg.position.set(0.12, 0.14, 0);
+		group.add(rightLeg);
+
+		const rightShoe = new THREE.Mesh(shoeGeo, blackMat);
+		rightShoe.position.set(0.12, 0.04, -0.02);
+		group.add(rightShoe);
+		
+		group.position.set(0, 0, 0);
+		
+		applyCurrentVisualMode(group);
+		
+		scene.add(group);
+		return group;
+	}
+	
+	// GENERIC SIAMESE -> I GATTI PIU BELLI DEL MONDO!
+	function createPlayerSiamese() {
+	  const group = new THREE.Group();
+
+	  // Materiali
+	  const bodyMat = new THREE.MeshLambertMaterial({ color: 0xe5d6c3 });    // Crema/Beige (Corpo)
+	  const pointMat = new THREE.MeshLambertMaterial({ color: 0x3d2b1f });   // Marrone scuro (Muso, Orecchie, Zampe, Coda)
+	  const eyeMat = new THREE.MeshLambertMaterial({ color: 0x00a8ff });     // Azzurro intenso (Occhi Siamesi)
+	  const eyeBackMat = new THREE.MeshLambertMaterial({ color: 0x443322 }); // Nero (Sfondo Occhi)
+
+	  // 1. Corpo base
+	  const body = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.7), bodyMat);
+	  body.position.set(0, 0.35, 0);
+	  body.castShadow = true;
+	  group.add(body);
+
+	  // 2. Testa
+	  const head = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.35, 0.35), bodyMat);
+	  head.position.set(0, 0.52, -0.38);
+	  head.castShadow = true;
+	  group.add(head);
+
+	  // 3. Maschera / Muso scuro (allargata per coprire la zona occhi)
+	  const snout = new THREE.Mesh(
+		new THREE.BoxGeometry(0.32, 0.22, 0.12),
+		pointMat
+	  );
+	  snout.position.set(0, 0.50, -0.50);
+	  group.add(snout);
+
+	  // --- SFONDO NERO DIETRO GLI OCCHI ---
+	  // Posizionato leggermente davanti al muso (Z = -0.555)
+	  const eyeBackground = new THREE.Mesh(
+		new THREE.BoxGeometry(0.32, 0.10, 0.02),
+		eyeBackMat
+	  );
+	  eyeBackground.position.set(0, 0.55, -0.555);
+	  group.add(eyeBackground);
+
+	  // 5. Occhi azzurri (spinti più in avanti: Z = -0.565)
+	  const eyeGeo = new THREE.BoxGeometry(0.07, 0.08, 0.02);
+
+	  const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+	  leftEye.position.set(-0.10, 0.55, -0.565);
+	  group.add(leftEye);
+
+	  const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+	  rightEye.position.set(0.10, 0.55, -0.565);
+	  group.add(rightEye);
+	  
+	  // 5. Musetto / Naso sporgente (in basso al centro, sporge più in avanti: Z = -0.57)
+	  const snoutBox = new THREE.Mesh(
+		new THREE.BoxGeometry(0.16, 0.12, 0.10),
+		pointMat
+	  );
+	  snoutBox.position.set(0, 0.46, -0.57);
+	  group.add(snoutBox);
+	  
+	  
+	  // 4. Orecchie a punta
+	  const earGeo = new THREE.BoxGeometry(0.1, 0.18, 0.06);
+
+	  const leftEar = new THREE.Mesh(earGeo, pointMat);
+	  leftEar.position.set(0.16, 0.75, -0.38);
+	  leftEar.rotation.z = -0.15;
+	  group.add(leftEar);
+
+	  const rightEar = new THREE.Mesh(earGeo, pointMat);
+	  rightEar.position.set(-0.16, 0.75, -0.38);
+	  rightEar.rotation.z = 0.15;
+	  group.add(rightEar);
+
+	  // 6. Zampe
+	  const legPositions = [
+		[-0.15, -0.22],
+		[0.15, -0.22],
+		[-0.15, 0.22],
+		[0.15, 0.22]
+	  ];
+
+	  legPositions.forEach(([x, z]) => {
+		const upperLeg = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.15, 0.12), bodyMat);
+		upperLeg.position.set(x, 0.22, z);
+		group.add(upperLeg);
+
+		const lowerLeg = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.15, 0.12), pointMat);
+		lowerLeg.position.set(x, 0.075, z);
+		lowerLeg.castShadow = true;
+		group.add(lowerLeg);
+	  });
+
+	  // 7. Coda
+	  const tail = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.35, 0.08), pointMat);
+	  tail.position.set(0, 0.5, 0.42);
+	  tail.rotation.x = -0.5;
+	  group.add(tail);
+
+	  group.position.set(0, 0, 0);
+	  
+	  applyCurrentVisualMode(group);
+	  
+	  scene.add(group);
+	  return group;
+	}
+	
+	// TARTUCA
+	function createPlayerTurtle() {
+	  const group = new THREE.Group();
+
+	  // Materiali
+	  const skinMat = new THREE.MeshLambertMaterial({ color: 0x27ae60 });   // Verde (Pelle)
+	  const shellMat = new THREE.MeshLambertMaterial({ color: 0x7e5109 });  // Marrone scuro (Guscio base)
+	  const plateMat = new THREE.MeshLambertMaterial({ color: 0xd35400 });  // Arancione/Marrone (Piastre carapace)
+	  const eyeMat = new THREE.MeshLambertMaterial({ color: 0x111111 });    // Nero (Occhi)
+
+	  // 1. Piastra di base inferiore del guscio (Piastrone)
+	  const plastron = new THREE.Mesh(
+		new THREE.BoxGeometry(0.7, 0.1, 0.9),
+		shellMat
+	  );
+	  plastron.position.set(0, 0.1, 0);
+	  plastron.castShadow = true;
+	  group.add(plastron);
+
+	  // 2. Cupola principale del guscio
+	  const shellDome = new THREE.Mesh(
+		new THREE.BoxGeometry(0.6, 0.3, 0.75),
+		shellMat
+	  );
+	  shellDome.position.set(0, 0.28, 0);
+	  shellDome.castShadow = true;
+	  group.add(shellDome);
+
+	  // 3. Dettaglio piastre del carapace (blocco superiore più chiaro)
+	  const shellTop = new THREE.Mesh(
+		new THREE.BoxGeometry(0.42, 0.1, 0.55),
+		plateMat
+	  );
+	  shellTop.position.set(0, 0.44, 0);
+	  group.add(shellTop);
+
+	  // 4. Testa
+	  const head = new THREE.Mesh(
+		new THREE.BoxGeometry(0.28, 0.22, 0.32),
+		skinMat
+	  );
+	  head.position.set(0, 0.22, -0.55);
+	  head.castShadow = true;
+	  group.add(head);
+
+	  // 5. Collo di congiunzione
+	  const neck = new THREE.Mesh(
+		new THREE.BoxGeometry(0.2, 0.16, 0.2),
+		skinMat
+	  );
+	  neck.position.set(0, 0.18, -0.38);
+	  group.add(neck);
+
+	  // 6. Occhi (sui lati della testa)
+	  const eyeGeo = new THREE.BoxGeometry(0.06, 0.06, 0.06);
+
+	  const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+	  leftEye.position.set(-0.15, 0.25, -0.6);
+	  group.add(leftEye);
+
+	  const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+	  rightEye.position.set(0.15, 0.25, -0.6);
+	  group.add(rightEye);
+
+	  // 7. Zampe (4 pinne/zampe basse e larghe)
+	  const legGeo = new THREE.BoxGeometry(0.18, 0.1, 0.25);
+
+	  // Anteriore Sinistra
+	  const legFL = new THREE.Mesh(legGeo, skinMat);
+	  legFL.position.set(-0.38, 0.08, -0.3);
+	  group.add(legFL);
+
+	  // Anteriore Destra
+	  const legFR = new THREE.Mesh(legGeo, skinMat);
+	  legFR.position.set(0.38, 0.08, -0.3);
+	  group.add(legFR);
+
+	  // Posteriore Sinistra
+	  const legBL = new THREE.Mesh(legGeo, skinMat);
+	  legBL.position.set(-0.38, 0.08, 0.3);
+	  group.add(legBL);
+
+	  // Posteriore Destra
+	  const legBR = new THREE.Mesh(legGeo, skinMat);
+	  legBR.position.set(0.38, 0.08, 0.3);
+	  group.add(legBR);
+
+	  // 8. Coda
+	  const tail = new THREE.Mesh(
+		new THREE.BoxGeometry(0.08, 0.08, 0.15),
+		skinMat
+	  );
+	  tail.position.set(0, 0.12, 0.48);
+	  group.add(tail);
+
+	  group.position.set(0, 0, 0);
+	  
+	  applyCurrentVisualMode(group);
+	  
+	  scene.add(group);
+	  return group;
+	}
+
+    // Helper per creare le ruote cubiche in stile Voxel
+    function createWheel(x, y, z, side) {
+	  const group = new THREE.Group();
+      const wheel = new THREE.Mesh(
+        new THREE.BoxGeometry(0.3, 0.22, 0.18),
+        new THREE.MeshLambertMaterial({ color: 0x222222 })
+      );
+	  wheel.position.set(0, 0, 0);
+	  wheel.castShadow = true;
+	  group.add(wheel);
+	  
+	  const axis = new THREE.Mesh(
+        new THREE.BoxGeometry(0.15, 0.11, 0.28),
+        new THREE.MeshLambertMaterial({ color: 0x666666 })
+      );
+      axis.position.set(0, 0, side * 0.0025);
+      axis.castShadow = true;
+	  group.add(axis);
+	  
+	  group.position.set(x, y, z);      
+	  return group;
+    }
+	
+	// --- MODELLO STRUTTURA BINARI ---
+	function createTrackMesh() {
+	  const group = new THREE.Group();
+
+	  // Traverse di legno (orizzontali)
+	  const tieMat = new THREE.MeshLambertMaterial({ color: 0x4a2e18 });
+	  const tieGeo = new THREE.BoxGeometry(0.2, 0.05, 0.85);
+
+	  for (let x = -BOARD_WIDTH / 2; x <= BOARD_WIDTH / 2; x += 0.6) {
+		const tie = new THREE.Mesh(tieGeo, tieMat);
+		tie.position.set(x, 0.025, 0);
+		tie.receiveShadow = true;
+		group.add(tie);
+	  }
+
+	  // Rotaie metalliche (2 barre di ferro longitudinali)
+	  const railMat = new THREE.MeshLambertMaterial({ color: 0x888888 });
+	  const railGeo = new THREE.BoxGeometry(BOARD_WIDTH, 0.08, 0.08);
+
+	  const leftRail = new THREE.Mesh(railGeo, railMat);
+	  leftRail.position.set(0, 0.08, -0.28);
+	  leftRail.castShadow = true;
+	  group.add(leftRail);
+
+	  const rightRail = new THREE.Mesh(railGeo, railMat);
+	  rightRail.position.set(0, 0.08, 0.28);
+	  rightRail.castShadow = true;
+	  group.add(rightRail);
+
+	  applyCurrentVisualMode(group);
+	  
+	  return group;
+	}
+	
+	//colori ambiente
+	const colors = [
+		{ prob: 0.0, tree: { col1: 0x2e7d32, col2: 0x388e3c }, cactus: { col1: 0x276a2b, col2: 0x307933 }, grass: { col1: 0x66bb66, col2: 0x60b560 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
+		{ prob: 0.1, tree: { col1: 0x60b560, col2: 0x66bb66 }, cactus: { col1: 0x529a52, col2: 0x579f57 }, grass: { col1: 0x4daa4d, col2: 0x49a449 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
+		{ prob: 0.2, tree: { col1: 0x49a449, col2: 0x4daa4d }, cactus: { col1: 0x3e8b3e, col2: 0x419141 }, grass: { col1: 0x349934, col2: 0x309530 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
+		{ prob: 0.5, tree: { col1: 0x309530, col2: 0x349934 }, cactus: { col1: 0x297f29, col2: 0x2c822c }, grass: { col1: 0x6fa156, col2: 0x699950 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
+		{ prob: 0.8, tree: { col1: 0x699950, col2: 0x6fa156 }, cactus: { col1: 0x598244, col2: 0x5e8949 }, grass: { col1: 0xaaa979, col2: 0xa5a074 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
+		{ prob: 0.9, tree: { col1: 0xa5a074, col2: 0xaaa979 }, cactus: { col1: 0x8c8863, col2: 0x919067 }, grass: { col1: 0x887f5e, col2: 0x827959 }, river: { col1: 0xd4b870, col2: 0xcfa860 }, track: { col1: 0x444444, col2: 0x3a3a3a }},// Terreno marrone chiaro / deserto -> Fiume con riflessi sabbia / oro sporco
+		{ prob: 0.9, tree: { col1: 0x827959, col2: 0x887f5e }, cactus: { col1: 0x6f674c, col2: 0x746c50 }, grass: { col1: 0x665544, col2: 0x605040 }, river: { col1: 0xc2a649, col2: 0xba9b3f }, track: { col1: 0x444444, col2: 0x3a3a3a }},// Terreno marrone scuro -> Fiume piú torbido / giallastro
+		{ prob: 0.4, tree: { col1: 0xa29989, col2: 0xa89f8e }, cactus: { col1: 0x8a8274, col2: 0x8f8779 }, grass: { col1: 0xa89f8e, col2: 0xa29989 }, river: { col1: 0xb3ecff, col2: 0x99e5ff }, track: { col1: 0x444444, col2: 0x3a3a3a }},// Terreno grigio/neve leggeri -> Fiume azzurro ghiaccio chiaro
+		{ prob: 0.0, tree: { col1: 0xe5e0d4, col2: 0xeae9d9 }, cactus: { col1: 0xc3beb4, col2: 0xc7c6b8 }, grass: { col1: 0xeae9d9, col2: 0xe5e0d4 }, river: { col1: 0xe0f7fa, col2: 0xd2f3f7 }, track: { col1: 0x444444, col2: 0x3a3a3a }},// Terreno completamente bianco / neve -> Fiume azzurro glaciale leggerissimo			
+		{ prob: 0.0, tree: { col1: 0x90c980, col2: 0x99cc88 }, cactus: { col1: 0x7aab6d, col2: 0x82ad74 }, grass: { col1: 0x99cc88, col2: 0x90c980 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
+	];
+	//colori treni
+	const trainColors = [
+		0xdd2222, // Rosso
+		0x1177dd, // Blu
+		0xffdd00, // Giallo
+		0x11bb99, // Verde Turchese / Turchese Scuro
+		0xff8822, // Arancione
+		0x00bb99 // Verde Menta / Giada
+	  ];
+	//colori auto
+	const carColors = [
+		  // --- COLORI VIVACI & POP ---
+		  0xe74c3c, // Rosso Alizarina
+		  0x3498db, // Blu Pietro
+		  0xf1c40f, // Giallo Girasole
+		  0x9b59b6, // Viola Ametista
+		  0x1abc9c, // Verde Turchese
+		  0xe67e22, // Arancione Carota
+		  0x2ecc71, // Verde Smeraldo
+		  0xe84393, // Rosa Acceso / Fucsia
+		  0x00cec9, // Ciano Chiaro
+		  0x6c5ce7, // Indaco / Viola Blu
+		  0xff7675, // Corallo
+		  0xfdcb6e, // Giallo Miele
+		  0x00b894, // Verde Giada
+
+		  // --- PASTELLI SOFT ---
+		  0xffb3ba, // Rosa Pastello
+		  0xffdfba, // Pesca Pastello
+		  0xffffba, // Giallo Pastello
+		  0xbaffc9, // Verde Pastello
+		  0xbae3ff, // Celeste Pastello
+		  0xdfbaff, // Lilla Pastello
+		  0xf7d794, // Crema / Burro
+		  0x778beb,  // Lavanda Satinata
+		  
+		  // --- TONI SCURI, SPORTIVI ED ELEGANTI ---
+		  0x2c3e50, // Blu Notte / Antracite
+		  0x222222, // Nero Ossidiana
+		  0x8e44ad, // Viola Prugna Scuro
+		  0x27ae60, // Verde Foresta
+		  0xd35400, // Arancione Ruggine
+		  0xc0392b, // Rosso Sangue / Corsa
+		  0x16a085, // Ottanio Scuro
+		  0x7f8c8d, // Grigio Asfalto / Alluminio
+
+		  // --- DESATURATI MODERNIE TONI TERRA ---
+		  0x636e72, // Grigio Minerale
+		  0xb2bec3, // Argento Chiaro
+		  0xd63031, // Rosso Mattone
+		  0xe17055, // Terracotta
+		  0x00b894, // Verde Pino Chiaro
+		  0x0984e3, // Blu Elettrico Satinato
+		  0xfd79a8, // Fenicottero
+		  0xeccc68 // Giallo Sabbia
+		];
+	//colori tir
+	const truckColors = [0xe67e22, 0x2980b9, 0x27ae60, 0xc0392b];
+
+	//colori rocce
+	const rockColors = [
+	    0x9e9e9e, // Grigio base
+	    0x8d8d8d, // Grigio medio
+	    0xa8a29e, // Grigio sabbia
+	    0xd0d0d0, // Bianco sporco / Roccia chiara
+	    0x7e5e47  // Marrone / Roccia terrosa
+	];
+	
+	// --- MODELLO TRENO (Motrice + Vagoni) ---
+	function createTrainMesh(wagonsCount) {
+	  const group = new THREE.Group();
+	  const wagonLength = 2.4;
+	  const gap = 0.2;
+	  
+	  const color = trainColors[Math.floor(Math.random() * trainColors.length)];
+	  const colorWagon = trainColors[Math.floor(Math.random() * trainColors.length)];
+	  
+	  // 1. Locomotiva (Frontale)
+	  const locoMat = new THREE.MeshLambertMaterial({ color: color });
+	  const loco = new THREE.Mesh(new THREE.BoxGeometry(wagonLength, 0.95, 0.8), locoMat);
+	  loco.position.set(0, 0.55, 0);
+	  loco.castShadow = true;
+	  group.add(loco);
+
+	  // Cabina guida rialzata
+	  const cabin = new THREE.Mesh(
+		new THREE.BoxGeometry(0.8, 0.3, 0.78),
+		new THREE.MeshLambertMaterial({ color: 0x111111 })
+	  );
+	  cabin.position.set(wagonsCount < 3 ? -0.6 : 0.7, 1.05, 0);
+	  group.add(cabin);
+	  
+	  // finestrini cabina
+	  const windowCabinOffsetsX = [-0.75, -0.25, 0.25, 0.75];
+		windowCabinOffsetsX.forEach((offsetX) => {
+		const win = new THREE.Mesh(
+			new THREE.BoxGeometry(0.4, 0.25, 0.82), 
+			new THREE.MeshLambertMaterial({ color: 0x111111 }));
+		win.position.set(offsetX, 0.70, 0);
+		group.add(win);
+	  });
+	  
+	  const windshield = new THREE.Mesh(
+        new THREE.BoxGeometry(0.11, 0.25, 0.81),
+        new THREE.MeshLambertMaterial({ color: 0x111111 })
+      );
+      windshield.position.set(1.15, 0.70, 0);
+      group.add(windshield);
+	  
+
+	  // 2. Vagoni collegati DIETRO la locomotiva
+	  const wagonMat = new THREE.MeshLambertMaterial({ color: colorWagon });
+	  for (let i = 1; i <= wagonsCount; i++) {
+		
+		const xPos = -i * (wagonLength + gap);
+		
+		const wagon = new THREE.Mesh(
+		  new THREE.BoxGeometry(wagonLength, 0.85, 0.8),
+		  wagonMat
+		);
+		wagon.position.set(xPos, 0.5, 0);
+		wagon.castShadow = true;
+		group.add(wagon);
+		
+		const windowOffsetsX = [-0.75, -0.25, 0.25, 0.75];
+		windowOffsetsX.forEach((offsetX) => {
+		  const win = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.25, 0.82), new THREE.MeshLambertMaterial({ color: 0x111111 }));
+		  win.position.set(xPos + offsetX, 0.70, 0);
+		  group.add(win);
+		});
+
+		// Gancio di collegamento
+		const coupler = new THREE.Mesh(
+		  new THREE.BoxGeometry(gap + 0.05, 0.1, 0.2),
+		  new THREE.MeshLambertMaterial({ color: 0x222222 })
+		);
+		coupler.position.set(xPos + (wagonLength / 2) + (gap / 2), 0.25, 0);
+		group.add(coupler);
+	  }
+	  
+	  applyCurrentVisualMode(group);
+	  
+	  return group;
+	}
+
+    // --- MODELLI VEICOLI ---
+	// --- MODELLI VEICOLI ---
+	function createCarMesh() {
+	  const group = new THREE.Group();
+	  
+	  const color = carColors[Math.floor(Math.random() * carColors.length)];
+
+	  // Telaio inferiore (Larghezza ridotta a 0.6)
+	  const body = new THREE.Mesh(
+		new THREE.BoxGeometry(1.5, 0.35, 0.6),//new THREE.BoxGeometry(1.5, 0.35, 0.8),
+		new THREE.MeshLambertMaterial({ color: color })
+	  );
+	  body.position.y = 0.25;
+	  body.castShadow = true;
+	  group.add(body);
+
+	  // Blocco Vetri Neri (Larghezza ridotta a 0.54)
+	  const glass = new THREE.Mesh(
+		new THREE.BoxGeometry(0.85, 0.28, 0.54),//new THREE.BoxGeometry(0.85, 0.28, 0.72),
+		new THREE.MeshLambertMaterial({ color: 0x111111 })
+	  );
+	  glass.position.set(-0.05, 0.48, 0);
+	  glass.castShadow = true;
+	  group.add(glass);
+
+	  // Tettuccio Bianco (Larghezza ridotta a 0.51)
+	  const roof = new THREE.Mesh(
+		new THREE.BoxGeometry(0.75, 0.08, 0.51),//new THREE.BoxGeometry(0.75, 0.08, 0.68),
+		new THREE.MeshLambertMaterial({ color: 0xffffff })
+	  );
+	  roof.position.set(-0.05, 0.64, 0);
+	  roof.castShadow = true;
+	  group.add(roof);
+
+	  // Ruote (Offset Z spostato da ±0.38 a ±0.28)
+	  group.add(createWheel(-0.45, 0.11,  0.28,  1));//group.add(createWheel(-0.45, 0.11, 0.38,   1));
+	  group.add(createWheel( 0.45, 0.11,  0.28,  1));//group.add(createWheel(0.45, 0.11, 0.38,    1));
+	  group.add(createWheel(-0.45, 0.11, -0.28, -1));//group.add(createWheel(-0.45, 0.11, -0.38, -1));
+	  group.add(createWheel( 0.45, 0.11, -0.28, -1));//group.add(createWheel(0.45, 0.11, -0.38,  -1));
+      
+	  applyCurrentVisualMode(group);
+	  
+	  return group;
+	}
+	
+	function createCarPoliceMesh() {
+	  let group = createCarMesh();
+	  // ==========================================
+	  // --- BARRA SIRENA (TRE CUBETTI SUL TETTO) ---
+	  // ==========================================
+	  
+	  // Usiamo MeshBasicMaterial o MeshStandardMaterial con emissive per l'effetto luminoso
+	  const redMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+	  const whiteMaterial = new THREE.MeshBasicMaterial({ color: 0xeeeeee });
+	  const blueMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+
+	  const cubeGeo = new THREE.BoxGeometry(0.08, 0.08, 0.12);
+	  const roofY = 0.72; // Posizione Y sopra il tettuccio
+	  const roofX = -0.05;
+
+	  // Cubetto Rosso (Sinistra / Z+)
+	  const redCube = new THREE.Mesh(cubeGeo, redMaterial);
+	  redCube.position.set(roofX, roofY, 0.14);
+	  group.add(redCube);
+
+	  // Cubetto Bianco (Centro / Z=0)
+	  const whiteCube = new THREE.Mesh(cubeGeo, whiteMaterial);
+	  whiteCube.position.set(roofX, roofY, 0);
+	  group.add(whiteCube);
+
+	  // Cubetto Blu (Destra / Z-)
+	  const blueCube = new THREE.Mesh(cubeGeo, blueMaterial);
+	  blueCube.position.set(roofX, roofY, -0.14);
+	  group.add(blueCube);
+
+	  // PointLight per proiettare la luce nell'ambiente
+	  const policeLight = new THREE.PointLight(0xff0000, 2, 2);
+	  policeLight.position.set(roofX, roofY + 0.1, 0);
+	  group.add(policeLight);
+	  const glowY = roofY + 0.1;
+	  
+	  //due cubi luminosi (invece della sfera)
+	  const glowGeo = new THREE.BoxGeometry(0.2, 0.15, 0.2);
+	  
+	  const glowMaterialRed = new THREE.MeshBasicMaterial({
+		color: 0xff0000,
+		transparent: true,
+		opacity: 0.05,
+		depthWrite: false
+	  });
+	  const glowMaterialBlue = new THREE.MeshBasicMaterial({
+		color: 0x0000ff,
+		transparent: true,
+		opacity: 0.05,
+		depthWrite: false
+	  });
+
+	  const lightGlowRed = new THREE.Mesh(glowGeo, glowMaterialRed);
+	  lightGlowRed.position.set(policeLight.position.x, policeLight.position.y, policeLight.position.z + 0.24);
+	  //lightGlowRed.position.set(roofX, glowY, 0.24);
+	  group.add(lightGlowRed);
+
+	  const lightGlowBlue = new THREE.Mesh(glowGeo, glowMaterialBlue);
+	  lightGlowBlue.position.set(policeLight.position.x, policeLight.position.y, policeLight.position.z - 0.24);
+	  //lightGlowBlue.position.set(roofX, glowY, -0.24);
+	  group.add(lightGlowBlue);
+	  
+	  group.userData = {
+		redMaterial: redMaterial,
+		blueMaterial: blueMaterial,
+		policeLight: policeLight,
+		glowMaterialRed: glowMaterialRed,
+		glowMaterialBlue: glowMaterialBlue
+	  };
+	  
+	  applyCurrentVisualMode(group);
+	  
+	  return group;
+	}
+    
+    function createTruckMesh() {
+      const group = new THREE.Group();
+      
+      const color = truckColors[Math.floor(Math.random() * truckColors.length)];
+
+      // Cabina anteriore
+      const cabin = new THREE.Mesh(
+        new THREE.BoxGeometry(0.8, 0.65, 0.82),
+        new THREE.MeshLambertMaterial({ color: color })
+      );
+      cabin.position.set(1.0, 0.425, 0);
+      cabin.castShadow = true;
+      group.add(cabin);
+
+      // Vetro Cabina
+      const windshield = new THREE.Mesh(
+        new THREE.BoxGeometry(0.2, 0.25, 0.75),
+        new THREE.MeshLambertMaterial({ color: 0x111111 })
+      );
+      windshield.position.set(1.31, 0.58, 0);
+      group.add(windshield);
+
+      // Cassone/Container posteriore
+      const cargo = new THREE.Mesh(
+        new THREE.BoxGeometry(2.0, 0.85, 0.85),
+        new THREE.MeshLambertMaterial({ color: 0xeeeeee })
+      );
+      cargo.position.set(-0.3, 0.525, 0);
+      cargo.castShadow = true;
+      group.add(cargo);
+
+      // Ruote (2 anteriori + 4 posteriori)
+      group.add(createWheel(1.0, 0.11, 0.38,    1));
+      group.add(createWheel(1.0, 0.11, -0.38,  -1));
+      group.add(createWheel(-0.4, 0.11, 0.38,   1));
+      group.add(createWheel(-0.4, 0.11, -0.38, -1));
+      group.add(createWheel(-0.8, 0.11, 0.38,   1));
+      group.add(createWheel(-0.8, 0.11, -0.38, -1));
+	  
+	  applyCurrentVisualMode(group);
+	  
+      return group;
+    }
+
+    // --- MODELLO TRONCO ---
+    function createLogMesh(length) {
+	  const group = new THREE.Group();
+
+	  // --- TRONCO ---
+	  const log = new THREE.Mesh(
+		new THREE.BoxGeometry(length, 0.2, 0.70),
+		new THREE.MeshLambertMaterial({ color: 0x795548 })
+	  );
+
+	  log.position.y = 0.02;
+	  log.receiveShadow = true;
+	  log.castShadow = true;
+	  group.add(log);
+
+
+	  // --- VENATURE ---
+	  const veinMat = new THREE.MeshLambertMaterial({
+		color: 0x5f4035
+	  });
+
+	  // 3 righe di venature
+	  const rows = [-0.25, -0.1, 0.1, 0.25];
+
+	  rows.forEach((z, rowIndex) => {
+
+		// Partenza casuale per rendere ogni riga diversa
+		let x = -length / 2;
+
+		while (x < length / 2) {
+
+		  // Spazio casuale prima della prossima venatura
+		  x += 0.1 + Math.random() * 0.2;
+
+		  // Lunghezza del segmento
+		  const veinLength = 0.20 + Math.random() * 0.5;
+
+		  // Evita di uscire dal tronco
+		  const remaining = length / 2 - x * 1.1;
+		  const actualLength = Math.min(veinLength, remaining);
+
+		  if (actualLength <= 0) break;
+
+		  const vein = new THREE.Mesh(
+			new THREE.BoxGeometry( actualLength, 0.015, 0.125 ),
+			veinMat
+		  );
+
+		  vein.position.set( x + actualLength / 2, 0.12, z );
+
+		  group.add(vein);
+
+		  x += actualLength;
+		}
+	  });
+	  
+	  applyCurrentVisualMode(group);
+	  
+	  return group;
+	}
+
+    // --- MODELLO ALBERO ---
+    function createTreeMesh(col1 = 0x2e7d32, col2 = 0x388e3c) {
+      const group = new THREE.Group();
+      const isTall = Math.random() > 0.5;
+
+      const trunkHeight = isTall ? 0.8 : 0.5;
+      const trunk = new THREE.Mesh(
+        new THREE.BoxGeometry(0.3, trunkHeight, 0.3),
+        new THREE.MeshLambertMaterial({ color: 0x5d4037 })
+      );
+      trunk.position.y = trunkHeight / 2;
+      trunk.castShadow = true;
+      group.add(trunk);
+
+      const leavesBottom = new THREE.Mesh(
+        new THREE.BoxGeometry(0.70, 0.75, 0.70),
+        new THREE.MeshLambertMaterial({ color: col1 })
+      );
+      leavesBottom.position.y = trunkHeight + 0.35;
+      leavesBottom.castShadow = true;
+      group.add(leavesBottom);
+
+      if (isTall) {
+        const leavesTop = new THREE.Mesh(
+          new THREE.BoxGeometry(0.60, 0.20, 0.60),
+          new THREE.MeshLambertMaterial({ color: col2 })
+        );
+        leavesTop.position.y = trunkHeight + 0.85;
+        leavesTop.castShadow = true;
+        group.add(leavesTop);
+      }
+	  
+	  applyCurrentVisualMode(group);
+
+      return group;
+    }
+	
+	function createCactusMesh(col1 = 0x2e7d32, col2 = 0x388e3c) {
+	  const group = new THREE.Group();
+	  const isTall = Math.random() > 0.25;
+	  const col = Math.random() > 0.5 ? col1 : col2;
+
+	  // Materiale verde principale e secondario (o opzionale per i bracci)
+	  const cactusMaterial = new THREE.MeshLambertMaterial({ color: col });
+	  
+	  // 1. TRONCO CENTRALE
+	  const trunkHeight = isTall ? 1.4 : 1.0;
+	  const trunkWidth = 0.35;
+	  const trunk = new THREE.Mesh(
+		new THREE.BoxGeometry(trunkWidth, trunkHeight, trunkWidth),
+		cactusMaterial
+	  );
+	  trunk.position.y = trunkHeight / 2;
+	  trunk.castShadow = true;
+	  group.add(trunk);
+
+	  // 2. BRACCIO SINISTRO
+	  const leftArmGroup = new THREE.Group();
+	  
+	  // Segmento orizzontale (0.30 x 0.20 x 0.20)
+	  const leftHorizontal = new THREE.Mesh(
+		new THREE.BoxGeometry(0.30, 0.20, 0.20),
+		cactusMaterial
+	  );
+	  // Spostato a sinistra di metà tronco + metà braccio orizzontale (0.175 + 0.15 = 0.325)
+	  leftHorizontal.position.x = -0.325;
+	  leftHorizontal.castShadow = true;
+	  leftArmGroup.add(leftHorizontal);
+
+	  // Segmento verticale (0.20 x 0.50 x 0.20)
+	  const leftVertical = new THREE.Mesh(
+		new THREE.BoxGeometry(0.20, 0.50, 0.20),
+		cactusMaterial
+	  );
+	  // Allineato all'estremità esterna del segmento orizzontale
+	  leftVertical.position.set(-0.375, 0.25, 0);
+	  leftVertical.castShadow = true;
+	  leftArmGroup.add(leftVertical);
+
+	  leftArmGroup.position.y = trunkHeight * 0.45;
+	  group.add(leftArmGroup);
+
+	  // 3. BRACCIO DESTRO (Sottile, presente solo se 'isTall')
+	  if (isTall) {
+		const rightArmGroup = new THREE.Group();
+
+		// Segmento orizzontale (0.30 x 0.20 x 0.20)
+		const rightHorizontal = new THREE.Mesh(
+		  new THREE.BoxGeometry(0.30, 0.20, 0.20),
+		  cactusMaterial
+		);
+		rightHorizontal.position.x = 0.325;
+		rightHorizontal.castShadow = true;
+		rightArmGroup.add(rightHorizontal);
+
+		// Segmento verticale (0.20 x 0.50 x 0.20)
+		const rightVertical = new THREE.Mesh(
+		  new THREE.BoxGeometry(0.20, 0.50, 0.20),
+		  cactusMaterial
+		);
+		rightVertical.position.set(0.375, 0.25, 0);
+		rightVertical.castShadow = true;
+		rightArmGroup.add(rightVertical);
+
+		rightArmGroup.position.y = trunkHeight * 0.60;
+		group.add(rightArmGroup);
+	  }
+
+	  // Mantiene il supporto alle modalità grafiche del tuo progetto
+	  applyCurrentVisualMode(group);
+
+	  return group;
+	}
+
+    // --- MODELLO ROCCIA (ostacolo sull'erba) ---
+    function createRockMesh() {
+      const group = new THREE.Group();
+      
+      const rockMat = new THREE.MeshLambertMaterial({
+        color: rockColors[Math.floor(Math.random() * rockColors.length)]
+      });
+
+      const base = new THREE.Mesh(new THREE.DodecahedronGeometry(0.32, 0), rockMat);
+      base.position.y = 0.24;
+      base.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+      base.scale.set(1, 0.8, 1);
+      base.castShadow = true;
+      group.add(base);
+
+	  if (Math.random() > 0.5) {
+		  const bump = new THREE.Mesh(new THREE.DodecahedronGeometry(0.18, 0), rockMat);
+		  bump.position.set(0.14, 0.4, 0.08);
+		  bump.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+		  bump.castShadow = true;
+		  group.add(bump);
+	  }
+	  
+      group.rotation.y = Math.random() * Math.PI * 2;
+	  
+	  applyCurrentVisualMode(group);
+	  
+      return group;
+    }
+	
+	// --- MODELLO SEMAFORO ---
+	function createTrafficLightMesh() {
+	  const group = new THREE.Group();
+
+	  // Palo
+	  const pole = new THREE.Mesh(
+		new THREE.BoxGeometry(0.1, 0.9, 0.1),
+		new THREE.MeshLambertMaterial({ color: 0x333333 })
+	  );
+	  pole.position.y = 0.45;
+	  pole.castShadow = true;
+	  group.add(pole);
+
+	  // Scatola semaforo
+	  const box = new THREE.Mesh(
+		new THREE.BoxGeometry(0.22, 0.5, 0.22),
+		new THREE.MeshLambertMaterial({ color: 0x111111 })
+	  );
+	  box.position.y = 0.85;
+	  box.castShadow = true;
+	  group.add(box);
+
+	  // Materiali: acceso / spento
+	  const redLightMat = new THREE.MeshLambertMaterial({
+		color: 0x330000
+	  });
+
+	  const greenLightMat = new THREE.MeshLambertMaterial({
+		color: 0x003300
+	  });
+
+	  const redLight = new THREE.Mesh(
+		new THREE.BoxGeometry(0.12, 0.12, 0.24),
+		redLightMat
+	  );
+	  redLight.position.set(0, 0.98, 0);
+	  group.add(redLight);
+
+	  const greenLight = new THREE.Mesh(
+		new THREE.BoxGeometry(0.12, 0.12, 0.24),
+		greenLightMat
+	  );
+	  greenLight.position.set(0, 0.72, 0);
+	  group.add(greenLight);
+
+	  group.userData = {
+		redLightMat,
+		greenLightMat
+	  };
+
+	  applyCurrentVisualMode(group);
+	  
+	  return group;
+	}
+	
+	// SEMAFORO TRENI PIU SECCO E LUNGO
+	function createTrainSignalMesh() {
+	  const group = new THREE.Group();
+
+	  const pole = new THREE.Mesh(
+		new THREE.BoxGeometry(0.08, 1.3, 0.08),
+		new THREE.MeshLambertMaterial({ color: 0x2b2b2b })
+	  );
+	  pole.position.y = 0.65;
+	  pole.castShadow = true;
+	  group.add(pole);
+
+	  // Pannello nero orizzontale
+	  const head = new THREE.Mesh(
+		new THREE.BoxGeometry(0.5, 0.18, 0.16),
+		new THREE.MeshLambertMaterial({ color: 0x111111 })
+	  );
+	  head.position.y = 1.4;
+	  head.castShadow = true;
+	  group.add(head);
+
+	  // Due lenti rosse, affiancate orizzontalmente
+	  const leftMat = new THREE.MeshLambertMaterial({ color: 0x330000 });
+	  const rightMat = new THREE.MeshLambertMaterial({ color: 0x330000 });
+	  const lensGeo = new THREE.CylinderGeometry(0.075, 0.075, 0.04, 16);
+
+	  const leftLight = new THREE.Mesh(lensGeo, leftMat);
+	  leftLight.rotation.x = Math.PI / 2;
+	  leftLight.position.set(-0.15, 1.4, 0.09);
+	  group.add(leftLight);
+
+	  const rightLight = new THREE.Mesh(lensGeo, rightMat);
+	  rightLight.rotation.x = Math.PI / 2;
+	  rightLight.position.set(0.15, 1.4, 0.09);
+	  group.add(rightLight);
+
+	  group.userData = { leftLightMat: leftMat, rightLightMat: rightMat };
+	  
+	  applyCurrentVisualMode(group);
+	  
+	  return group;
+	}
+
+	function createTunnelPortal() {
+	  const portalGroup = new THREE.Group();
+
+	  // Materiali
+	  const concreteMat = new THREE.MeshLambertMaterial({ color: 0x888888 }); // Cemento grigio
+	  const holeMat = new THREE.MeshBasicMaterial({ color: 0x050505 }); // Buco nero profondo
+
+	  // --- 1. Struttura del Pannello (Cemento) ---
+	  // Sagoma con buco al centro usata per creare una forma estrusa (o combinazione di blocchi)
+	  const outerWidth = 1.10;
+	  const outerHeight = 1.25;
+	  const innerWidth = 1.00;
+	  const innerHeight = 1.20;
+	  
+	  const concreteDept = 0.5;
+
+	  // Blocco superiore sopra l'arco
+	  const topBlock = new THREE.Mesh(
+		new THREE.BoxGeometry(outerWidth, outerHeight - innerHeight, concreteDept),
+		concreteMat
+	  );
+	  topBlock.position.set(0, innerHeight + (outerHeight - innerHeight) / 2, 0);
+	  topBlock.castShadow = true;
+	  portalGroup.add(topBlock);
+
+	  // Spalla sinistra
+	  const sideWidth = (outerWidth - innerWidth) / 2;
+	  const leftWall = new THREE.Mesh(
+		new THREE.BoxGeometry(sideWidth, innerHeight, concreteDept),
+		concreteMat
+	  );
+	  leftWall.position.set(-innerWidth / 2 - sideWidth / 2, innerHeight / 2, 0);
+	  leftWall.castShadow = true;
+	  portalGroup.add(leftWall);
+
+	  // Spalla destra
+	  const rightWall = leftWall.clone();
+	  rightWall.position.x = innerWidth / 2 + sideWidth / 2;
+	  portalGroup.add(rightWall);
+
+	  // Cornice decorativa in sporgenza sul bordo superiore
+	  const cornice = new THREE.Mesh(
+		new THREE.BoxGeometry(outerWidth + 0.2, 0.2, concreteDept),
+		concreteMat
+	  );
+	  cornice.position.set(0, outerHeight + 0.1, 0);
+	  cornice.castShadow = true;
+	  portalGroup.add(cornice);
+
+	  // --- 2. Il "Buco Nero" (Simulazione profondità tunnel) ---
+	  const holeDepth = 0.5;
+	  const hole = new THREE.Mesh(
+		new THREE.BoxGeometry(innerWidth, innerHeight, holeDepth),
+		holeMat
+	  );
+	  
+	  hole.position.set(0, innerHeight / 2, -0.05);//-holeDepth / 2 + 0.05);
+	  portalGroup.add(hole);
+	  
+	  applyCurrentVisualMode(portalGroup);
+
+	  return portalGroup;
+	}
+
+	// --- EFFETTO MORTE: X ROSSA CHE APPARE E SPARISCE ---
+	function createDeathMarker() {
+	  const group = new THREE.Group();
+	  const barGeo = new THREE.BoxGeometry(1.1, 0.16, 0.14);
+
+	  const mat1 = new THREE.MeshBasicMaterial({ color: 0xff1e1e, transparent: true, opacity: 1, depthTest: false });
+	  const bar1 = new THREE.Mesh(barGeo, mat1);
+	  bar1.rotation.z = Math.PI / 4;
+	  group.add(bar1);
+
+	  const mat2 = new THREE.MeshBasicMaterial({ color: 0xff1e1e, transparent: true, opacity: 1, depthTest: false });
+	  const bar2 = new THREE.Mesh(barGeo, mat2);
+	  bar2.rotation.z = -Math.PI / 4;
+	  group.add(bar2);
+
+	  // Orienta la X verso la camera in base all'angolazione corrente
+	  const offset = getRotatedCameraOffset();
+	  group.rotation.y = Math.atan2(offset.x, offset.z);
+	  group.renderOrder = 999;
+	  
+	  applyCurrentVisualMode(group);
+
+	  return group;
+	}
+
+	function playDeathMarker(position) {
+	  const marker = createDeathMarker();
+	  marker.position.set(position.x, 0.5, position.z);
+	  marker.scale.set(0.2, 0.2, 0.2);
+	  scene.add(marker);
+
+	  const start = performance.now();
+	  const duration = 500;
+
+	  function step() {
+		const t = Math.min((performance.now() - start) / duration, 1);
+		const scale = THREE.MathUtils.lerp(0.2, 1.2, Math.min(t * 2.2, 1));
+		marker.scale.set(scale, scale, scale);
+		marker.children.forEach(child => { child.material.opacity = 1 - t; });
+
+		if (t < 1) {
+		  requestAnimationFrame(step);
+		} else {
+		  scene.remove(marker);
+		  disposeObject3D(marker);
+		}
+	  }
+	  requestAnimationFrame(step);
+	}
+
+	// --- EFFETTO SPAWN/RESPAWN: FASCIO DI LUCE DALL'ALTO ---
+	function createSpawnBeam() {
+	  const group = new THREE.Group();
+
+	  const beamMat = new THREE.MeshBasicMaterial({
+		color: 0xfffde7,
+		transparent: true,
+		opacity: 0.55,
+		depthWrite: false,
+		side: THREE.DoubleSide
+	  });
+	  const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.05, 6, 14, 1, true), beamMat);
+	  beam.position.y = 3;
+	  group.add(beam);
+
+	  const ringMat = new THREE.MeshBasicMaterial({
+		color: 0xfff59d,
+		transparent: true,
+		opacity: 0.85,
+		side: THREE.DoubleSide,
+		depthWrite: false
+	  });
+	  const ring = new THREE.Mesh(new THREE.RingGeometry(0.1, 0.55, 24), ringMat);
+	  ring.rotation.x = -Math.PI / 2;
+	  ring.position.y = 0.03;
+	  group.add(ring);
+	  
+	  applyCurrentVisualMode(group);
+
+	  return group;
+	}
+
+	function playSpawnEffect(position) {
+	  const beamGroup = createSpawnBeam();
+	  beamGroup.position.set(position.x, 0, position.z);
+	  scene.add(beamGroup);
+
+	  const baseOpacities = beamGroup.children.map(child => child.material.opacity);
+	  const start = performance.now();
+	  const duration = 700;
+
+	  function step() {
+		const t = Math.min((performance.now() - start) / duration, 1);
+		beamGroup.children.forEach((child, i) => {
+		  child.material.opacity = baseOpacities[i] * (1 - t);
+		});
+		const scale = 1 + t * 0.7;
+		beamGroup.scale.set(scale, 1, scale);
+
+		if (t < 1) {
+		  requestAnimationFrame(step);
+		} else {
+		  scene.remove(beamGroup);
+		  disposeObject3D(beamGroup);
+		}
+	  }
+	  requestAnimationFrame(step);
+	}
+
+
+	function createAnimatedRiverTexture() {
+	  const canvas = document.createElement('canvas');
+	  canvas.width = 512;
+	  canvas.height = 64;
+	  const ctx = canvas.getContext('2d');
+
+	  // Sfondo azzurro sfumato
+	  const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+	  gradient.addColorStop(0.0, '#54cdff');// Azzurro chiaro ai bordi
+	  gradient.addColorStop(0.3, '#1070d0'); // Azzurro scuro al centro
+	  gradient.addColorStop(0.7, '#1070d0'); // Azzurro scuro al centro
+	  gradient.addColorStop(1.0, '#54cdff');// Azzurro chiaro ai bordi
+	  ctx.fillStyle = gradient;
+	  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+	  // Strisce di schiuma bianca (dettagli di corrente)
+	  ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; // Bianco semi-trasparente
+	  for (let i = 0; i < 20; i++) {
+		const x = Math.random() * canvas.width;
+		const y = Math.random() * canvas.height;
+		const w = 20 + Math.random() * 20; // Lunghezza striscia
+		const h = 4 + Math.random() * 2;   // Spessore
+		ctx.fillRect(x, y, w, h);
+	  }
+
+	  const texture = new THREE.CanvasTexture(canvas);
+	  // Abilita la ripetizione infinita della texture sull'asse X
+	  texture.wrapS = THREE.RepeatWrapping; 
+	  texture.wrapT = THREE.ClampToEdgeWrapping;
+	  
+	  return texture;
+	}
+	const riverTextureLeft = createAnimatedRiverTexture();
+	const riverTextureRight = createAnimatedRiverTexture();
+	
+	
+	
+	function getObjectColorByZ(z) {
+		let isLight = z % 2 === 0;
+		
+		if (z>-5) return colors[0];
+	  
+	    let colorIdx = ((-z * 0.025)|0) % colors.length;
+		return colors[colorIdx];
+	}
+	
+	
+	//ZAMPETTE BONUS!!!
+	const PAW_POINTS = 10;
+	const PAW_CHANCE = 0.15; // probabilità per corsia d'erba
+	let bonusScore = 0;
+	const pawPrints = [];
+
+	const pawMat = new THREE.MeshLambertMaterial({ color: 0xff8800, emissive: 0x664400 });
+
+	// Zampetta voxel su griglia 9x9: [colonna, riga, larghezza, altezza]
+	// riga 0 = punta delle dita (verso l'alto dello schermo)
+	const PAW_CELL = 0.075;
+	const PAW_RECTS = [
+	  [2, 2, 2, 2], [4.5, 1, 2, 2], [7, 2, 2, 2], // polpastrelli
+	  [2, 5, 6, 3],				                // cuscinetto (corpo)
+	];
+
+	function buildPawGeometry() {
+	  const pos = [], nor = [], idx = [];
+	  let offset = 0;
+	  PAW_RECTS.forEach(([c, r, w, h]) => {
+		const g = new THREE.BoxGeometry(w * PAW_CELL, 0.1, h * PAW_CELL);
+		g.translate((c + w / 2 - 4.5) * PAW_CELL, 0, (r + h / 2 - 4.5) * PAW_CELL);
+		pos.push(...g.attributes.position.array);
+		nor.push(...g.attributes.normal.array);
+		g.index.array.forEach(i => idx.push(i + offset));
+		offset += g.attributes.position.count;
+		g.dispose();
+	  });
+	  const geo = new THREE.BufferGeometry();
+	  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+	  geo.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+	  geo.setIndex(idx);
+	  return geo;
+	}
+	const pawGeo = buildPawGeometry();
+
+	function createPawPrintMesh() {
+	  const root = new THREE.Group();          // orientamento verso lo schermo + fluttuazione
+	  const paw = new THREE.Mesh(pawGeo, pawMat);
+	  paw.rotation.x = 0.5;                    // inclinata verso la camera
+	  //paw.scale.setScalar(0.9);
+	  paw.castShadow = true;
+	  root.add(paw);
+	  applyCurrentVisualMode(root);
+	  return root;
+	}
+
+	function updateScoreBoard() {
+	  document.getElementById('score-board').innerText = score + bonusScore;
+	}
+
+	function showScorePop(x, y, text) {
+	  const el = document.createElement('div');
+	  el.className = 'score-pop';
+	  el.style.left = x + 'px';
+	  el.style.top = y + 'px';
+	  el.textContent = text;
+	  document.body.appendChild(el);
+	  setTimeout(() => el.remove(), 800);
+	}
+
+	function collectPawAt(x, z) {
+	  const lane = lanes.find(l => l.z === z);
+	  const paw = lane && lane.paw;
+	  if (!paw || paw.x !== x) return;
+	  scene.remove(paw.mesh);
+	  disposeObject3D(paw.mesh);
+	  const i = pawPrints.indexOf(paw);
+	  if (i !== -1) pawPrints.splice(i, 1);
+	  lane.paw = null;
+	  bonusScore += PAW_POINTS;
+	  updateScoreBoard();
+	  playSound('bonusSound');
+	  const p = worldToScreen(paw.x, 0.8, paw.z);
+	  showScorePop(p.x, p.y, '+' + PAW_POINTS);
+	}
+	
+	
+    // --- CORSIE ---
+    function createLane(z) {
+	  if (lanes.some(lane => lane.z === z)) return;
+	  
+	  let nextLane = lanes.find(lane => lane.z === z+1);
+	  
+	  let type = 'grass';
+	  const rand = Math.random();
+	  
+	  //rocky va in citta, all'inizio e' campagna...
+      if (z < -50) {
+		if (rand < 0.30) type = 'road';//25% strada
+		else if (rand < 0.50) type = 'river';//25% fiume
+		else if (rand < 0.75) type = 'track';//25% binari
+	  } else if (z < -5) {
+	  	if (rand < 0.20) type = 'road';//20% strada
+		else if (rand < 0.40) type = 'river';//20% fiume
+		else if (rand < 0.60) type = 'track';//20% binari
+      }
+	  
+	  if (nextLane && nextLane.type === 'river') type = z % 2 ? 'river' : 'grass';//erba dopo il fiume
+	  if (type === 'river' && nextLane && nextLane.type === 'track') type = 'grass';//no fiume attaccato a ferrovia!
+
+	  const laneDecor = [];//decorazioni
+	  
+      let laneGeo, laneMat;
+      let laneY = -0.1;
+      
+      let isLight = z % 2 === 0;
+	  let isWhiteLine = z % 6;	
+
+	  let color = getObjectColorByZ(z);
+	  
+	  
+      if (type === 'grass') {
+        laneGeo = new THREE.BoxGeometry(BOARD_WIDTH, 0.2, 1);
+		laneMat = new THREE.MeshLambertMaterial({ color: isLight ? color.grass.col1 : color.grass.col2 });
+      } else if (type === 'road') {
+        laneGeo = new THREE.BoxGeometry(BOARD_WIDTH, 0.2, 1);
+        laneMat = new THREE.MeshLambertMaterial({ color: isLight ? 0x444444 : 0x404040 });
+		
+		  if(nextLane && nextLane.type === 'road') {
+			  // --- CREAZIONE RIGHE TRATTEGGIATE BIANCHE ---
+			  const dashMat = new THREE.MeshLambertMaterial({ color: isWhiteLine ? 0xffffff : 0xeeee00 });
+			  const dashGeo = new THREE.BoxGeometry(0.4, 0.01, 0.08); // Segmenti tratteggiati spessi 1cm
+
+			  // Ciclo lungo la larghezza della mappa per posizionare i tratti
+			  for (let x = -BOARD_WIDTH / 2; x <= BOARD_WIDTH / 2; x += 1) {
+				// Striscia sul bordo inferiore della corsia (offset Z +0.46)
+				const dashBottom = new THREE.Mesh(dashGeo, dashMat);
+				dashBottom.position.set(x, 0.1, z + 0.56);
+				dashBottom.receiveShadow = true;
+				scene.add(dashBottom);
+
+			  }
+		  } else {
+			//linea continua?
+			const dashMat = new THREE.MeshLambertMaterial({ color: isWhiteLine ? 0xffffff : 0xeeee00 });
+			const dashGeo = new THREE.BoxGeometry(BOARD_WIDTH * 2, 0.01, 0.04); // Segmenti tratteggiati spessi 40cm
+			
+			// Striscia sul bordo superiore della corsia (offset Z -0.46)
+			const dashTop = new THREE.Mesh(dashGeo, dashMat);
+			dashTop.position.set(-BOARD_WIDTH/2, 0.01, z - 0.45);
+			dashTop.receiveShadow = true;
+			scene.add(dashTop);
+			
+			// Striscia sul bordo inferiore della corsia (offset Z +0.46)
+			const dashBottom = new THREE.Mesh(dashGeo, dashMat);
+			dashBottom.position.set(-BOARD_WIDTH/2, 0.01, z + 0.45);
+			dashBottom.receiveShadow = true;
+			scene.add(dashBottom);
+			
+			//decorazioni
+			laneDecor.push(dashTop);
+			laneDecor.push(dashBottom);
+		  }
+		  
+		  
+		  // --- STRISCE PEDONALI (ZEBRA CROSSING) ---
+		  if(Math.random() < 10.5 && nextLane && nextLane.type !== 'road') {
+				const stripeMat = new THREE.MeshLambertMaterial({ color: isWhiteLine ? 0xffffff : 0xeeee00 });
+				const stripeGeo = new THREE.BoxGeometry(0.8, 0.01, 0.10);
+				const stripeX = -5 + Math.random() * 10;
+
+				// Crea un blocco di strisce parallele
+				for (let zOffset = -0.30; zOffset <= 0.4; zOffset += 0.2) {
+				  	const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+					// Posizionate a Y = 0.105 per evitare z-fighting
+					stripe.position.set(stripeX, 0.105, z + zOffset);
+					stripe.receiveShadow = true;
+					scene.add(stripe);
+					
+					laneDecor.push(stripe);//decorazione
+				  }
+		  }
+			  
+      } else if (type === 'river') {
+        laneGeo = new THREE.BoxGeometry(BOARD_WIDTH, 0.15, 1);
+        laneMat = new THREE.MeshLambertMaterial({ color: isLight ? color.river.col1 : color.river.col2, map: z % 3 ? riverTextureLeft : riverTextureRight });
+        laneY = -0.15;
+      } else if (type === 'track') {
+        laneGeo = new THREE.BoxGeometry(BOARD_WIDTH, 0.2, 1);
+        laneMat = new THREE.MeshLambertMaterial({ color: isLight ? color.track.col1 : color.track.col2  });
+		
+		// Aggiunge la struttura 3D di binari e traverse
+		const trackStructure = createTrackMesh();
+		trackStructure.position.set(0, 0, z);
+		scene.add(trackStructure);
+		
+		laneDecor.push(trackStructure);//decorazione
+	  }
+
+      const laneMesh = new THREE.Mesh(laneGeo, laneMat);
+      laneMesh.position.set(0, laneY, z);
+      laneMesh.receiveShadow = true;
+      scene.add(laneMesh);
+
+      const laneData = { mesh: laneMesh, type: type, z: z, obstacles: [], decor: laneDecor };//decorazioni tracciate
+
+	  
+	  // Decorazione Bordi (Alberi, rocce o Gallerie)									  
+      for (let x = -Math.floor(BOARD_WIDTH / 2); x <= Math.floor(BOARD_WIDTH / 2); x++) {
+        const isBorder = Math.abs(x) > X_LIMIT || z === MIN_LANE;
+		const isQuasiBorder = Math.abs(x) > X_LIMIT - 1 || z === MIN_LANE - 1;
+		const isQuasiPlayerStart = Math.abs(x) < 2 && Math.abs(z) < 2;
+        
+        if (type === 'grass') {
+          const isPlayerStart = (x === 0 && z === 0);
+		  if (isBorder) {
+            const tree = Math.random() < color.prob ? createCactusMesh(color.cactus.col1, color.cactus.col2) : createTreeMesh(color.tree.col1, color.tree.col2);
+            tree.position.set(x, 0, z);
+            scene.add(tree);
+            laneData.obstacles.push(x);
+			laneData.decor.push(tree);//anche nelle decorazioni
+          } else if (isQuasiBorder && Math.random() < 0.5) {
+		    const tree = Math.random() < color.prob ? createCactusMesh(color.cactus.col1, color.cactus.col2) : createTreeMesh(color.tree.col1, color.tree.col2);
+            tree.position.set(x, 0, z);
+            scene.add(tree);
+            laneData.obstacles.push(x);
+			laneData.decor.push(tree);//anche nelle decorazioni
+		  } else if (!isPlayerStart && !isQuasiPlayerStart) {
+            const rand = Math.random();
+            if (rand < 0.10) {
+              const tree = Math.random() < color.prob ? createCactusMesh(color.cactus.col1, color.cactus.col2) : createTreeMesh(color.tree.col1, color.tree.col2);
+              tree.position.set(x, 0, z);
+              scene.add(tree);
+              laneData.obstacles.push(x);
+			  laneData.decor.push(tree);//anche nelle decorazioni
+            } else if (rand < 0.15) {
+              const rock = createRockMesh();
+              rock.position.set(x, 0, z);
+              scene.add(rock);
+              laneData.obstacles.push(x);
+			  laneData.decor.push(rock);//anche nelle decorazioni
+            }
+          }
+        } else {
+          if (isBorder) {
+			if(type === 'track' || type === 'road') {
+				const tunnel = createTunnelPortal();
+				tunnel.position.set(x, 0, z);
+				tunnel.rotation.y = x < 0 ? Math.PI / 2 : -Math.PI / 2;
+				scene.add(tunnel);
+				laneData.decor.push(tunnel);//anche nelle decorazioni
+			} else {
+				const tree = Math.random() < color.prob ? createCactusMesh(color.cactus.col1, color.cactus.col2) : createTreeMesh(color.tree.col1, color.tree.col2);
+				tree.position.set(x, 0, z);
+				scene.add(tree);
+				laneData.obstacles.push(x);
+				laneData.decor.push(tree);//anche nelle decorazioni
+			}
+		  }
+	    }
+      }//end loop
+
+
+	  //ZAMPETTE BONUS
+	  // Zampetta bonus: solo su erba, su una casella libera
+	  if (type === 'grass' && z < -2 && Math.random() < PAW_CHANCE) {
+	    const free = [];
+	    for (let x = -X_LIMIT; x <= X_LIMIT; x++) {
+	  	if (!laneData.obstacles.includes(x)) free.push(x);
+	    }
+	    if (free.length) {
+	  	const px = free[Math.floor(Math.random() * free.length)];
+	  	const mesh = createPawPrintMesh();
+	  	mesh.position.set(px, 0.3, z);
+	  	scene.add(mesh);
+	  	laneData.paw = { mesh, x: px, z };
+	  	pawPrints.push(laneData.paw);
+	    }
+	  }
+
+
+
+	  // Impostazioni velocità e spawn							   
+      if (type === 'road') {
+        laneData.speed = (Math.random() * 0.025 + 0.018) * (Math.random() > 0.5 ? 1 : -1);
+        laneData.spawnTimer = 0;
+        laneData.spawnInterval = Math.random() * 240 + 240;
+	  }
+		
+	  if (type === 'river') {
+		laneData.speed = (Math.random() * 0.02 + 0.01) * (z % 3 ? 1 : -1);
+        laneData.spawnTimer = 0;
+        laneData.spawnInterval = Math.random() * 240 + 120;
+	  }
+	  
+	  if (type === 'track') {
+	  	laneData.speed = (Math.random() * 0.030 + 0.020) * (Math.random() > 0.5 ? 1 : -1);
+        laneData.spawnTimer = 0;
+        laneData.spawnInterval = Math.random() * 480 + 720;
+	  }
+
+	  // 50% di possibilità di avere un semaforo su questa strada
+		if (type === 'road' && Math.random() < 0.5 && nextLane && nextLane.type !== 'road') {
+				const trafficLightMesh = createTrafficLightMesh();
+				// Posizioniamo il semaforo a bordo strada (es. x = 5)
+				trafficLightMesh.position.set(-5 + Math.random() * 10, 0, z + 0.6);
+				scene.add(trafficLightMesh);
+
+				laneData.trafficLight = {
+				  mesh: trafficLightMesh,
+				  state: 'green', // 'green' o 'red'
+				  timer: 0,
+				  isTrainSignal: false,
+				  switchInterval: 300 // Cambia stato ogni ~5 secondi (300 frame)
+				};
+		}
+		
+		if (type === 'track' && Math.random() < 0.75 && nextLane && nextLane.type !== 'road') {
+			const trafficLightMesh = createTrainSignalMesh();
+				// Posizioniamo il semaforo a bordo strada (es. x = 5)
+				trafficLightMesh.position.set(-5 + Math.random() * 10, 0, z + 0.6);
+				scene.add(trafficLightMesh);
+
+				laneData.trafficLight = {
+				  mesh: trafficLightMesh,
+				  state: 'green', // 'green' o 'red'
+				  timer: 0,
+				  isTrainSignal: true,
+				  switchInterval: 300 // Cambia stato ogni ~5 secondi (300 frame)
+				};
+		}
+
+      lanes.push(laneData);
+    }
+
+
+	/*
+	// --- NUVOLE IN ALTO NEL CIELO ---
+	const cloudGroup = new THREE.Group();
+	scene.add(cloudGroup);
+
+	// Creazione di una singola nuvola con blocchi voxel
+	function createCloudMeshSOLID() {
+	  const group = new THREE.Group();
+	  const mat = new THREE.MeshLambertMaterial({ 
+		color: 0xffffff, 
+		transparent: true, 
+		opacity: 0.75 
+	  });
+
+	  // Genera un cluster casuale di 3-6 cubi vicini
+	  const count = 3 + Math.floor(Math.random() * 3);
+	  for (let i = 0; i < count; i++) {
+		const w = 1.2 + Math.random() * 1.5;
+		const h = 0.6 + Math.random() * 0.3;
+		const d = 1.0 + Math.random() * 1.2;
+		const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+		mesh.position.set(
+		  (Math.random() - 0.5) * 2,
+		  (Math.random() - 0.5) * 0.2,
+		  (Math.random() - 0.5) * 1.5
+		);
+		group.add(mesh);
+	  }
+	  return group;
+	}
+
+	function createClouds() {
+		for (let i = 0; i < NUM_CLOUDS; i++) {
+		  const cloud = createCloudMesh();
+		  const x = (Math.random() - 0.5) * (BOARD_WIDTH - 6);
+		  const y = 5 + Math.random() * 2; // Altezza nel cielo
+		  const z = -20 + Math.random() * 100;
+		  cloud.position.set(x, y, z);
+		  
+		  const speed = 0.005 + Math.random() * 0.01; // Velocità di scorrimento
+		  clouds.push({ mesh: cloud, speed: speed });
+		  cloudGroup.add(cloud);
+		}
+	}
+	
+	
+	function createFogTexture() {
+	  const size = 128;
+	  const canvas = document.createElement('canvas');
+	  canvas.width = canvas.height = size;
+	  const ctx = canvas.getContext('2d');
+	  const gradient = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+	  gradient.addColorStop(0, 'rgba(255,255,255,0.9)');
+	  gradient.addColorStop(0.5, 'rgba(255,255,255,0.35)');
+	  gradient.addColorStop(1, 'rgba(255,255,255,0)');
+	  ctx.fillStyle = gradient;
+	  ctx.fillRect(0, 0, size, size);
+	  return new THREE.CanvasTexture(canvas);
+	}
+	const fogTexture = createFogTexture();
+	
+	function createCloudMesh() {
+	  const group = new THREE.Group();
+	  const count = 4 + Math.floor(Math.random() * 8); // "branco" di 4-7 batuffoli
+	  for (let i = 0; i < count; i++) {
+		const scale = 1.2 + Math.random() * 1.8;
+		const mat = new THREE.SpriteMaterial({
+		  map: fogTexture,
+		  transparent: true,
+		  opacity: 0.5 + Math.random() * 0.3,
+		  depthWrite: false
+		});
+		const sprite = new THREE.Sprite(mat);
+		sprite.scale.set(scale, scale * 0.6, 1);
+		sprite.position.set(
+		  (Math.random() - 0.5) * 2.5,
+		  (Math.random() - 0.5) * 0.4,
+		  (Math.random() - 0.5) * 2
+		);
+		group.add(sprite);
+	  }
+	  return group;
+	}
+
+	// Aggiorna la posizione delle nuvole a ogni frame
+	function updateClouds() {
+	  clouds.forEach(c => {
+		c.mesh.position.z -= c.speed;
+		if (Math.abs(c.mesh.position.z - playerPos.z) > (BOARD_WIDTH - 3)) {
+		  c.mesh.position.z = playerPos.z + (Math.random() - 0.5) * 4;
+		}
+	  });
+	}
+
+	// Genera un set iniziale di nuvole
+	const clouds = [];
+	const NUM_CLOUDS = 10;
+	createClouds();
+	*/
+	
+	//pulizia lane vecchie
+	function disposeObject3D(obj) {
+	  obj.traverse(child => {
+		if (child.isMesh) {
+		  if (child.geometry) child.geometry.dispose();
+		  const mats = Array.isArray(child.material) ? child.material : [child.material];
+		  mats.forEach(mat => mat && mat.dispose());
+		  // NB: non disporre mat.map! riverTextureLeft/riverTextureRight sono
+		  // condivise tra tutte le corsie fiume: distruggerle romperebbe l'acqua altrove.
+		}
+	  });
+	}
+
+	function removeLane(lane) {
+	  scene.remove(lane.mesh);
+	  disposeObject3D(lane.mesh);
+	  lane.decor.forEach(m => { scene.remove(m); disposeObject3D(m); });
+	  if (lane.trafficLight?.mesh) {
+		scene.remove(lane.trafficLight.mesh);
+		disposeObject3D(lane.trafficLight.mesh);
+	  }
+	  if (lane.paw) {
+	    scene.remove(lane.paw.mesh);
+		disposeObject3D(lane.paw.mesh);
+	    const i = pawPrints.indexOf(lane.paw);
+	    if (i !== -1) pawPrints.splice(i, 1);
+	  }
+	}
+
+	const LANE_CLEANUP_MARGIN = 30; // oltre il limite di retrocessione (leash di 20 tile)
+
+	function cleanupOldLanes() {
+	  for (let i = lanes.length - 1; i >= 0; i--) {
+		if (lanes[i].z > maxZReached + LANE_CLEANUP_MARGIN) {
+		  removeLane(lanes[i]);
+		  lanes.splice(i, 1);
+		}
+	  }
+	}
+	
+	
+	
+	
+	
+	
+	
+
+    for (let z = MIN_LANE; z > MAX_LANE; z--) {
+      createLane(z);
+    }
+
+    player = createPlayerRockyGraffietto();
+    playSpawnEffect(player.position);
+
+    // --- CONTROLLI UTENTE ---
+	function shortestAngleDiff(current, target) {
+      let diff = (target - current) % (Math.PI * 2);
+      if (diff > Math.PI) diff -= Math.PI * 2;
+      if (diff < -Math.PI) diff += Math.PI * 2;
+      return diff;
+    }
+    
+    function updatePlayerRotation() {
+      const diff = shortestAngleDiff(player.rotation.y, targetPlayerRotationY);
+      player.rotation.y += diff * 0.33; // velocità di rotazione, regola a piacere
+      if (Math.abs(diff) < 0.01) player.rotation.y = targetPlayerRotationY;
+    }
+
+    // Logica di movimento condivisa da tastiera (frecce/WASD) e D-pad touch
+    function attemptMove(direction) {
+      if (!gameStarted || isJumping || isDying) return;
+
+      const startX = Math.round(playerPos.x);
+      const startZ = Math.round(playerPos.z);
+
+      let nextX = startX;
+      let nextZ = startZ;
+	  /*
+      if (direction === 'up') {
+        nextZ -= GRID;
+        player.rotation.y = 0;
+      } else if (direction === 'down') {
+        nextZ += GRID;
+        player.rotation.y = Math.PI;
+      } else if (direction === 'left') {
+        nextX -= GRID;
+        player.rotation.y = Math.PI / 2;
+      } else if (direction === 'right') {
+        nextX += GRID;
+        player.rotation.y = -Math.PI / 2;
+      } else {
+        return;
+      }
+	  */
+	  if (direction === 'up') {
+	    if (immediateRotation || player.rotation.y === 0) nextZ -= GRID;
+	    targetPlayerRotationY = 0;
+	  } else if (direction === 'down') {
+	    if (immediateRotation || player.rotation.y === Math.PI) nextZ += GRID;
+	    targetPlayerRotationY = Math.PI;
+	  } else if (direction === 'left') {
+	    if (immediateRotation || player.rotation.y === Math.PI/2) nextX -= GRID;
+	    targetPlayerRotationY = Math.PI / 2;
+	  } else if (direction === 'right') {
+	    if (immediateRotation || player.rotation.y === -Math.PI/2) nextX += GRID;
+	    targetPlayerRotationY = -Math.PI / 2;
+	  } else {
+	    return;
+	  }
+
+      if (Math.abs(nextX) > X_LIMIT) return;
+      if (nextZ > maxZReached + 20) return;
+
+      const targetLane = lanes.find(l => l.z === nextZ);
+      if (targetLane && targetLane.obstacles.includes(nextX)) {
+        return;
+      }
+
+      playerPos.x = startX;
+      playerPos.z = startZ;
+      targetPos.x = nextX;
+      targetPos.z = nextZ;
+      jumpProgress = 0;
+      isJumping = true;
+
+	  /*
+      if (-targetPos.z > score) {
+        score = -targetPos.z;
+        document.getElementById('score-board').innerText = score;
+        createLane(targetPos.z - 25);
+      }*/
+	  if (-targetPos.z > score) {
+        score = -targetPos.z;
+        updateScoreBoard();              // era: document.getElementById('score-board').innerText = score;
+        createLane(targetPos.z - 25);
+      }
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+        attemptMove('up');
+      } else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+        attemptMove('down');
+      } else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+        attemptMove('left');
+      } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+        attemptMove('right');
+      }
+    });
+
+    // --- ROTAZIONE CAMERA A CALDO (Q / E), NEBBIA (F / G), PLAYER (P) ---
+    window.addEventListener('keydown', (e) => {
+      if (!gameStarted) return;
+      if (e.key === 'q' || e.key === 'Q') {
+		targetCameraAngle -= Math.PI / 9;
+      } else if (e.key === 'e' || e.key === 'E') {
+        targetCameraAngle += Math.PI / 9;
+      } /*else if (e.key === 'f' || e.key === 'F') {
+		scene.fog = new THREE.Fog(0x87ceeb, BOARD_WIDTH / 2, -MAX_LANE / 2)
+	  } else if (e.key === 'g' || e.key === 'G') {
+		scene.fog = new THREE.Fog(0x87ceeb, BOARD_WIDTH, -MAX_LANE)
+	  }  */else if (e.key === 'p' || e.key === 'P') {
+		togglePlayerModel();
+	  } else if (e.key === 'm' || e.key === 'M') {
+		isMute = !isMute; updateMusic();
+      }
+    });
+
+    // --- MOVIMENTO A TAP: click/tocco vicino al player determina la direzione ---
+
+    // Proietta una posizione 3D del mondo in coordinate pixel sullo schermo (relative al canvas)
+    function worldToScreen(x, y, z) {
+      const vector = new THREE.Vector3(x, y, z);
+      vector.project(camera);
+      const rect = renderer.domElement.getBoundingClientRect();
+      return {
+        x: (vector.x * 0.5 + 0.5) * rect.width,
+        y: (1 - (vector.y * 0.5 + 0.5)) * rect.height
+      };
+    }
+
+    // Determina la direzione di movimento confrontando l'angolo del click rispetto al player
+    // con l'angolo (sullo schermo, tenendo conto della rotazione camera) di ciascuna cella adiacente:
+    // così "davanti/dietro/sinistra/destra" seguono sempre ciò che si vede a video, anche a camera ruotata.
+    function screenPositionToDirection(clientX, clientY) {
+      const rect = renderer.domElement.getBoundingClientRect();
+      const playerScreen = worldToScreen(playerPos.x, 0, playerPos.z);
+
+      const clickVec = { x: (clientX - rect.left) - playerScreen.x, y: (clientY - rect.top) - playerScreen.y };
+      const clickLen = Math.hypot(clickVec.x, clickVec.y);
+      if (clickLen < 4) return null; // click troppo vicino al player: ignora
+
+      const candidates = {
+        up:    worldToScreen(playerPos.x, 0, playerPos.z - 1),
+        down:  worldToScreen(playerPos.x, 0, playerPos.z + 1),
+        left:  worldToScreen(playerPos.x - 1, 0, playerPos.z),
+        right: worldToScreen(playerPos.x + 1, 0, playerPos.z)
+      };
+
+      let bestDir = null;
+      let bestCos = -Infinity;
+
+      for (const dir in candidates) {
+        const c = candidates[dir];
+        const dirVec = { x: c.x - playerScreen.x, y: c.y - playerScreen.y };
+        const dirLen = Math.hypot(dirVec.x, dirVec.y) || 1;
+        const cos = (dirVec.x * clickVec.x + dirVec.y * clickVec.y) / (dirLen * clickLen);
+        if (cos > bestCos) {
+          bestCos = cos;
+          bestDir = dir;
+        }
+      }
+
+      return bestDir;
+    }
+
+    function showTapRipple(clientX, clientY) {
+      const ripple = document.createElement('div');
+      ripple.className = 'tap-ripple';
+      ripple.style.left = clientX + 'px';
+      ripple.style.top = clientY + 'px';
+      document.body.appendChild(ripple);
+      setTimeout(() => ripple.remove(), 350);
+    }
+
+    renderer.domElement.style.touchAction = 'none';
+    renderer.domElement.addEventListener('pointerdown', (e) => {
+      if (!gameStarted) return;
+      const dir = screenPositionToDirection(e.clientX, e.clientY);
+      if (dir) {
+        showTapRipple(e.clientX, e.clientY);
+        attemptMove(dir);
+      }
+    });
+
+    // --- CONTROLLI TOUCH: ROTAZIONE CAMERA, NEBBIA, PLAYER ---
+    function bindTouchButton(id, handler) {
+      const el = document.getElementById(id);
+      el.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handler();
+      });
+      el.addEventListener('contextmenu', (e) => e.preventDefault());
+    }
+
+    bindTouchButton('btn-rot-left', () => {
+      if (!gameStarted) return;
+      targetCameraAngle -= Math.PI / 9;
+    });
+    bindTouchButton('btn-rot-right', () => {
+      if (!gameStarted) return;
+      targetCameraAngle += Math.PI / 9;
+    });
+
+    /*
+	let fogEnabled = false;
+    bindTouchButton('btn-fog', () => {
+      if (!gameStarted) return;
+      fogEnabled = !fogEnabled;
+	  if (fogEnabled) 
+		scene.fog = new THREE.Fog(0x87ceeb, BOARD_WIDTH / 2, -MAX_LANE / 2);
+	  else
+		scene.fog = new THREE.Fog(0x87ceeb, BOARD_WIDTH, -MAX_LANE);
+      document.getElementById('btn-fog').classList.toggle('toggled-on', fogEnabled);
+    });
+	*/
+	
+	bindTouchButton('btn-wireframe', () => {
+		isWireframe = !isWireframe;
+		toggleWorldWireframeOverlay(scene, isWireframe);
+		document.getElementById('btn-wireframe').classList.toggle('toggled-on', isWireframe);
+	});
+
+	bindTouchButton('btn-godmode', () => {
+		isGod = !isGod;
+		document.getElementById('btn-godmode').classList.toggle('toggled-on', isGod);
+	});
+
+	bindTouchButton('btn-mute', () => {
+		isMute = !isMute; 
+		updateMusic();
+	});
+
+	const infoOverlay = document.getElementById('info-overlay');
+	const infoButton = document.getElementById('btn-info');
+	const infoCloseButton = document.getElementById('info-close-btn');
+
+	function toggleInfoPopup(forceOpen) {
+	  const shouldOpen = typeof forceOpen === 'boolean'
+	    ? forceOpen
+	    : !infoOverlay.classList.contains('visible');
+
+	  infoOverlay.classList.toggle('visible', shouldOpen);
+	  infoOverlay.setAttribute('aria-hidden', shouldOpen ? 'false' : 'true');
+	}
+
+	bindTouchButton('btn-info', () => {
+	  toggleInfoPopup(true);
+	});
+
+	infoCloseButton.addEventListener('pointerdown', (event) => {
+	  event.preventDefault();
+	  event.stopPropagation();
+	  toggleInfoPopup(false);
+	});
+	infoCloseButton.addEventListener('contextmenu', (e) => e.preventDefault());
+
+	infoOverlay.addEventListener('pointerdown', (event) => {
+	  if (event.target === infoOverlay) {
+		event.preventDefault();
+		toggleInfoPopup(false);
+	  }
+	});
+	
+
+	function updateMusic() {
+      const m1 = document.getElementById("musicSound1");
+	  const m2 = document.getElementById("musicSound2");
+      if (!m1 || !m2) return;
+	  
+	  document.getElementById('btn-mute').innerText = isMute ? '🔇' : '🎵';
+
+      if (isMute) {
+        m1.pause();
+		m2.pause();
+		let sounds = ["trainSound","policeSound","splashSound"];
+		sounds.forEach(s => {
+			let elem = document.getElementById(s);
+			if (elem) elem.pause();
+		});
+        return;
+      }
+	  
+	  var chooseMusic = new Date().getSeconds() % 2;
+	  
+	  if (chooseMusic) {
+		  if (m2.paused) {
+			m2.volume = 0.5;
+			m2.play().catch(function(){});
+			m1.pause();
+		  }
+	  } else {
+		  if (m1.paused) {
+			m1.volume = 0.5;
+			m1.play().catch(function(){});
+			m2.pause();
+		  }
+	  }
+    }
+
+    function playSound(id, vol = 1) {
+      if (isMute) return;
+      const audio = document.getElementById(id);
+      if (audio) {
+        //audio.currentTime = 0;
+        audio.volume = vol;
+        audio.play();
+      }
+    }
+
+    bindTouchButton('btn-player', () => {
+      if (!gameStarted) return;
+      togglePlayerModel();
+    });
+
+    // --- POPUP INIZIALE: AVVIO PARTITA ---
+    document.getElementById('play-btn').addEventListener('click', () => {
+      gameStarted = true;
+      document.getElementById('start-overlay').style.display = 'none';
+	  updateMusic();
+    });
+	
+	
+    // --- RESPAWN SICURO ---
+    function handleDeath() {
+      if (isDying) return;
+      isDying = true;
+
+      playDeathMarker(player.position);
+      player.visible = false;
+
+	  playSound(currentPlayerDeadSound);
+
+      setTimeout(() => {
+        const safeIndex = Math.max(0, moveHistory.length - 1);///xxx - 4
+        const respawnPoint = moveHistory[safeIndex] || { x: 0, z: 0 };
+        
+        const safeX = Math.round(respawnPoint.x);
+        const safeZ = Math.round(respawnPoint.z);
+
+        moveHistory = moveHistory.slice(0, safeIndex + 1);
+
+        playerPos = { x: safeX, z: safeZ };
+        targetPos = { x: safeX, z: safeZ };
+		
+		player.rotation.y = 0;
+		targetPlayerRotationY = 0;
+
+        player.position.set(safeX, 0, safeZ);
+        player.rotation.y = 0;
+        player.visible = true;
+        playSpawnEffect(player.position);
+
+        isJumping = false;
+        jumpProgress = 0;
+        isDying = false;
+      }, 1500);
+    }
+
+	function setCameraAndLights() {
+	  cameraAngle = THREE.MathUtils.lerp(cameraAngle, targetCameraAngle, 0.1);
+	  if(Math.abs(cameraAngle - targetCameraAngle)<0.0001) cameraAngle = targetCameraAngle;//fix zompetti
+	  
+      const rotatedOffset = getRotatedCameraOffset();
+
+      camera.position.z = THREE.MathUtils.lerp(camera.position.z, player.position.z + rotatedOffset.z, 0.08);
+      camera.position.x = THREE.MathUtils.lerp(camera.position.x, player.position.x + rotatedOffset.x, 0.08);
+	  
+	  //fix zompetti
+      if (cameraAngle !== targetCameraAngle) {
+		camera.lookAt(player.position.x, player.position.y, player.position.z);
+		//console.log(cameraAngle, targetCameraAngle);
+	  }	  
+      
+	  let sunHeight = new Date().getHours();//4..5..6......24..23..22.....4
+      if (sunHeight <= 12) sunHeight = 4 + (sunHeight * 20 / 12);
+	  else sunHeight = 24 - ((sunHeight - 12) * 20 / 12);
+	  
+      dirLightTarget.position.set(player.position.x, 0, player.position.z);
+      dirLight.position.set(player.position.x + 15, sunHeight, player.position.z + 10);//era 25, quasi a mezzogiorno
+	}
+	
+	
+	
+	function updateClippingPlanes() {
+	  clipFront.constant = -(player.position.z - VISIBLE_AHEAD);
+	  clipBack.constant  =  (player.position.z + VISIBLE_BEHIND);
+	}
+	
+    
+	//FPS PER DELFINI CURIOSI!
+	const fpsEl = document.getElementById('fps-counter');
+	let fpsFrames = 0;
+	let fpsLast = performance.now();
+	let fpsVisible = location.search.includes('fps');   // apri la pagina con ?fps per averlo subito
+	fpsEl.style.display = fpsVisible ? 'block' : 'none';
+
+	function toggleFps() {
+	  fpsVisible = !fpsVisible;
+	  fpsEl.style.display = fpsVisible ? 'block' : 'none';
+	}
+	window.addEventListener('keydown', (e) => {
+	  if (e.key === 'f' || e.key === 'F') toggleFps();          // desktop: tasto F
+	});
+	document.getElementById('score-board')
+	  .addEventListener('pointerdown', toggleFps);              // mobile: tocca il punteggio
+
+	function updateFps(now) {
+	  fpsFrames++;
+	  if (now - fpsLast < 500) return;
+	  if (fpsVisible) {
+		const fps = Math.round(fpsFrames * 1000 / (now - fpsLast));
+		const info = renderer.info;
+		fpsEl.textContent =
+		  fps + ' fps\n' +
+		  info.render.calls + ' draw calls\n' +
+		  info.render.triangles + ' tri\n' +
+		  info.memory.geometries + ' geo';
+	  }
+	  fpsFrames = 0;
+	  fpsLast = now;
+	}
+
+	// --- LOOP DI ANIMAZIONE ---
+	const FRAME_MS = 1000 / 60;
+	let lastFrameTime = 0;
+	
+
+	function animate(now = 0) {
+	  requestAnimationFrame(animate);
+	
+	  /* limite a 60fps */
+	  const elapsed = now - lastFrameTime;
+	  if (elapsed < FRAME_MS - 1) return;
+	  lastFrameTime = now - (elapsed % FRAME_MS);
+	
+      // 1. ANIMAZIONE SALTO
+      if (isJumping && !isDying) {
+        jumpProgress += 0.12; 
+        player.position.x = THREE.MathUtils.lerp(playerPos.x, targetPos.x, jumpProgress);
+        player.position.z = THREE.MathUtils.lerp(playerPos.z, targetPos.z, jumpProgress);
+        player.position.y = Math.sin(jumpProgress * Math.PI) * 0.4;
+
+        if (jumpProgress >= 1) {
+          isJumping = false;
+          jumpProgress = 0;
+          playerPos.x = targetPos.x;
+          playerPos.z = targetPos.z;
+          player.position.y = 0;
+		  
+		  collectPawAt(Math.round(playerPos.x), playerPos.z);//ZAMPETTE BONUS
+          
+          if (playerPos.z < maxZReached) {
+            maxZReached = playerPos.z;
+			if (maxZReached % 5 === 0) cleanupOldLanes();//pulizia lane vecchie ogni 5 passi
+          }
+
+		  if (lanes.find(x => x.z === playerPos.z && x.type === 'grass')) {
+			moveHistory.push({ x: Math.round(playerPos.x), z: Math.round(playerPos.z) });
+			if(moveHistory.length > 10) moveHistory.shift();//pulizia history
+		  }
+        }
+      }
+	  
+	  updatePlayerRotation();
+	  
+	  const tPaw = performance.now() * 0.004;
+	  for (const p of pawPrints) {
+	    if (Math.abs(p.z - player.position.z) > 14) continue;
+	    p.mesh.rotation.y += 0.03;
+	    p.mesh.position.y = 0.3 + Math.sin(tPaw + p.x) * 0.06;
+	  }
+
+	  
+      // 2. CAMERA E LUCI
+	  setCameraAndLights();
+	  updateClippingPlanes();
+	  
+	  //updateClouds();
+	  
+	  //fiume
+	  if (riverTextureLeft && riverTextureRight) {
+		riverTextureLeft.offset.x -= 0.002;
+		riverTextureRight.offset.x += 0.002;
+	  }
+      
+      // 3. SPAWN OSTACOLI
+      lanes.forEach(lane => {
+        if (lane.type === 'road' || lane.type === 'river' || lane.type === 'track') {
+          lane.spawnTimer++;
+          if (lane.spawnTimer > lane.spawnInterval) {
+            lane.spawnTimer = 0;
+            
+			// TRENO!
+			if (lane.type === 'track') {
+              const lastVehicleOnLane = cars.filter(c => c.z === lane.z);
+              let canSpawn = true;
+              
+              const wagonsCount = Math.floor(Math.random() * 2) + 2;
+              const totalLength = 2.4 + wagonsCount * (2.4 + 0.2);
+              const margin = totalLength + 4;
+              const trainStartX = lane.speed > 0 ? -BOARD_WIDTH / 2 - margin : BOARD_WIDTH / 2 + margin;
+
+              for (let v of lastVehicleOnLane) {
+				// La distanza di sicurezza deve tenere conto della lunghezza di ENTRAMBI
+                // i treni (quello nuovo e quello già presente), non solo del nuovo:
+                // altrimenti un treno esistente più lungo può restare "scoperto" oltre
+                // la soglia e il nuovo treno gli spawna sopra i vagoni.
+                const requiredGap = totalLength + (v.width || 0) + 2;
+                if (Math.abs(v.mesh.position.x - trainStartX) < requiredGap) {
+                  canSpawn = false;
+                  break;
+                }
+              }
+
+              if (canSpawn) {
+                const train = createTrainMesh(wagonsCount);
+                train.position.set(trainStartX, 0, lane.z);
+
+                if (lane.speed < 0) {
+                  train.rotation.y = Math.PI;
+                }
+
+                scene.add(train);
+				
+                cars.push({
+                  mesh: train,
+                  speed: lane.speed,
+                  z: lane.z,
+                  width: totalLength,
+                  isTrain: true
+                });
+              }
+            }
+
+			//strada
+            if (lane.type === 'road') {
+              // Verifica che non ci siano veicoli troppo vicini allo spawn per evitare tamponamenti
+			  const startX = lane.speed > 0 ? -BOARD_WIDTH / 2 - 2 : BOARD_WIDTH / 2 + 2;
+              const lastVehicleOnLane = cars.filter(c => c.z === lane.z);
+              let canSpawn = true;
+              for (let v of lastVehicleOnLane) {
+                if (Math.abs(v.mesh.position.x - startX) < 4.5) {
+                  canSpawn = false;
+                  break;
+                }
+              }
+
+              if (canSpawn) {
+                const isTruck = Math.random() < 0.2;
+                const isPolice = Math.random() < 0.1;
+				const vehicle = isTruck ? createTruckMesh() : isPolice ? createCarPoliceMesh() : createCarMesh();
+				
+                vehicle.position.set(startX, 0, lane.z);
+                if (lane.speed < 0) vehicle.rotation.y = Math.PI;
+                scene.add(vehicle);
+                
+                cars.push({ 
+                  mesh: vehicle, 
+                  speed: lane.speed, 
+                  z: lane.z, 
+                  width: isTruck ? 2.8 : 1.5,
+				  isPolice: !isTruck && isPolice
+                });
+              }
+            }
+			
+			if (lane.type === 'river') {
+			  const startX = lane.speed > 0 ? -BOARD_WIDTH / 2 - 2 : BOARD_WIDTH / 2 + 2;
+			  const lastLogOnLane = logs.filter(c => c.z === lane.z);
+			  let canSpawn = true;
+              for (let v of lastLogOnLane) {
+			    if (Math.abs(v.mesh.position.x - startX) < 3) {
+				  canSpawn = false;
+                  break;
+                }
+              }
+			  
+			  if (canSpawn) {
+				  const logLengths = [2.2, 3.0, 1.5];
+				  const logLength = logLengths[Math.floor(Math.random() * logLengths.length)];
+				  
+				  const log = createLogMesh(logLength);
+				  log.position.set(startX, 0, lane.z);
+				  scene.add(log);
+				  logs.push({
+					mesh: log,
+					speed: lane.speed,
+					z: lane.z,
+					length: logLength,
+					lane: lane,
+					type: 'river'
+				  });
+		      }
+            }
+          }
+        }
+		
+		// --- AGGIORNAMENTO SEMAFORO / SEGNALE FERROVIARIO ---
+		if (lane.trafficLight) {
+		  if (lane.trafficLight.isTrainSignal) {
+			// Lampeggio orizzontale alternato, tipico passaggio a livello
+			const flashOn = Math.floor(performance.now() / 500) % 2 === 0;
+			const { leftLightMat, rightLightMat } = lane.trafficLight.mesh.userData;
+			leftLightMat.color.setHex(flashOn ? 0xff0000 : 0x330000);
+			rightLightMat.color.setHex(flashOn ? 0x330000 : 0xff0000);
+		  } else {
+			const seconds = Math.floor(performance.now() / 1000);
+			const isEven = seconds % 2 === 0;
+
+			if (isEven) {
+			  lane.trafficLight.state = 'red';
+			  lane.trafficLight.mesh.userData.redLightMat.color.setHex(0xff0000);
+			  lane.trafficLight.mesh.userData.greenLightMat.color.setHex(0x003300);
+			} else {
+			  lane.trafficLight.state = 'green';
+			  lane.trafficLight.mesh.userData.redLightMat.color.setHex(0x330000);
+			  lane.trafficLight.mesh.userData.greenLightMat.color.setHex(0x00ff00);
+			}
+		  }
+		}
+
+      });
+
+
+	  //calcola polizia/treno piu vicino
+	  let minPoliceDistance = 9999;
+	  let minTrainDistance = 9999;
+	  
+	  // 4. MOVIMENTO MACCHINE E COLLISIONI
+      for (let i = cars.length - 1; i >= 0; i--) {
+        const car = cars[i];
+        car.mesh.position.x += car.speed;
+				
+		if (car.isPolice || car.isTrain) {
+			let carDistanceZ = Math.abs(player.position.z - car.z);
+			let carDistanceX = Math.abs(player.position.x - car.mesh.position.x);
+			let carDistance = Math.sqrt(carDistanceZ * carDistanceZ + carDistanceX * carDistanceX);
+			
+			if(car.isPolice && carDistance < minPoliceDistance) {
+				//console.log('police', carDistance);
+				minPoliceDistance = carDistance;
+			} else if(car.isTrain && carDistance < minTrainDistance) {
+				//console.log('train', carDistance);
+				minTrainDistance = carDistance;			
+			}
+		}
+
+		if (car.isPolice && car.mesh && car.mesh.userData && car.mesh.userData.redMaterial && car.mesh.userData.blueMaterial && car.mesh.userData.policeLight) {
+			const flash = Math.floor(performance.now() / 500) % 2;
+			if (flash) {
+				// Stato 1: Rosso acceso, Blu spento
+				car.mesh.userData.redMaterial.color.setHex(0xff0000);
+				car.mesh.userData.blueMaterial.color.setHex(0x222255);
+				car.mesh.userData.policeLight.color.setHex(0xff0000);
+				car.mesh.userData.glowMaterialRed.color.setHex(0xff0000);
+				car.mesh.userData.glowMaterialBlue.color.setHex(0x000066); // spento/scuro
+			} else {
+				// Stato 2: Rosso spento, Blu acceso
+				car.mesh.userData.redMaterial.color.setHex(0x552222);
+				car.mesh.userData.blueMaterial.color.setHex(0x0000ff);
+				car.mesh.userData.policeLight.color.setHex(0x0000ff);
+				car.mesh.userData.glowMaterialRed.color.setHex(0x660000); // spento/scuro
+				car.mesh.userData.glowMaterialBlue.color.setHex(0x0000ff);
+			}
+		}
+
+        if (!isJumping && !isDying) {
+          const dz = Math.abs(player.position.z - car.z);
+  
+		  let hitBoxX = (car.width / 2) + 0.2;
+		  let carCenterX = car.mesh.position.x;
+
+		  // Offset hitbox se è un treno (poiché i vagoni si sviluppano all'indietro)
+		  if (car.isTrain) {
+			const dir = car.speed > 0 ? 1 : -1;
+			carCenterX -= (car.width / 2 - 1.2) * dir;
+		  }
+
+		  const dx = Math.abs(player.position.x - carCenterX);
+
+		  if (!isGod && dx < hitBoxX && dz < 0.4) {
+			handleDeath();
+		  }
+        }
+
+		// blocco di rimozione cars
+		const limitMargin = car.isTrain ? car.width + 6 : BOARD_WIDTH / 2 + 4;
+		if (Math.abs(car.mesh.position.x) > BOARD_WIDTH / 2 + limitMargin) {
+		  scene.remove(car.mesh);
+		  disposeObject3D(car.mesh);
+		  cars.splice(i, 1);
+		}
+      }
+
+	  //se esiste polizia/treno vicino -> SUONA!!!
+	  if (minPoliceDistance < 6) playSound('policeSound',  minPoliceDistance < 3 ? 1 : minPoliceDistance < 5 ? 0.33 : 0.1);
+	  if (minTrainDistance < 12) playSound('trainSound',  minTrainDistance < 3 ? 1 : minTrainDistance < 5 ? 0.66 : minTrainDistance < 8 ? 0.50 : minTrainDistance < 11 ? 0.25 : 0.1);  
+      
+
+
+      // 5. MOVIMENTO TRONCHI E FISICA FIUME
+      let onLog = false;
+
+		for (let i = logs.length - 1; i >= 0; i--) {
+		  const log = logs[i];
+
+		  // Un tronco può appartenere esclusivamente a una corsia fiume
+		  if (!log.lane || log.lane.type !== 'river') {
+			scene.remove(log.mesh);
+			disposeObject3D(log.mesh);
+			logs.splice(i, 1);
+			continue;
+		  }
+
+		  log.mesh.position.x += log.speed;
+
+
+        if (!isJumping && !isDying && Math.abs(player.position.z - log.z) < 0.1) {
+          const dx = Math.abs(player.position.x - log.mesh.position.x);
+          if (dx < log.length / 2 + 0.15) {
+            onLog = true;
+            player.position.x += log.speed;
+            playerPos.x = player.position.x;
+            targetPos.x = player.position.x;
+			
+			if (log.mesh.position.y !== -0.1) playSound('splashSound');//splash solo appena il tronco affonda
+			
+			//tronco affonda leggermente
+			//console.log(log.mesh.position.y);
+			log.mesh.position.y = -0.1;
+			
+            if (Math.abs(player.position.x) > X_LIMIT) {
+			  if (isGod) {
+				player.position.x = player.position.x > 0 ? X_LIMIT : -X_LIMIT; 
+			  } else {
+                handleDeath();
+			  }
+            }
+          }
+        } else {
+			//ripristina tronco affondato
+			log.mesh.position.y = 0;
+		}
+
+        if (Math.abs(log.mesh.position.x) > BOARD_WIDTH / 2 + 4) {
+          scene.remove(log.mesh);
+		  disposeObject3D(log.mesh);
+          logs.splice(i, 1);
+        }
+      }
+
+      // Controllo caduta in acqua
+      const currentLane = lanes.find( l => l.z === Math.round(player.position.z) );
+
+      if (!isGod && !isJumping && !isDying && currentLane && currentLane.type === 'river' && !onLog) {
+        handleDeath();
+      }
+
+      renderer.render(scene, camera);
+	  
+	  updateFps(now);
+    }
+	
+	
+	
+	window.addEventListener('keydown', (event) => {
+	  if (event.key.toLowerCase() === 'x') {
+	    isWireframe = !isWireframe;
+		toggleWorldWireframeOverlay(scene, isWireframe);
+	  } else if (event.key === 'Escape' && infoOverlay.classList.contains('visible')) {
+		toggleInfoPopup(false); 
+	  }
+	});
+	
+	function setWorldWireframe(target = scene, enableWireframe = true) {
+	  target.traverse((child) => {
+		if (child.isMesh && child.material) {
+		  // Gestisce sia materiali singoli che array di materiali
+		  if (Array.isArray(child.material)) {
+			child.material.forEach(mat => mat.wireframe = enableWireframe);
+		  } else {
+			child.material.wireframe = enableWireframe;
+		  }
+		}
+	  });
+	}
+	
+	function applyCurrentVisualMode(target) {
+	  if (isWireframe) {
+		toggleWorldWireframeOverlay(target, true);
+	  }
+	}
+	
+	function toggleWorldWireframeOverlay(target = scene, enableWireframe = true) {
+	  target.traverse((child) => {
+		if (child.isMesh) {
+		  // 1. Cerca se la mesh ha già un overlay wireframe come figlio
+		  let wireframeOverlay = child.children.find(c => c.userData.isWireframeOverlay);
+
+		  if (enableWireframe) {
+			if (!wireframeOverlay) {
+			  // 2. Crea la geometria per le linee a partire dalla mesh
+			  //const wireframeGeo = new THREE.WireframeGeometry(child.geometry);
+			  const wireframeGeo = new THREE.EdgesGeometry(child.geometry, 1);
+			  
+			  // 3. Crea il materiale per le linee dell'overlay
+			  const wireframeMat = new THREE.LineBasicMaterial({
+				color: 0x000000,    // Colore delle linee (es. nero o bianco 0xffffff)
+				linewidth: 1,       // Nota: WebGL spesso limita lo spessore a 1px
+				transparent: true,
+				opacity: 0.25
+			  });
+
+			  // 4. Crea i segmenti di linea e aggiungili come figlio della Mesh
+			  wireframeOverlay = new THREE.LineSegments(wireframeGeo, wireframeMat);
+			  wireframeOverlay.userData.isWireframeOverlay = true; // Marker di riconoscimento
+			  
+			  child.add(wireframeOverlay);
+			} else {
+			  wireframeOverlay.visible = true;
+			}
+		  } else if (wireframeOverlay) {
+			// Nasconde l'overlay se la modalità viene disattivata
+			wireframeOverlay.visible = false;
+		  }
+		}
+	  });
+	}
+
+    animate();
+  </script>
+</body>
+</html>
