@@ -173,28 +173,31 @@
 
     /* --- CONTROLLI AZIONE: ROTAZIONE, NEBBIA, PLAYER --- */
     #action-controls {
-      position: fixed;
-      right: 10px;
-      bottom: 10px;
-      z-index: 50;
-      display: flex;
-      gap: 8px;
-      user-select: none;
-    }
-    .action-btn {
-      background: rgba(255,255,255,0.18);
-      border: 2px solid rgba(255,255,255,0.4);
-      border-radius: 12.5%;
-      color: #ffffff;
-      font-size: 22px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      touch-action: none;
-      -webkit-tap-highlight-color: transparent;
-	  width: 50px;
+	  position: fixed;
+	  right: 6px;
+	  bottom: 6px;
+	  width: min(100vw - 12px, 400px);  /* tutta la larghezza, ma su schermi larghi si ferma a 400px */
+	  z-index: 50;
+	  display: flex;
+	  gap: 6px;
+	  user-select: none;
+	}
+	.action-btn {
+	  flex: 1 1 0;                      /* stessa larghezza per tutti, riempiono lo spazio */
+	  min-width: 0;                     /* possono restringersi sui telefoni stretti */
+	  padding: 0;
 	  height: 50px;
-    }	
+	  background: rgba(255,255,255,0.18);
+	  border: 2px solid rgba(255,255,255,0.4);
+	  border-radius: 12.5%;
+	  color: #ffffff;
+	  font-size: 22px;
+	  display: flex;
+	  align-items: center;
+	  justify-content: center;
+	  touch-action: none;
+	  -webkit-tap-highlight-color: transparent;
+	}
     .action-btn:active {
       background: rgba(255,255,255,0.45);
     }
@@ -251,6 +254,7 @@
     <!--button class="action-btn" id="btn-fog"       aria-label="Fog toggle">🌫️</button-->
 	<button class="action-btn" id="btn-wireframe" aria-label="Wireframe toggle">📐</button>
 	<button class="action-btn" id="btn-godmode"   aria-label="GodMode toggle">🛡️</button>
+	<button class="action-btn" id="btn-fps"		  aria-label="FPS toggle">🕵️</button>
 	<button class="action-btn" id="btn-mute"      aria-label="Mute toggle">🎵</button>
     <button class="action-btn" id="btn-info"      aria-label="Game info">?</button>
     <button class="action-btn" id="btn-player"    aria-label="Change player">🥊</button>
@@ -280,6 +284,7 @@
   <audio id="musicSound2" loop preload="auto">
     <source src="./crossy-music2.mp3" type="audio/mpeg">
   </audio>
+  
   <audio id="deadSoundCat" preload="auto">
     <source src="./crossy-dead-cat.mp3" type="audio/mpeg">
   </audio>
@@ -313,6 +318,16 @@
   <audio id="deadSoundHorse" preload="auto">
     <source src="./crossy-dead-horse.mp3" type="audio/mpeg">
   </audio>
+  <audio id="deadSoundFox" preload="auto">
+    <source src="./crossy-dead-fox.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="deadSoundPenguin" preload="auto">
+    <source src="./crossy-dead-penguin.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="deadSoundChick" preload="auto">
+    <source src="./crossy-dead-chick.mp3" type="audio/mpeg">
+  </audio>
+  
   <audio id="trainSound" preload="auto">
     <source src="./crossy-train.mp3" type="audio/mpeg">
   </audio>
@@ -489,7 +504,7 @@
 			break;
 			
 		case 'bender': 
-			currentPlayerType = 'minion'; player = createPlayerMinion(); document.getElementById('btn-player').innerText = '🤓'; 
+			currentPlayerType = 'minion'; player = createPlayerMinion(); document.getElementById('btn-player').innerText = '🤓'; 
 			currentPlayerDeadSound = 'deadSoundMinion';
 			break;
 		
@@ -498,7 +513,22 @@
 			currentPlayerDeadSound = 'deadSoundOwl';
 			break;
 		
-		case 'owl': 
+		case 'owl':
+			currentPlayerType = 'fox'; player = createPlayerFox(); document.getElementById('btn-player').innerText = '🦊';
+			currentPlayerDeadSound = 'deadSoundFox';
+			break;		
+		
+		case 'fox':
+			currentPlayerType = 'penguin'; player = createPlayerPenguin(); document.getElementById('btn-player').innerText = '🐧';
+			currentPlayerDeadSound = 'deadSoundPenguin';
+			break;
+		
+		case 'penguin':
+			currentPlayerType = 'chick'; player = createPlayerChick(); document.getElementById('btn-player').innerText = '🐤';
+			currentPlayerDeadSound = 'deadSoundChick';
+			break;
+			
+		case 'chick':
 			currentPlayerType = 'unicorn'; player = createPlayerUnicorn(); document.getElementById('btn-player').innerText = '🦄';
 			currentPlayerDeadSound = 'deadSoundHorse';
 			break;
@@ -779,6 +809,191 @@
 	  return group;
 	}
 
+	//PINGU
+	function createPlayerPenguin() {
+	  const group = new THREE.Group();
+
+	  // Materiali
+	  const navyMat    = new THREE.MeshLambertMaterial({ color: 0x0b3c85 }); // Blu scuro (testa/schiena/pinne)
+	  const bellyMat   = new THREE.MeshLambertMaterial({ color: 0xa5d0f5 }); // Azzurro chiaro (pancia)
+	  const beakMat    = new THREE.MeshLambertMaterial({ color: 0xff7a00 }); // Arancione (becco)
+	  const beakLowMat = new THREE.MeshLambertMaterial({ color: 0xf05f00 }); // Arancione scuro (becco inferiore)
+	  const feetMat    = new THREE.MeshLambertMaterial({ color: 0xffa726 }); // Arancione chiaro (piedi)
+	  const eyeMat     = new THREE.MeshLambertMaterial({ color: 0x0d0d0d }); // Nero (occhi)
+	  const whiteMat   = new THREE.MeshLambertMaterial({ color: 0xffffff }); // Bianco (riflesso)
+	  const yellowMat  = new THREE.MeshLambertMaterial({ color: 0xc8c000 }); // Giallo (striscia sul viso)
+
+	  // 1. Piedi arancioni piatti che sporgono davanti
+	  const footGeo = new THREE.BoxGeometry(0.16, 0.06, 0.28);
+	  [-0.17, 0.17].forEach(x => {
+		const foot = new THREE.Mesh(footGeo, feetMat);
+		foot.position.set(x, 0.03, -0.3);
+		group.add(foot);
+	  });
+
+	  // 2. Pancia chiara davanti
+	  const belly = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.3, 0.5), bellyMat);
+	  belly.position.set(0, 0.21, -0.05);
+	  belly.castShadow = true;
+	  group.add(belly);
+
+	  // 3. Schiena scura dietro
+	  const back = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.3, 0.1), navyMat);
+	  back.position.set(0, 0.21, 0.25);
+	  back.castShadow = true;
+	  group.add(back);
+
+	  // 4. Testa blu scura
+	  const head = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.3, 0.6), navyMat);
+	  head.position.set(0, 0.51, 0);
+	  head.castShadow = true;
+	  group.add(head);
+
+	  // 5. Becco (a cavallo tra testa e pancia)
+	  const beak = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.09, 0.12), beakMat);
+	  beak.position.set(0, 0.39, -0.36);
+	  beak.castShadow = true;
+	  group.add(beak);
+
+	  const beakLow = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.03, 0.1), beakLowMat);
+	  beakLow.position.set(0, 0.33, -0.35);
+	  group.add(beakLow);
+
+	  // 6. Lati: occhio con riflesso, striscia gialla, pinna con gradino
+	  const eyeGeo = new THREE.BoxGeometry(0.02, 0.12, 0.12);
+	  const glintGeo = new THREE.BoxGeometry(0.02, 0.04, 0.04);
+	  const stripeGeo = new THREE.BoxGeometry(0.02, 0.03, 0.1);
+	  const finGeo = new THREE.BoxGeometry(0.08, 0.36, 0.3);
+	  const finStepGeo = new THREE.BoxGeometry(0.05, 0.14, 0.3);
+
+	  [-1, 1].forEach(s => {
+		const eye = new THREE.Mesh(eyeGeo, eyeMat);
+		eye.position.set(s * 0.31, 0.54, -0.12);
+		group.add(eye);
+
+		const glint = new THREE.Mesh(glintGeo, whiteMat);
+		glint.position.set(s * 0.32, 0.52, -0.15);
+		group.add(glint);
+
+		const stripe = new THREE.Mesh(stripeGeo, yellowMat);
+		stripe.position.set(s * 0.305, 0.625, -0.06);
+		group.add(stripe);
+
+		const fin = new THREE.Mesh(finGeo, navyMat);
+		fin.position.set(s * 0.34, 0.28, 0.13);
+		fin.castShadow = true;
+		group.add(fin);
+
+		const finStep = new THREE.Mesh(finStepGeo, navyMat);
+		finStep.position.set(s * 0.405, 0.17, 0.13);
+		finStep.castShadow = true;
+		group.add(finStep);
+	  });
+
+	  group.position.set(0, 0, 0);
+
+	  applyCurrentVisualMode(group);
+
+	  scene.add(group);
+	  return group;
+	}
+	
+	
+	//VOLPETTA
+	function createPlayerFox() {
+	  const group = new THREE.Group();
+
+	  // Materiali
+	  const orangeMat = new THREE.MeshLambertMaterial({ color: 0xf08c3c });
+	  const whiteMat  = new THREE.MeshLambertMaterial({ color: 0xf4f4f8 });
+	  const darkMat   = new THREE.MeshLambertMaterial({ color: 0x2b2b33 });
+
+	  // 1. Zampe nere agli angoli
+	  const footGeo = new THREE.BoxGeometry(0.2, 0.06, 0.2);
+	  [[-0.2, -0.2], [0.2, -0.2], [-0.2, 0.2], [0.2, 0.2]].forEach(([x, z]) => {
+		const foot = new THREE.Mesh(footGeo, darkMat);
+		foot.position.set(x, 0.03, z);
+		group.add(foot);
+	  });
+
+	  // 2. Corpo cubico
+	  const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.56, 0.6), orangeMat);
+	  body.position.set(0, 0.34, 0);
+	  body.castShadow = true;
+	  group.add(body);
+
+	  // 3. Orecchie nere con interno bianco
+	  const earGeo = new THREE.BoxGeometry(0.16, 0.14, 0.14);
+	  const earInnerGeo = new THREE.BoxGeometry(0.08, 0.08, 0.02);
+	  [-0.22, 0.22].forEach(x => {
+		const ear = new THREE.Mesh(earGeo, darkMat);
+		ear.position.set(x, 0.69, -0.23);
+		ear.castShadow = true;
+		group.add(ear);
+
+		const earInner = new THREE.Mesh(earInnerGeo, whiteMat);
+		earInner.position.set(x, 0.68, -0.305);
+		group.add(earInner);
+	  });
+
+	  // 4. Occhi grandi con riflesso
+	  const eyeGeo = new THREE.BoxGeometry(0.11, 0.16, 0.02);
+	  const glintGeo = new THREE.BoxGeometry(0.04, 0.04, 0.02);
+	  [[-0.17, -1], [0.17, 1]].forEach(([x, s]) => {
+		const eye = new THREE.Mesh(eyeGeo, darkMat);
+		eye.position.set(x, 0.45, -0.305);
+		group.add(eye);
+
+		const glint = new THREE.Mesh(glintGeo, whiteMat);
+		glint.position.set(x + s * 0.025, 0.505, -0.315);
+		group.add(glint);
+	  });
+
+	  // 5. Muso sporgente con tartufo nero
+	  const muzzle = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.1, 0.1), orangeMat);
+	  muzzle.position.set(0, 0.34, -0.35);
+	  muzzle.castShadow = true;
+	  group.add(muzzle);
+
+	  const nose = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.03, 0.05), darkMat);
+	  nose.position.set(0, 0.395, -0.365);
+	  group.add(nose);
+
+	  // 6. Macchia bianca sul petto
+	  const chestTop = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.08, 0.02), whiteMat);
+	  chestTop.position.set(0, 0.25, -0.305);
+	  group.add(chestTop);
+
+	  const chestBottom = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.15, 0.02), whiteMat);
+	  chestBottom.position.set(0, 0.135, -0.305);
+	  group.add(chestBottom);
+
+	  // 7. Macchie bianche sui fianchi
+	  const flankGeo = new THREE.BoxGeometry(0.02, 0.1, 0.29);
+	  [-0.305, 0.305].forEach(x => {
+		const flank = new THREE.Mesh(flankGeo, whiteMat);
+		flank.position.set(x, 0.11, 0);
+		group.add(flank);
+	  });
+
+	  // 8. Coda sul dorso con punta bianca
+	  const tailBase = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.14, 0.16), orangeMat);
+	  tailBase.position.set(-0.05, 0.69, 0.2);
+	  tailBase.castShadow = true;
+	  group.add(tailBase);
+
+	  const tailTip = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.14, 0.16), whiteMat);
+	  tailTip.position.set(0.2, 0.69, 0.2);
+	  tailTip.castShadow = true;
+	  group.add(tailTip);
+
+	  group.position.set(0, 0, 0);
+
+	  applyCurrentVisualMode(group);
+
+	  scene.add(group);
+	  return group;
+	}
 	
 	// GUFO ANACLETO
 	function createPlayerOwl() {
@@ -1240,12 +1455,26 @@
       const eyeMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
 
       const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
-      leftEye.position.set(-0.31, 0.42, -0.15);
+      leftEye.position.set(-0.31, 0.42, -0.20);
       group.add(leftEye);
 
       const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
-      rightEye.position.set(0.31, 0.42, -0.15);
+      rightEye.position.set(0.31, 0.42, -0.20);
       group.add(rightEye);
+	  
+	  // ALI (due box ai lati, attaccate al cubo del corpo)
+	  const wingGeo = new THREE.BoxGeometry(0.08, 0.32, 0.30);
+	  const wingMat = new THREE.MeshLambertMaterial({ color: 0xe0e0e0 }); // un filo più scuro del corpo, così si staccano
+	  
+	  const leftWing = new THREE.Mesh(wingGeo, wingMat);
+	  leftWing.position.set(-0.34, 0.28, 0.1);
+	  leftWing.castShadow = true;
+	  group.add(leftWing);
+	  
+	  const rightWing = new THREE.Mesh(wingGeo, wingMat);
+	  rightWing.position.set(0.34, 0.28, 0.1);
+	  rightWing.castShadow = true;
+	  group.add(rightWing);
 
       group.position.set(0, 0, 0);
 	  
@@ -1254,6 +1483,87 @@
       scene.add(group);
       return group;
     }
+	
+	//IL PULCINO PIO!
+	function createPlayerChick() {
+	  const group = new THREE.Group();
+
+	  // Materiali
+	  const yellowMat = new THREE.MeshLambertMaterial({ color: 0xffd93b }); // Giallo pulcino (corpo)
+	  const wingMat   = new THREE.MeshLambertMaterial({ color: 0xffc41f }); // Giallo più scuro (alette/ciuffo)
+	  const orangeMat = new THREE.MeshLambertMaterial({ color: 0xff8f1f }); // Arancione (becco/zampette)
+	  const cheekMat  = new THREE.MeshLambertMaterial({ color: 0xff9e7a }); // Rosa (guance)
+	  const eyeMat    = new THREE.MeshLambertMaterial({ color: 0x111111 }); // Nero (occhi)
+	  const whiteMat  = new THREE.MeshLambertMaterial({ color: 0xffffff }); // Bianco (riflesso)
+
+	  // 1. Zampette arancioni piatte che sporgono davanti
+	  const footGeo = new THREE.BoxGeometry(0.14, 0.04, 0.22);
+	  [-0.13, 0.13].forEach(x => {
+		const foot = new THREE.Mesh(footGeo, orangeMat);
+		foot.position.set(x, 0.02, -0.27);
+		group.add(foot);
+	  });
+
+	  // 2. Corpo giallo
+	  const body = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.52, 0.56), yellowMat);
+	  body.position.set(0, 0.30, 0);
+	  body.castShadow = true;
+	  group.add(body);
+
+	  // 3. Ciuffetto in testa
+	  const tuftCenter = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.14, 0.08), wingMat);
+	  tuftCenter.position.set(0, 0.63, 0);
+	  group.add(tuftCenter);
+
+	  const tuftSideGeo = new THREE.BoxGeometry(0.06, 0.08, 0.06);
+	  [-0.07, 0.07].forEach(x => {
+		const tuftSide = new THREE.Mesh(tuftSideGeo, wingMat);
+		tuftSide.position.set(x, 0.60, 0.02);
+		group.add(tuftSide);
+	  });
+
+	  // 4. Occhi sul davanti con riflesso
+	  const eyeGeo = new THREE.BoxGeometry(0.08, 0.12, 0.02);
+	  const glintGeo = new THREE.BoxGeometry(0.03, 0.03, 0.02);
+	  [-0.15, 0.15].forEach(x => {
+		const eye = new THREE.Mesh(eyeGeo, eyeMat);
+		eye.position.set(x, 0.38, -0.285);
+		group.add(eye);
+
+		const glint = new THREE.Mesh(glintGeo, whiteMat);
+		glint.position.set(x + (x < 0 ? -0.015 : 0.015), 0.42, -0.295);
+		group.add(glint);
+	  });
+
+	  // 5. Guance rosate
+	  const cheekGeo = new THREE.BoxGeometry(0.08, 0.06, 0.02);
+	  [-0.21, 0.21].forEach(x => {
+		const cheek = new THREE.Mesh(cheekGeo, cheekMat);
+		cheek.position.set(x, 0.27, -0.285);
+		group.add(cheek);
+	  });
+
+	  // 6. Becco piccolo
+	  const beak = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.08, 0.10), orangeMat);
+	  beak.position.set(0, 0.30, -0.33);
+	  beak.castShadow = true;
+	  group.add(beak);
+
+	  // 7. Alette ai lati
+	  const wingGeo = new THREE.BoxGeometry(0.06, 0.24, 0.24);
+	  [-0.31, 0.31].forEach(x => {
+		const wing = new THREE.Mesh(wingGeo, wingMat);
+		wing.position.set(x, 0.30, 0.02);
+		group.add(wing);
+	  });
+
+	  group.position.set(0, 0, 0);
+
+	  applyCurrentVisualMode(group);
+
+	  scene.add(group);
+	  return group;
+	}
 	
 	// LUMACA!!!
 	function createPlayerSnail() {
@@ -3560,6 +3870,10 @@
 		isGod = !isGod;
 		document.getElementById('btn-godmode').classList.toggle('toggled-on', isGod);
 	});
+	
+	bindTouchButton('btn-fps', () => {
+		toggleFps();
+	});
 
 	bindTouchButton('btn-mute', () => {
 		isMute = !isMute; 
@@ -3733,6 +4047,7 @@
 	function toggleFps() {
 	  fpsVisible = !fpsVisible;
 	  fpsEl.style.display = fpsVisible ? 'block' : 'none';
+	  document.getElementById('btn-fps').classList.toggle('toggled-on', fpsVisible);
 	}
 	window.addEventListener('keydown', (e) => {
 	  if (e.key === 'f' || e.key === 'F') toggleFps();          // desktop: tasto F
@@ -3749,8 +4064,8 @@
 		fpsEl.textContent =
 		  fps + ' fps\n' +
 		  info.render.calls + ' draw calls\n' +
-		  info.render.triangles + ' tri\n' +
-		  info.memory.geometries + ' geo';
+		  info.render.triangles + ' triangles\n' +
+		  info.memory.geometries + ' geometries';
 	  }
 	  fpsFrames = 0;
 	  fpsLast = now;
