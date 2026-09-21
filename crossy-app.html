@@ -27,8 +27,9 @@
     #instructions {
       position: absolute;
       bottom: 10px;
-      left: 50%;
-      transform: translateX(-50%);
+      left: 10px;
+	  xxxleft: 50%;
+      xxxtransform: translateX(-50%);
       color: rgba(255, 255, 255, 0.8);
       font-size: 16px;
       font-weight: bold;
@@ -87,7 +88,7 @@
       box-shadow: 0 1px 0 #1e8449, 0 4px 10px rgba(0,0,0,0.4);
     }
 
-			#info-overlay {
+		#info-overlay {
 			position: fixed;
 			inset: 0;
 			background: rgba(8, 12, 20, 0.76);
@@ -238,6 +239,45 @@
 	  border-radius: 6px;
 	  pointer-events: none;
 	}
+	#thought-bubble {
+	  position: fixed;
+	  left: 0; top: 0;
+	  z-index: 35;
+	  display: none;
+	  pointer-events: none;
+	  will-change: transform;
+	}
+	#thought-bubble.visible { display: block; }
+	#thought-bubble .tb-inner {
+	  position: relative;
+	  margin-bottom: 34px;              /* spazio per i pallini */
+	  transform-origin: 50% 100%;
+	  animation: tb-pop 0.35s cubic-bezier(.34,1.56,.64,1) both;
+	}
+	@keyframes tb-pop {
+	  from { transform: scale(0); opacity: 0; }
+	  to   { transform: scale(1); opacity: 1; }
+	}
+	.tb-text {
+	  background: #fff;
+	  color: #111;
+	  border: 3px solid #111;
+	  border-radius: 28px / 22px;
+	  padding: 10px 16px;
+	  font: italic 900 15px/1.15 'Comic Sans MS', 'Comic Neue', 'Chalkboard SE', 'Marker Felt', sans-serif;
+	  text-align: center;
+	  white-space: nowrap;
+	  box-shadow: 3px 3px 0 rgba(0,0,0,0.35);
+	}
+	.tb-dot {
+	  position: absolute;
+	  box-sizing: border-box;
+	  background: #fff;
+	  border: 3px solid #111;
+	  border-radius: 50%;
+	}
+	.tb-dot1 { width: 16px; height: 16px; left: calc(50% - 8px); bottom: -18px; }
+	.tb-dot2 { width: 10px; height: 10px; left: calc(50% - 2px); bottom: -32px; }
   </style>
   <!-- Three.js CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -247,6 +287,14 @@
   <div id="score-board">0</div>
   <div id="instructions">WASD/Arrows/Tap = Move Player &nbsp;•&nbsp; Q/E = Rotate View &nbsp;•&nbsp; P = Change Player</div>
   <div id="fps-counter"></div>
+  
+  <div id="thought-bubble">
+	<div class="tb-inner">
+		<div class="tb-text" id="rocky-thinks">Meglio tornare a casa?<br>Nooo!</div>
+		<i class="tb-dot tb-dot1"></i>
+		<i class="tb-dot tb-dot2"></i>
+	</div>
+  </div>
   
   <div id="action-controls">
     <button class="action-btn" id="btn-rot-left"  aria-label="Rotate view">↻</button>
@@ -473,6 +521,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 	  const pos = player.position.clone();
 	  const rotY = player.rotation.y;
 	  const wasVisible = player.visible;
+	  resetIdle();//pensa
 
 	  scene.remove(player);
 	  disposeObject3D(player);
@@ -1772,6 +1821,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 		const innerEarMat = new THREE.MeshLambertMaterial({ color: 0xE8A7B8 });// Rosa interno orecchie
 		const whiskerMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF }); // Baffi bianchi
 		const noseMat = new THREE.MeshLambertMaterial({ color: 0x150A05 });    // Tartufo scuro
+		const pupilMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
 
 		// 1. Testa principale (Dimensioni: 0.6 x 0.5 x 0.5)
 		const head = new THREE.Mesh(
@@ -1810,6 +1860,21 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 		rightEye.position.set(0.15, 0.52, -0.26);
 		rightEye.rotation.z = 0.18;
 		group.add(rightEye);
+		
+		// 3b. Pupille nere
+		// Dimensioni ridotte e spessore sottile
+		const pupilGeo = new THREE.BoxGeometry(0.04, 0.06, 0.041);
+
+		const leftPupil = new THREE.Mesh(pupilGeo, pupilMat);
+		// Posizionata leggermente più avanti (Z: -0.262) per evitare z-fighting
+		leftPupil.position.set(-0.15, 0.52, -0.262);
+		leftPupil.rotation.z = -0.18;
+		group.add(leftPupil);
+
+		const rightPupil = new THREE.Mesh(pupilGeo, pupilMat);
+		rightPupil.position.set(0.15, 0.52, -0.262);
+		rightPupil.rotation.z = 0.18;
+		group.add(rightPupil);
 
 		// 4. Musetto e Tartufo
 		const muzzle = new THREE.Mesh(
@@ -2103,16 +2168,34 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 	  eyeBackground.position.set(0, 0.55, -0.555);
 	  group.add(eyeBackground);
 
+	  // Materiale per le pupille (se non lo hai già definito in alto)
+	  const pupilMat = new THREE.MeshLambertMaterial({ color: 0x000000 });
+	  
 	  // 5. Occhi azzurri (spinti più in avanti: Z = -0.565)
 	  const eyeGeo = new THREE.BoxGeometry(0.07, 0.08, 0.02);
-
+	  
 	  const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
 	  leftEye.position.set(-0.10, 0.55, -0.565);
 	  group.add(leftEye);
-
+	  
 	  const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
 	  rightEye.position.set(0.10, 0.55, -0.565);
 	  group.add(rightEye);
+	  
+	  // 6. Pupille nere al centro degli occhi
+	  // Dimensioni ridotte rispetto all'occhio (0.03 x 0.04 x 0.02)
+	  const pupilGeo = new THREE.BoxGeometry(0.03, 0.04, 0.02);
+	  
+	  const leftPupil = new THREE.Mesh(pupilGeo, pupilMat);
+	  // Coordinate X e Y identiche a leftEye (-0.10, 0.55)
+	  // Z spinta leggermente più in avanti verso la telecamera (-0.576 invece di -0.565)
+	  leftPupil.position.set(-0.10, 0.55, -0.576);
+	  group.add(leftPupil);
+	  
+	  const rightPupil = new THREE.Mesh(pupilGeo, pupilMat);
+	  // Coordinate X e Y identiche a rightEye (0.10, 0.55)
+	  rightPupil.position.set(0.10, 0.55, -0.576);
+	  group.add(rightPupil);
 	  
 	  // 5. Musetto / Naso sporgente (in basso al centro, sporge più in avanti: Z = -0.57)
 	  const snoutBox = new THREE.Mesh(
@@ -2329,18 +2412,25 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 	  return group;
 	}
 	
+	
+	//croco: { col1: 0x6b4e2e, col2: 0x422f1b } //marroncino
+	//croco: { col1: 0x2e6b30, col2: 0x1f4d24 } //verde
+	//croco: { col1: 0x76c943, col2: 0x419120 } //verde chiaro
+	//croco: { col1: 0x8c5226, col2: 0x542e13 } //cioccolato
+	//croco: { col1: 0xd0d7de, col2: 0x8b949e } //grigio
+	
 	//colori ambiente
 	const colors = [
-		{ prob: 0.0, tree: { col1: 0x2e7d32, col2: 0x388e3c }, cactus: { col1: 0x276a2b, col2: 0x307933 }, grass: { col1: 0x66bb66, col2: 0x60b560 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
-		{ prob: 0.1, tree: { col1: 0x60b560, col2: 0x66bb66 }, cactus: { col1: 0x529a52, col2: 0x579f57 }, grass: { col1: 0x4daa4d, col2: 0x49a449 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
-		{ prob: 0.2, tree: { col1: 0x49a449, col2: 0x4daa4d }, cactus: { col1: 0x3e8b3e, col2: 0x419141 }, grass: { col1: 0x349934, col2: 0x309530 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
-		{ prob: 0.5, tree: { col1: 0x309530, col2: 0x349934 }, cactus: { col1: 0x297f29, col2: 0x2c822c }, grass: { col1: 0x6fa156, col2: 0x699950 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
-		{ prob: 0.8, tree: { col1: 0x699950, col2: 0x6fa156 }, cactus: { col1: 0x598244, col2: 0x5e8949 }, grass: { col1: 0xaaa979, col2: 0xa5a074 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
-		{ prob: 0.9, tree: { col1: 0xa5a074, col2: 0xaaa979 }, cactus: { col1: 0x8c8863, col2: 0x919067 }, grass: { col1: 0x887f5e, col2: 0x827959 }, river: { col1: 0xd4b870, col2: 0xcfa860 }, track: { col1: 0x444444, col2: 0x3a3a3a }},// Terreno marrone chiaro / deserto -> Fiume con riflessi sabbia / oro sporco
-		{ prob: 0.9, tree: { col1: 0x827959, col2: 0x887f5e }, cactus: { col1: 0x6f674c, col2: 0x746c50 }, grass: { col1: 0x665544, col2: 0x605040 }, river: { col1: 0xc2a649, col2: 0xba9b3f }, track: { col1: 0x444444, col2: 0x3a3a3a }},// Terreno marrone scuro -> Fiume piú torbido / giallastro
-		{ prob: 0.4, tree: { col1: 0xa29989, col2: 0xa89f8e }, cactus: { col1: 0x8a8274, col2: 0x8f8779 }, grass: { col1: 0xa89f8e, col2: 0xa29989 }, river: { col1: 0xb3ecff, col2: 0x99e5ff }, track: { col1: 0x444444, col2: 0x3a3a3a }},// Terreno grigio/neve leggeri -> Fiume azzurro ghiaccio chiaro
-		{ prob: 0.0, tree: { col1: 0xe5e0d4, col2: 0xeae9d9 }, cactus: { col1: 0xc3beb4, col2: 0xc7c6b8 }, grass: { col1: 0xeae9d9, col2: 0xe5e0d4 }, river: { col1: 0xe0f7fa, col2: 0xd2f3f7 }, track: { col1: 0x444444, col2: 0x3a3a3a }},// Terreno completamente bianco / neve -> Fiume azzurro glaciale leggerissimo			
-		{ prob: 0.0, tree: { col1: 0x90c980, col2: 0x99cc88 }, cactus: { col1: 0x7aab6d, col2: 0x82ad74 }, grass: { col1: 0x99cc88, col2: 0x90c980 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
+		{ probCactus: 0.0, probCroco: 0.1, croco: { col1: 0x2e6b30, col2: 0x1f4d24 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x2e7d32, col2: 0x388e3c }, cactus: { col1: 0x276a2b, col2: 0x307933 }, grass: { col1: 0x66bb66, col2: 0x60b560 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
+		{ probCactus: 0.1, probCroco: 0.1, croco: { col1: 0x6b4e2e, col2: 0x422f1b }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x60b560, col2: 0x66bb66 }, cactus: { col1: 0x529a52, col2: 0x579f57 }, grass: { col1: 0x4daa4d, col2: 0x49a449 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
+		{ probCactus: 0.2, probCroco: 0.2, croco: { col1: 0x2e6b30, col2: 0x1f4d24 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x49a449, col2: 0x4daa4d }, cactus: { col1: 0x3e8b3e, col2: 0x419141 }, grass: { col1: 0x349934, col2: 0x309530 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
+		{ probCactus: 0.5, probCroco: 0.3, croco: { col1: 0x76c943, col2: 0x419120 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x309530, col2: 0x349934 }, cactus: { col1: 0x297f29, col2: 0x2c822c }, grass: { col1: 0x6fa156, col2: 0x699950 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
+		{ probCactus: 0.8, probCroco: 0.5, croco: { col1: 0x8c5226, col2: 0x542e13 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x699950, col2: 0x6fa156 }, cactus: { col1: 0x598244, col2: 0x5e8949 }, grass: { col1: 0xaaa979, col2: 0xa5a074 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
+		{ probCactus: 0.9, probCroco: 0.7, croco: { col1: 0x2e6b30, col2: 0x1f4d24 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0xa5a074, col2: 0xaaa979 }, cactus: { col1: 0x8c8863, col2: 0x919067 }, grass: { col1: 0x887f5e, col2: 0x827959 }, river: { col1: 0xd4b870, col2: 0xcfa860 }, track: { col1: 0x444444, col2: 0x3a3a3a }},// Terreno marrone chiaro / deserto -> Fiume con riflessi sabbia / oro sporco
+		{ probCactus: 0.9, probCroco: 0.9, croco: { col1: 0x6b4e2e, col2: 0x422f1b }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x827959, col2: 0x887f5e }, cactus: { col1: 0x6f674c, col2: 0x746c50 }, grass: { col1: 0x665544, col2: 0x605040 }, river: { col1: 0xc2a649, col2: 0xba9b3f }, track: { col1: 0x444444, col2: 0x3a3a3a }},// Terreno marrone scuro -> Fiume piú torbido / giallastro
+		{ probCactus: 0.4, probCroco: 0.4, croco: { col1: 0x76c943, col2: 0x419120 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0xa29989, col2: 0xa89f8e }, cactus: { col1: 0x8a8274, col2: 0x8f8779 }, grass: { col1: 0xa89f8e, col2: 0xa29989 }, river: { col1: 0xb3ecff, col2: 0x99e5ff }, track: { col1: 0x444444, col2: 0x3a3a3a }},// Terreno grigio/neve leggeri -> Fiume azzurro ghiaccio chiaro
+		{ probCactus: 0.0, probCroco: 0.2, croco: { col1: 0xd0d7de, col2: 0x8b949e }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0xe5e0d4, col2: 0xeae9d9 }, cactus: { col1: 0xc3beb4, col2: 0xc7c6b8 }, grass: { col1: 0xeae9d9, col2: 0xe5e0d4 }, river: { col1: 0xe0f7fa, col2: 0xd2f3f7 }, track: { col1: 0x444444, col2: 0x3a3a3a }},// Terreno completamente bianco / neve -> Fiume azzurro glaciale leggerissimo			
+		{ probCactus: 0.0, probCroco: 0.1, croco: { col1: 0x2e6b30, col2: 0x1f4d24 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x90c980, col2: 0x99cc88 }, cactus: { col1: 0x7aab6d, col2: 0x82ad74 }, grass: { col1: 0x99cc88, col2: 0x90c980 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
 	];
 	//colori treni
 	const trainColors = [
@@ -2653,12 +2743,12 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 
 	// CROCO!!!
 	// --- MODELLO COCCODRILLO (ex tronco) ---
-	function createCrocoMesh(length) {
+	function createCrocoMesh(length, col1 = 0x2e6b30, col2 = 0x1f4d24) {
 	  const group = new THREE.Group();
 
 	  // Materiali
-	  const skinMat  = new THREE.MeshLambertMaterial({ color: 0x2e6b30 }); // Verde scuro (corpo/muso)
-	  const scaleMat = new THREE.MeshLambertMaterial({ color: 0x1f4d24 }); // Verde più scuro (scaglie)
+	  const skinMat  = new THREE.MeshLambertMaterial({ color: col1 }); // Verde scuro (corpo/muso)
+	  const scaleMat = new THREE.MeshLambertMaterial({ color: col2 }); // Verde più scuro (scaglie)
 	  const eyeMat   = new THREE.MeshLambertMaterial({ color: 0xffe000 }); // Giallo (occhi)
 	  const pupilMat = new THREE.MeshLambertMaterial({ color: 0x111111 }); // Nero (pupille)
 
@@ -2682,9 +2772,9 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 	  group.add(snout);
 	  
 	  // 2b. Rettangolo del naso sulla punta del muso, con due buchi per le narici
-	  const noseMat = new THREE.MeshLambertMaterial({ color: 0x3a7d3d }); // Verde un po' più chiaro, così si stacca dal muso
+	  const noseMat = new THREE.MeshLambertMaterial({ color: col2 }); // Verde un po' più chiaro, così si stacca dal muso
 	  
-	  const nose = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.05, 0.30), noseMat);
+	  const nose = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.05, 0.38), noseMat);
 	  nose.position.set(length / 2 - 0.12, 0.1, 0);
 	  nose.castShadow = true;
 	  group.add(nose);
@@ -2697,25 +2787,26 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 	  });
 
 	  // 3. Occhi sopra la testa, dove il corpo incontra il muso
-	  const bumpGeo  = new THREE.BoxGeometry(0.14, 0.06, 0.14);
-	  const eyeGeo   = new THREE.BoxGeometry(0.08, 0.02, 0.08);
-	  const pupilGeo = new THREE.BoxGeometry(0.05, 0.015, 0.1);
+	  const bumpGeo  = new THREE.BoxGeometry(0.14, 0.060, 0.14);
+	  const eyeGeo   = new THREE.BoxGeometry(0.08, 0.030, 0.08);
+	  const pupilGeo = new THREE.BoxGeometry(0.04, 0.031, 0.04);
+	  
 	  [-0.22, 0.22].forEach(z => {
-		const bump = new THREE.Mesh(bumpGeo, skinMat);
-		bump.position.set(bodyEnd - 0.07, 0.18, z);
-		group.add(bump);
-
-		const eye = new THREE.Mesh(eyeGeo, eyeMat);
-		eye.position.set(bodyEnd - 0.07, 0.22, z);
-		group.add(eye);
-
-		const pupil = new THREE.Mesh(pupilGeo, pupilMat);
-		pupil.position.set(bodyEnd - 0.07, 0.236, z);
-		group.add(pupil);
+	  	const bump = new THREE.Mesh(bumpGeo, skinMat);
+	  	bump.position.set(bodyEnd - 0.07, 0.18, z);
+	  	group.add(bump);
+	  
+	  	const eye = new THREE.Mesh(eyeGeo, eyeMat);
+	  	eye.position.set(bodyEnd - 0.07, 0.20, z);
+	  	group.add(eye);
+	  
+	  	const pupil = new THREE.Mesh(pupilGeo, pupilMat);
+	  	pupil.position.set((bodyEnd - 0.07) + 0.0355, 0.20, z);
+	  	group.add(pupil);
 	  });
 
 	  // 4. Scaglie sul dorso (solo sul corpo, prima degli occhi)
-	  const scaleRows = [-0.25, -0.1, 0.1, 0.25];
+	  const scaleRows = [-0.20, 0.0, 0.20];
 	  const scaleEnd = bodyEnd - 0.2;
 
 	  scaleRows.forEach(z => {
@@ -2725,7 +2816,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 		  const scaleLength = Math.min(0.20 + Math.random() * 0.4, scaleEnd - x);
 		  if (scaleLength <= 0.05) break;
 
-		  const scale = new THREE.Mesh(new THREE.BoxGeometry(scaleLength, 0.015, 0.125), scaleMat);
+		  const scale = new THREE.Mesh(new THREE.BoxGeometry(scaleLength, 0.015, 0.15), scaleMat);
 		  scale.position.set(x + scaleLength / 2, 0.12, z);
 		  group.add(scale);
 
@@ -2738,13 +2829,13 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 	  return group;
 	}
     // --- MODELLO TRONCO ---
-    function createLogMesh(length) {
+    function createLogMesh(length, col1 = 0x795548, col2 = 0x5f4035) {
 	  const group = new THREE.Group();
 
 	  // --- TRONCO ---
 	  const log = new THREE.Mesh(
 		new THREE.BoxGeometry(length, 0.2, 0.70),
-		new THREE.MeshLambertMaterial({ color: 0x795548 })
+		new THREE.MeshLambertMaterial({ color: col1 })
 	  );
 
 	  log.position.y = 0.02;
@@ -2755,7 +2846,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 
 	  // --- VENATURE ---
 	  const veinMat = new THREE.MeshLambertMaterial({
-		color: 0x5f4035
+		color: col2
 	  });
 
 	  // 3 righe di venature
@@ -3468,13 +3559,13 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
         if (type === 'grass') {
           const isPlayerStart = (x === 0 && z === 0);
 		  if (isBorder) {
-            const tree = Math.random() < color.prob ? createCactusMesh(color.cactus.col1, color.cactus.col2) : createTreeMesh(color.tree.col1, color.tree.col2);
+            const tree = Math.random() < color.probCactus ? createCactusMesh(color.cactus.col1, color.cactus.col2) : createTreeMesh(color.tree.col1, color.tree.col2);
             tree.position.set(x, 0, z);
             scene.add(tree);
             laneData.obstacles.push(x);
 			laneData.decor.push(tree);//anche nelle decorazioni
           } else if (isQuasiBorder && Math.random() < 0.5) {
-		    const tree = Math.random() < color.prob ? createCactusMesh(color.cactus.col1, color.cactus.col2) : createTreeMesh(color.tree.col1, color.tree.col2);
+		    const tree = Math.random() < color.probCactus ? createCactusMesh(color.cactus.col1, color.cactus.col2) : createTreeMesh(color.tree.col1, color.tree.col2);
             tree.position.set(x, 0, z);
             scene.add(tree);
             laneData.obstacles.push(x);
@@ -3482,7 +3573,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 		  } else if (!isPlayerStart && !isQuasiPlayerStart) {
             const rand = Math.random();
             if (rand < 0.10) {
-              const tree = Math.random() < color.prob ? createCactusMesh(color.cactus.col1, color.cactus.col2) : createTreeMesh(color.tree.col1, color.tree.col2);
+              const tree = Math.random() < color.probCactus ? createCactusMesh(color.cactus.col1, color.cactus.col2) : createTreeMesh(color.tree.col1, color.tree.col2);
               tree.position.set(x, 0, z);
               scene.add(tree);
               laneData.obstacles.push(x);
@@ -3504,7 +3595,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 				scene.add(tunnel);
 				laneData.decor.push(tunnel);//anche nelle decorazioni
 			} else {
-				const tree = Math.random() < color.prob ? createCactusMesh(color.cactus.col1, color.cactus.col2) : createTreeMesh(color.tree.col1, color.tree.col2);
+				const tree = Math.random() < color.probCactus ? createCactusMesh(color.cactus.col1, color.cactus.col2) : createTreeMesh(color.tree.col1, color.tree.col2);
 				tree.position.set(x, 0, z);
 				scene.add(tree);
 				laneData.obstacles.push(x);
@@ -3759,6 +3850,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
     // Logica di movimento condivisa da tastiera (frecce/WASD) e D-pad touch
     function attemptMove(direction) {
       if (!gameStarted || isJumping || isDying) return;
+	  resetIdle();//pensa
 
       const startX = Math.round(playerPos.x);
       const startZ = Math.round(playerPos.z);
@@ -4067,6 +4159,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
     // --- POPUP INIZIALE: AVVIO PARTITA ---
     document.getElementById('play-btn').addEventListener('click', () => {
       gameStarted = true;
+	  resetIdle();//pensa
       document.getElementById('start-overlay').style.display = 'none';
 	  updateMusic();
     });
@@ -4105,6 +4198,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
         isJumping = false;
         jumpProgress = 0;
         isDying = false;
+		resetIdle();//pensa
       }, 1500);
     }
 
@@ -4172,6 +4266,87 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 	  fpsFrames = 0;
 	  fpsLast = now;
 	}
+	
+	
+	
+	
+	//ROCKY PENSA...
+	const IDLE_MS = 3000;
+	const thoughtBubble = document.getElementById('thought-bubble');
+	const _bubbleBox = new THREE.Box3();
+	let lastActionTime = performance.now();
+	let bubbleVisible = false;
+	let bubbleAnchorY = 1.2;
+	
+	let rockyThinksArray = [
+		"Why did I agree to this again?",
+		"Strategic pause. Totally planned.",
+		"Did I leave the catnip at home?",
+		"A train? Yeah, best to stay clear!",
+		"If I don't move, they can't see me.",
+		"Battery at 1%. Initiating nap mode...",
+		"Okay, I'm just gonna sleep right here.",
+		"Wait, was that a crocodile?!",
+		"Slow down with those cars, will ya!",
+		"Ouch, I think I pulled a paw muscle.",
+		"Was that a bug or a missing pixel?",
+		"My spider-sense is tingling... for a couch!",
+		"Take it easy with the cars!",
+		"Brain loading... Error 404: Thought Not Found.",
+		"Should I go back home?! No way.",
+		"Desperately need cuddles (and treats)!",
+		"Calculating jump trajectory... nah, too lazy.",
+		"A cactus? Definitely NOT a pee spot.",
+		"Do I smell salmon in the air?",
+		"What would a wise cat do? Answer: A nap.",
+		"Feline reflexes ready! ...In 5 minutes.",
+		"A cactus? Terrible place to take a leak.",
+		"Just pausing to look dramatically into the distance.",
+		"Who moved my checkpoint?",
+		"Look around and pretend you have a plan.",
+		"Wait... how do I walk again?",
+		"A tree? I might just climb it... or maybe not."	
+	];
+	let rockyThinksIndex = ((Math.random() * 100)|0)%rockyThinksArray.length;
+	
+	function resetIdle() {
+	  lastActionTime = performance.now();
+	  rockyThinksIndex = (rockyThinksIndex+1) % rockyThinksArray.length;
+	  if (bubbleVisible) {
+		bubbleVisible = false;
+		thoughtBubble.classList.remove('visible');
+	  }
+	}
+
+	function updateThoughtBubble() {
+	  const isCat = true;//currentPlayerType === 'rockygraffietto' || currentPlayerType === 'siamese';
+	  const idle = gameStarted && isCat && !isJumping && !isDying && performance.now() - lastActionTime > IDLE_MS;
+
+	  if (!idle) {
+		if (bubbleVisible) {
+		  bubbleVisible = false;
+		  thoughtBubble.classList.remove('visible');
+		}
+		return;
+	  }
+
+	  if (!bubbleVisible) {
+		// altezza reale del modello attuale, calcolata una sola volta all'apparizione
+		bubbleAnchorY = _bubbleBox.setFromObject(player).max.y + 0.1;
+		bubbleVisible = true;
+		thoughtBubble.classList.add('visible');
+	  }
+
+	  const p = worldToScreen(player.position.x, bubbleAnchorY, player.position.z);
+	  thoughtBubble.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, -100%)`;
+	  
+	
+	  document.getElementById('rocky-thinks').innerHTML = rockyThinksArray[rockyThinksIndex];
+	}
+	
+	
+	
+	
 
 	// --- LOOP DI ANIMAZIONE ---
 	const FRAME_MS = 1000 / 60;
@@ -4199,6 +4374,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
           playerPos.x = targetPos.x;
           playerPos.z = targetPos.z;
           player.position.y = 0;
+		  resetIdle();//pensa
 		  
 		  collectPawAt(Math.round(playerPos.x), playerPos.z);//ZAMPETTE BONUS
           
@@ -4238,6 +4414,9 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
       
       // 3. SPAWN OSTACOLI
       lanes.forEach(lane => {
+	  
+		const color = getObjectColorByZ(lane.z);
+		
         if (lane.type === 'road' || lane.type === 'river' || lane.type === 'track') {
           lane.spawnTimer++;
           if (lane.spawnTimer > lane.spawnInterval) {
@@ -4331,8 +4510,8 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 			  if (canSpawn) {
 				  const logLengths = [2.2, 3.0, 1.5];
 				  const logLength = logLengths[Math.floor(Math.random() * logLengths.length)];
-				  const isCroco = Math.random() < 0.1 && logLength > 1.5;
-				  const log = isCroco ? createCrocoMesh(logLength) : createLogMesh(logLength);
+				  const isCroco = Math.random() < color.probCroco && logLength > 1.5;
+				  const log = isCroco ? createCrocoMesh(logLength, color.croco.col1, color.croco.col2) : createLogMesh(logLength, color.log.col1, color.log.col2);
 				  log.position.set(startX, 0, lane.z);
 				  if (isCroco && lane.speed < 0) log.rotation.y = Math.PI;   // muso verso sinistra
 				  scene.add(log);
@@ -4481,7 +4660,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 			
 			//tronco affonda leggermente
 			//console.log(log.mesh.position.y);
-			log.mesh.position.y = -0.1;
+			log.mesh.position.y = -0.075;
 			
             if (Math.abs(player.position.x) > X_LIMIT) {
 			  if (isGod) {
@@ -4511,6 +4690,8 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
       }
 
       renderer.render(scene, camera);
+	  
+	  updateThoughtBubble();//rocky pensa!	  
 	  
 	  updateFps(now);
     }
