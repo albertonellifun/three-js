@@ -382,10 +382,18 @@
     camera.lookAt(0, 0, 0);
 
     
-	const renderer = new THREE.WebGLRenderer({ antialias: true });
-	renderer.setSize(window.innerWidth, window.innerHeight);
-	renderer.shadowMap.enabled = true;
-	renderer.shadowMap.type = THREE.PCFShadowMap;//THREE.PCFSoftShadowMap;
+	// Parametri di test: ?aa=0  ?pr=0.5  ?shadows=0  (combinabili, es. ?aa=0&pr=0.75&fps)
+const params = new URLSearchParams(location.search);
+const USE_AA      = params.get('aa') !== '0';
+const PIXEL_RATIO = parseFloat(params.get('pr')) || 1;
+const USE_SHADOWS = params.get('shadows') !== '0';
+
+const renderer = new THREE.WebGLRenderer({ antialias: USE_AA, powerPreference: 'high-performance' });
+renderer.setPixelRatio(PIXEL_RATIO);
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = USE_SHADOWS;
+renderer.shadowMap.type = THREE.PCFShadowMap;
+	
 	document.body.appendChild(renderer.domElement);
 
 	
@@ -2641,6 +2649,92 @@
       return group;
     }
 
+	// CROCO!!!
+	// --- MODELLO COCCODRILLO (ex tronco) ---
+	function createCrocoMesh(length) {
+	  const group = new THREE.Group();
+
+	  // Materiali
+	  const skinMat  = new THREE.MeshLambertMaterial({ color: 0x2e6b30 }); // Verde scuro (corpo/muso)
+	  const scaleMat = new THREE.MeshLambertMaterial({ color: 0x1f4d24 }); // Verde più scuro (scaglie)
+	  const eyeMat   = new THREE.MeshLambertMaterial({ color: 0xffe000 }); // Giallo (occhi)
+	  const pupilMat = new THREE.MeshLambertMaterial({ color: 0x111111 }); // Nero (pupille)
+
+	  // Il muso è verso +x (senso di marcia)
+	  const snoutLen = Math.max(0.4, length * 0.25);
+	  const bodyLen  = length - snoutLen;
+	  const bodyEnd  = -length / 2 + bodyLen; // x dove finisce il corpo e inizia il muso
+	  
+	  // 1. Corpo: rettangolare e piatto
+	  const body = new THREE.Mesh(new THREE.BoxGeometry(bodyLen, 0.20, 0.70), skinMat);
+	  body.position.set(-length / 2 + bodyLen / 2, 0.02, 0);
+	  body.receiveShadow = true;
+	  body.castShadow = true;
+	  group.add(body);
+
+	  // 2. Muso: più stretto e un filo più basso
+	  const snout = new THREE.Mesh(new THREE.BoxGeometry(snoutLen, 0.16, 0.50), skinMat);
+	  snout.position.set(bodyEnd + snoutLen / 2, 0.01, 0);
+	  snout.receiveShadow = true;
+	  snout.castShadow = true;
+	  group.add(snout);
+	  
+	  // 2b. Rettangolo del naso sulla punta del muso, con due buchi per le narici
+	  const noseMat = new THREE.MeshLambertMaterial({ color: 0x3a7d3d }); // Verde un po' più chiaro, così si stacca dal muso
+	  
+	  const nose = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.05, 0.30), noseMat);
+	  nose.position.set(length / 2 - 0.12, 0.1, 0);
+	  nose.castShadow = true;
+	  group.add(nose);
+	  
+	  const nostrilGeo = new THREE.BoxGeometry(0.05, 0.015, 0.05);
+	  [-0.08, 0.08].forEach(z => {
+	    const nostril = new THREE.Mesh(nostrilGeo, pupilMat); // riuso il nero delle pupille
+	    nostril.position.set(length / 2 - 0.12, 0.15, z);
+	    group.add(nostril);
+	  });
+
+	  // 3. Occhi sopra la testa, dove il corpo incontra il muso
+	  const bumpGeo  = new THREE.BoxGeometry(0.14, 0.06, 0.14);
+	  const eyeGeo   = new THREE.BoxGeometry(0.08, 0.02, 0.08);
+	  const pupilGeo = new THREE.BoxGeometry(0.05, 0.015, 0.1);
+	  [-0.22, 0.22].forEach(z => {
+		const bump = new THREE.Mesh(bumpGeo, skinMat);
+		bump.position.set(bodyEnd - 0.07, 0.18, z);
+		group.add(bump);
+
+		const eye = new THREE.Mesh(eyeGeo, eyeMat);
+		eye.position.set(bodyEnd - 0.07, 0.22, z);
+		group.add(eye);
+
+		const pupil = new THREE.Mesh(pupilGeo, pupilMat);
+		pupil.position.set(bodyEnd - 0.07, 0.236, z);
+		group.add(pupil);
+	  });
+
+	  // 4. Scaglie sul dorso (solo sul corpo, prima degli occhi)
+	  const scaleRows = [-0.25, -0.1, 0.1, 0.25];
+	  const scaleEnd = bodyEnd - 0.2;
+
+	  scaleRows.forEach(z => {
+		let x = -length / 2;
+		while (x < scaleEnd) {
+		  x += 0.1 + Math.random() * 0.2;
+		  const scaleLength = Math.min(0.20 + Math.random() * 0.4, scaleEnd - x);
+		  if (scaleLength <= 0.05) break;
+
+		  const scale = new THREE.Mesh(new THREE.BoxGeometry(scaleLength, 0.015, 0.125), scaleMat);
+		  scale.position.set(x + scaleLength / 2, 0.12, z);
+		  group.add(scale);
+
+		  x += scaleLength;
+		}
+	  });
+
+	  applyCurrentVisualMode(group);
+
+	  return group;
+	}
     // --- MODELLO TRONCO ---
     function createLogMesh(length) {
 	  const group = new THREE.Group();
@@ -4229,9 +4323,10 @@
 			  if (canSpawn) {
 				  const logLengths = [2.2, 3.0, 1.5];
 				  const logLength = logLengths[Math.floor(Math.random() * logLengths.length)];
-				  
-				  const log = createLogMesh(logLength);
+				  const isCroco = Math.random() < 0.1 && logLength > 1.5;
+				  const log = isCroco ? createCrocoMesh(logLength) : createLogMesh(logLength);
 				  log.position.set(startX, 0, lane.z);
+				  if (isCroco && lane.speed < 0) log.rotation.y = Math.PI;   // muso verso sinistra
 				  scene.add(log);
 				  logs.push({
 					mesh: log,
