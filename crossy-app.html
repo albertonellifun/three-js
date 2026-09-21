@@ -333,6 +333,9 @@
   <audio id="musicSound2" loop preload="auto">
     <source src="./crossy-music2.mp3" type="audio/mpeg">
   </audio>
+  <audio id="musicSound3" loop preload="auto">
+    <source src="./crossy-music3.mp3" type="audio/mpeg">
+  </audio>
   
   <audio id="deadSoundCat" preload="auto">
     <source src="./crossy-dead-cat.mp3" type="audio/mpeg">
@@ -4109,13 +4112,15 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 	function updateMusic() {
       const m1 = document.getElementById("musicSound1");
 	  const m2 = document.getElementById("musicSound2");
-      if (!m1 || !m2) return;
+	  const m3 = document.getElementById("musicSound3");
+      if (!m1 || !m2 || !m3) return;
 	  
 	  document.getElementById('btn-mute').innerText = isMute ? '🔇' : '🎵';
 
       if (isMute) {
         m1.pause();
 		m2.pause();
+		m3.pause();
 		let sounds = ["trainSound","policeSound","splashSound"];
 		sounds.forEach(s => {
 			let elem = document.getElementById(s);
@@ -4124,18 +4129,27 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
         return;
       }
 	  
-	  var chooseMusic = new Date().getSeconds() % 2;
+	  var chooseMusic = new Date().getSeconds() % 3;
 	  
-	  if (chooseMusic) {
+	  if (chooseMusic === 2) {
 		  if (m2.paused) {
 			m2.volume = 0.5;
 			m2.play().catch(function(){});
 			m1.pause();
+			m3.pause();
 		  }
-	  } else {
+	  } else if (chooseMusic === 1) {
 		  if (m1.paused) {
 			m1.volume = 0.5;
 			m1.play().catch(function(){});
+			m2.pause();
+			m3.pause();
+		  }
+	  } else if (chooseMusic === 0) {
+		  if (m3.paused) {
+		    m3.volume = 0.5;
+			m3.play().catch(function(){});
+			m1.pause();
 			m2.pause();
 		  }
 	  }
@@ -4627,7 +4641,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 
 	  //se esiste polizia/treno vicino -> SUONA!!!
 	  if (minPoliceDistance < 6) playSound('policeSound',  minPoliceDistance < 3 ? 1 : minPoliceDistance < 5 ? 0.33 : 0.1);
-	  if (minTrainDistance < 12) playSound('trainSound',  minTrainDistance < 3 ? 1 : minTrainDistance < 5 ? 0.66 : minTrainDistance < 8 ? 0.50 : minTrainDistance < 11 ? 0.25 : 0.1);  
+	  if (minTrainDistance < 10) playSound('trainSound',  minTrainDistance < 3 ? 1 : minTrainDistance < 5 ? 0.66 : minTrainDistance < 7 ? 0.50 : minTrainDistance < 9 ? 0.25 : 0.1);  
       
 
 
@@ -4656,7 +4670,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
             playerPos.x = player.position.x;
             targetPos.x = player.position.x;
 			
-			if (log.mesh.position.y !== -0.1) playSound('splashSound');//splash solo appena il tronco affonda
+			if (log.mesh.position.y !== -0.075) playSound('splashSound');//splash solo appena il tronco affonda
 			
 			//tronco affonda leggermente
 			//console.log(log.mesh.position.y);
