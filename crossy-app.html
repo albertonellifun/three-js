@@ -253,6 +253,7 @@
     <button class="action-btn" id="btn-rot-right" aria-label="Rotate view">↺</button>
     <!--button class="action-btn" id="btn-fog"       aria-label="Fog toggle">🌫️</button-->
 	<button class="action-btn" id="btn-wireframe" aria-label="Wireframe toggle">📐</button>
+	<button class="action-btn toggled-on" id="btn-shadows" aria-label="Shadows toggle">🌗</button>
 	<button class="action-btn" id="btn-godmode"   aria-label="GodMode toggle">🛡️</button>
 	<button class="action-btn" id="btn-fps"		  aria-label="FPS toggle">🕵️</button>
 	<button class="action-btn" id="btn-mute"      aria-label="Mute toggle">🎵</button>
@@ -453,9 +454,10 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
     let gameStarted = false;
 
 	let isMute = true;//////false;
-	let isWireframe = false;
-	let immediateRotation = true;
-	let isGod = false;
+	let isWireframe = false;//wireframe disabilitato
+	let isShadows = true;//ombre abilitate
+	let immediateRotation = true;//se false, doppia clickata per spostarsi
+	let isGod = false;//godmode 
 
     // Cronologia mosse sicure
     let moveHistory = [{ x: 0, z: 0 }];
@@ -2278,7 +2280,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
         new THREE.MeshLambertMaterial({ color: 0x222222 })
       );
 	  wheel.position.set(0, 0, 0);
-	  wheel.castShadow = true;
+	  wheel.castShadow = false;//true;ottimizzazione
 	  group.add(wheel);
 	  
 	  const axis = new THREE.Mesh(
@@ -2286,7 +2288,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
         new THREE.MeshLambertMaterial({ color: 0x666666 })
       );
       axis.position.set(0, 0, side * 0.0025);
-      axis.castShadow = true;
+      axis.castShadow = false;//true;ottimizzazione
 	  group.add(axis);
 	  
 	  group.position.set(x, y, z);      
@@ -2314,12 +2316,12 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 
 	  const leftRail = new THREE.Mesh(railGeo, railMat);
 	  leftRail.position.set(0, 0.08, -0.28);
-	  leftRail.castShadow = true;
+	  leftRail.castShadow = false;//true;ottimizzazione
 	  group.add(leftRail);
 
 	  const rightRail = new THREE.Mesh(railGeo, railMat);
 	  rightRail.position.set(0, 0.08, 0.28);
-	  rightRail.castShadow = true;
+	  rightRail.castShadow = false;//true;ottimizzazione
 	  group.add(rightRail);
 
 	  applyCurrentVisualMode(group);
@@ -3958,6 +3960,12 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 		isWireframe = !isWireframe;
 		toggleWorldWireframeOverlay(scene, isWireframe);
 		document.getElementById('btn-wireframe').classList.toggle('toggled-on', isWireframe);
+	});
+
+	bindTouchButton('btn-shadows', () => {
+	  isShadows = !isShadows;
+	  dirLight.castShadow = isShadows;
+	  document.getElementById('btn-shadows').classList.toggle('toggled-on', isShadows);
 	});
 
 	bindTouchButton('btn-godmode', () => {
