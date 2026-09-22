@@ -270,7 +270,7 @@
 	  padding: 10px 16px;
 	  font: italic 900 15px/1.15 'Comic Sans MS', 'Comic Neue', 'Chalkboard SE', 'Marker Felt', sans-serif;
 	  text-align: center;
-	  white-space: nowrap;
+	  white-space: wrap;
 	  box-shadow: 3px 3px 0 rgba(0,0,0,0.35);
 	}
 	.tb-dot {
@@ -490,8 +490,8 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
     const dirLight = new THREE.DirectionalLight(0xffffff, 0.65);
     dirLight.position.set(15, 25, 10);
     dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 2048;
-    dirLight.shadow.mapSize.height = 2048;
+    dirLight.shadow.mapSize.width = 1024;
+    dirLight.shadow.mapSize.height = 1024;
     const dShadow = 15;
     dirLight.shadow.camera.left = -dShadow;
     dirLight.shadow.camera.right = dShadow;
@@ -4493,17 +4493,16 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 		bubbleAnchorY = _bubbleBox.setFromObject(player).max.y + 0.1;
 		bubbleVisible = true;
 		thoughtBubble.classList.add('visible');
+		
+		document.getElementById('rocky-thinks').innerHTML = 
+			isCat ? rockyThinksArray[rockyThinksIndex] :
+			isBender ? benderThinksArray[rockyThinksIndex] : 
+			isMinion ? minionThinksArray[rockyThinksIndex] : 
+			genericThinksArray[rockyThinksIndex];
 	  }
 
 	  const p = worldToScreen(player.position.x, bubbleAnchorY, player.position.z);
 	  thoughtBubble.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, -100%)`;
-	  
-	
-	  document.getElementById('rocky-thinks').innerHTML = 
-		isCat ? rockyThinksArray[rockyThinksIndex] :
-		isBender ? benderThinksArray[rockyThinksIndex] : 
-		isMinion ? minionThinksArray[rockyThinksIndex] : 
-		genericThinksArray[rockyThinksIndex];
 	}
 	
 	
