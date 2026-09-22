@@ -28,12 +28,10 @@
       position: absolute;
       bottom: 10px;
       left: 10px;
-	  xxxleft: 50%;
-      xxxtransform: translateX(-50%);
-      color: rgba(255, 255, 255, 0.8);
+	  color: rgba(255, 255, 255, 0.25);
       font-size: 16px;
       font-weight: bold;
-      background: rgba(0,0,0,0.5);
+      background: rgba(0,0,0,0.15);
       padding: 8px 16px;
       border-radius: 8px;
       z-index: 10;
@@ -182,10 +180,11 @@
 	  display: flex;
 	  gap: 6px;
 	  user-select: none;
+	  flex-wrap: wrap;
 	}
 	.action-btn {
 	  flex: 1 1 0;                      /* stessa larghezza per tutti, riempiono lo spazio */
-	  min-width: 0;                     /* possono restringersi sui telefoni stretti */
+	  min-width: 50px;                     /* possono restringersi sui telefoni stretti */
 	  padding: 0;
 	  height: 50px;
 	  background: rgba(255,255,255,0.18);
@@ -207,7 +206,7 @@
       border-color: #2ecc71;
     }
 	
-    @media (max-width: 700px) {
+    @media (max-width: 1024px) {
       #instructions { display: none; }
     }
 	
@@ -278,6 +277,8 @@
 	}
 	.tb-dot1 { width: 16px; height: 16px; left: calc(50% - 8px); bottom: -18px; }
 	.tb-dot2 { width: 10px; height: 10px; left: calc(50% - 2px); bottom: -32px; }
+	
+	.action-btn.at-limit { opacity: 0.35; }
   </style>
   <!-- Three.js CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -285,7 +286,7 @@
 <body>
 
   <div id="score-board">0</div>
-  <div id="instructions">WASD/Arrows/Tap = Move Player &nbsp;•&nbsp; Q/E = Rotate View &nbsp;•&nbsp; P = Change Player</div>
+  <div id="instructions">Urban Blox Crossing - 🥊😼Rocky Graffietto Edition</div>
   <div id="fps-counter"></div>
   
   <div id="thought-bubble">
@@ -297,9 +298,11 @@
   </div>
   
   <div id="action-controls">
+    <button class="action-btn" id="btn-zoom-out" aria-label="Zoom out">−</button>
+    <button class="action-btn" id="btn-zoom-in"  aria-label="Zoom in">+</button>
     <button class="action-btn" id="btn-rot-left"  aria-label="Rotate view">↻</button>
     <button class="action-btn" id="btn-rot-right" aria-label="Rotate view">↺</button>
-    <!--button class="action-btn" id="btn-fog"       aria-label="Fog toggle">🌫️</button-->
+    <button class="action-btn" id="btn-perspective" aria-label="Perspective toggle">👁️</button>
 	<button class="action-btn" id="btn-wireframe" aria-label="Wireframe toggle">📐</button>
 	<button class="action-btn toggled-on" id="btn-shadows" aria-label="Shadows toggle">🌗</button>
 	<button class="action-btn" id="btn-godmode"   aria-label="GodMode toggle">🛡️</button>
@@ -408,13 +411,16 @@
     //scene.fog = new THREE.Fog(0x87ceeb, BOARD_WIDTH, -MAX_LANE);
 
     const aspect = window.innerWidth / window.innerHeight;
-    const d = 5; // Zoom ridotto
+    const ZOOM_MIN = 2;
+	const ZOOM_MAX = 7;
+	const ZOOM_STEP = 0.4;
+	let d = 5; // zoom iniziale (modificabile con i pulsanti +/-)
     let camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
 	/*camera = new THREE.PerspectiveCamera( 
-		40, // FOV alto == 120-150 == prospettiva distorta, basso == 40-60 == normale
+		20+d*d, // FOV alto == 120-150 == prospettiva distorta, basso == 40-60 == normale
 		aspect,
 		0.1,
-		1000
+		100
 	);*/
 	
 
@@ -504,11 +510,12 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
     let isDying = false;
     let gameStarted = false;
 
-	let isMute = true;//////false;
+	let isMute = false;
 	let isWireframe = false;//wireframe disabilitato
 	let isShadows = true;//ombre abilitate
 	let immediateRotation = true;//se false, doppia clickata per spostarsi
 	let isGod = false;//godmode 
+	let isPerspective = false;//prospettiva figherrima++
 
     // Cronologia mosse sicure
     let moveHistory = [{ x: 0, z: 0 }];
@@ -2581,7 +2588,6 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 	}
 
     // --- MODELLI VEICOLI ---
-	// --- MODELLI VEICOLI ---
 	function createCarMesh() {
 	  const group = new THREE.Group();
 	  
@@ -2771,7 +2777,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 	  const snout = new THREE.Mesh(new THREE.BoxGeometry(snoutLen, 0.16, 0.50), skinMat);
 	  snout.position.set(bodyEnd + snoutLen / 2, 0.01, 0);
 	  snout.receiveShadow = true;
-	  snout.castShadow = true;
+	  snout.castShadow = false;//true;ottimizzazione
 	  group.add(snout);
 	  
 	  // 2b. Rettangolo del naso sulla punta del muso, con due buchi per le narici
@@ -2779,7 +2785,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 	  
 	  const nose = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.05, 0.38), noseMat);
 	  nose.position.set(length / 2 - 0.12, 0.1, 0);
-	  nose.castShadow = true;
+	  nose.castShadow = false;//true;ottimizzazione
 	  group.add(nose);
 	  
 	  const nostrilGeo = new THREE.BoxGeometry(0.05, 0.015, 0.05);
@@ -3636,13 +3642,13 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 	  }
 		
 	  if (type === 'river') {
-		laneData.speed = (Math.random() * 0.02 + 0.01) * (z % 3 ? 1 : -1);
+		laneData.speed = (Math.random() * 0.020 + 0.010) * (z % 3 ? 1 : -1);
         laneData.spawnTimer = 0;
         laneData.spawnInterval = Math.random() * 240 + 120;
 	  }
 	  
 	  if (type === 'track') {
-	  	laneData.speed = (Math.random() * 0.030 + 0.020) * (Math.random() > 0.5 ? 1 : -1);
+	  	laneData.speed = (Math.random() * 0.050 + 0.020) * (Math.random() > 0.5 ? 1 : -1);
         laneData.spawnTimer = 0;
         laneData.spawnInterval = Math.random() * 480 + 720;
 	  }
@@ -4031,11 +4037,11 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 
     bindTouchButton('btn-rot-left', () => {
       if (!gameStarted) return;
-      targetCameraAngle -= Math.PI / 9;
+      targetCameraAngle -= Math.PI / 12;
     });
     bindTouchButton('btn-rot-right', () => {
       if (!gameStarted) return;
-      targetCameraAngle += Math.PI / 9;
+      targetCameraAngle += Math.PI / 12;
     });
 
     /*
@@ -4076,6 +4082,45 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 		isMute = !isMute; 
 		updateMusic();
 	});
+	
+	bindTouchButton('btn-perspective', () => {
+		isPerspective = !isPerspective;
+		document.getElementById('btn-perspective').classList.toggle('toggled-on', isPerspective);
+
+		const aspect = window.innerWidth / window.innerHeight; // ricalcolato, non quello stale
+		const oldPos = camera.position.clone();
+
+		camera = isPerspective
+			? new THREE.PerspectiveCamera(20 + d * d, aspect, 0.1, 100)
+			: new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
+
+		camera.position.copy(oldPos);   // niente più scatto a (0,0,0)
+		camera.lookAt(player.position.x, player.position.y, player.position.z);
+
+		setZoom(d);
+	});
+
+	function setZoom(newD) {
+	  d = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, newD));
+	  const aspect = window.innerWidth / window.innerHeight;
+	  if (isPerspective) {
+		camera.fov = 20 + d * d;
+		camera.aspect = aspect;
+	  } else {
+		camera.left   = -d * aspect;
+		camera.right  =  d * aspect;
+		camera.top    =  d;
+		camera.bottom = -d;
+	  }
+	  camera.updateProjectionMatrix();
+	  document.getElementById('btn-zoom-in').classList.toggle('at-limit', d <= ZOOM_MIN);
+	  document.getElementById('btn-zoom-out').classList.toggle('at-limit', d >= ZOOM_MAX);
+	}
+	
+	bindTouchButton('btn-zoom-in',  () => setZoom(d - ZOOM_STEP)); // + = avvicina
+	bindTouchButton('btn-zoom-out', () => setZoom(d + ZOOM_STEP)); // − = allontana
+
+	setZoom(d); // sincronizza lo stato iniziale dei pulsanti
 
 	const infoOverlay = document.getElementById('info-overlay');
 	const infoButton = document.getElementById('btn-info');
