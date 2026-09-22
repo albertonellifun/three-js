@@ -3480,21 +3480,21 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
         laneGeo = new THREE.BoxGeometry(BOARD_WIDTH, 0.2, 1);
         laneMat = new THREE.MeshLambertMaterial({ color: isLight ? 0x444444 : 0x404040 });
 		
-		  if(nextLane && nextLane.type === 'road') {
-			  // --- CREAZIONE RIGHE TRATTEGGIATE BIANCHE ---
-			  const dashMat = new THREE.MeshLambertMaterial({ color: isWhiteLine ? 0xffffff : 0xeeee00 });
-			  const dashGeo = new THREE.BoxGeometry(0.4, 0.01, 0.08); // Segmenti tratteggiati spessi 1cm
+		if(nextLane && nextLane.type === 'road') {
+		  // --- CREAZIONE RIGHE TRATTEGGIATE BIANCHE ---
+		  const dashMat = new THREE.MeshLambertMaterial({ color: isWhiteLine ? 0xffffff : 0xeeee00 });
+		  const dashGeo = new THREE.BoxGeometry(0.4, 0.01, 0.08);
 
-			  // Ciclo lungo la larghezza della mappa per posizionare i tratti
-			  for (let x = -BOARD_WIDTH / 2; x <= BOARD_WIDTH / 2; x += 1) {
-				// Striscia sul bordo inferiore della corsia (offset Z +0.46)
-				const dashBottom = new THREE.Mesh(dashGeo, dashMat);
-				dashBottom.position.set(x, 0.1, z + 0.56);
-				dashBottom.receiveShadow = true;
-				scene.add(dashBottom);
-
-			  }
-		  } else {
+		  // Ciclo lungo la larghezza della mappa per posizionare i tratti
+		  for (let x = -BOARD_WIDTH / 2; x <= BOARD_WIDTH / 2; x += 1) {
+		    // Striscia sul bordo inferiore della corsia (offset Z +0.46)
+			const dashBottom = new THREE.Mesh(dashGeo, dashMat);
+			dashBottom.position.set(x, 0.1, z + 0.56);
+			dashBottom.receiveShadow = true;
+			scene.add(dashBottom);
+			laneDecor.push(dashBottom);
+		  }
+		} else {
 			//linea continua?
 			const dashMat = new THREE.MeshLambertMaterial({ color: isWhiteLine ? 0xffffff : 0xeeee00 });
 			const dashGeo = new THREE.BoxGeometry(BOARD_WIDTH * 2, 0.01, 0.04); // Segmenti tratteggiati spessi 40cm
