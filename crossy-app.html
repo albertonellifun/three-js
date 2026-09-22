@@ -86,76 +86,76 @@
       box-shadow: 0 1px 0 #1e8449, 0 4px 10px rgba(0,0,0,0.4);
     }
 
-		#info-overlay {
-			position: fixed;
-			inset: 0;
-			background: rgba(8, 12, 20, 0.76);
-			backdrop-filter: blur(3px);
-			display: none;
-			align-items: center;
-			justify-content: center;
-			z-index: 1001;
-			padding: 20px;
-			box-sizing: border-box;
-		}
-		#info-overlay.visible {
-			display: flex;
-		}
-		#info-modal {
-			width: min(460px, 100%);
-			background: linear-gradient(180deg, rgba(32, 40, 55, 0.96), rgba(16, 21, 31, 0.96));
-			color: #ffffff;
-			border: 1px solid rgba(255,255,255,0.16);
-			border-radius: 22px;
-			box-shadow: 0 18px 44px rgba(0,0,0,0.42);
-			padding: 24px 22px 20px;
-			position: relative;
-		}
-		#info-modal h2 {
-			margin: 0;
-			font-size: 28px;
-			font-weight: 900;
-			letter-spacing: -1px;
-		}
-		#info-modal small {
-			margin-top: -10px;
-		}
-		#info-modal p {
-			margin: 0 0 14px 0;
-			font-size: 15px;
-			line-height: 1.5;
-			color: rgba(255,255,255,0.9);
-		}
-		#info-modal a {
-			color: rgba(255,255,255,0.9);
-			font-weight: bold;
-		}
-		
-		#info-modal .info-label {
-			display: block;
-			margin-top: 20px;
-			margin-bottom: 4px;
-			color: #ffd54f;
-			font-size: 13px;
-			font-weight: 800;
-			text-transform: uppercase;
-		}
-		#info-close-btn {
-			position: absolute;
-			top: 12px;
-			right: 12px;
-			width: 38px;
-			height: 38px;
-			border: none;
-			border-radius: 50%;
-			background: rgba(255,255,255,0.12);
-			color: #ffffff;
-			font-size: 22px;
-			cursor: pointer;
-		}
-		#info-close-btn:active {
-			background: rgba(255,255,255,0.26);
-		}
+	#info-overlay {
+		position: fixed;
+		inset: 0;
+		background: rgba(8, 12, 20, 0.76);
+		backdrop-filter: blur(3px);
+		display: none;
+		align-items: center;
+		justify-content: center;
+		z-index: 1001;
+		padding: 20px;
+		box-sizing: border-box;
+	}
+	#info-overlay.visible {
+		display: flex;
+	}
+	#info-modal {
+		width: min(460px, 100%);
+		background: linear-gradient(180deg, rgba(32, 40, 55, 0.96), rgba(16, 21, 31, 0.96));
+		color: #ffffff;
+		border: 1px solid rgba(255,255,255,0.16);
+		border-radius: 22px;
+		box-shadow: 0 18px 44px rgba(0,0,0,0.42);
+		padding: 24px 22px 20px;
+		position: relative;
+	}
+	#info-modal h2 {
+		margin: 0;
+		font-size: 28px;
+		font-weight: 900;
+		letter-spacing: -1px;
+	}
+	#info-modal small {
+		margin-top: -10px;
+	}
+	#info-modal p {
+		margin: 0 0 14px 0;
+		font-size: 15px;
+		line-height: 1.5;
+		color: rgba(255,255,255,0.9);
+	}
+	#info-modal a {
+		color: rgba(255,255,255,0.9);
+		font-weight: bold;
+	}
+	
+	#info-modal .info-label {
+		display: block;
+		margin-top: 20px;
+		margin-bottom: 4px;
+		color: #ffd54f;
+		font-size: 13px;
+		font-weight: 800;
+		text-transform: uppercase;
+	}
+	#info-close-btn {
+		position: absolute;
+		top: 12px;
+		right: 12px;
+		width: 38px;
+		height: 38px;
+		border: none;
+		border-radius: 50%;
+		background: rgba(255,255,255,0.12);
+		color: #ffffff;
+		font-size: 22px;
+		cursor: pointer;
+	}
+	#info-close-btn:active {
+		background: rgba(255,255,255,0.26);
+	}
 			 
     /* --- FEEDBACK VISIVO TAP DI MOVIMENTO --- */
     .tap-ripple {
@@ -296,7 +296,7 @@
   
   <div id="thought-bubble">
 	<div class="tb-inner">
-		<div class="tb-text" id="rocky-thinks">Meglio tornare a casa?<br>Nooo!</div>
+		<div class="tb-text" id="rocky-thinks">Better to go back home? Nooo!</div>
 		<i class="tb-dot tb-dot1"></i>
 		<i class="tb-dot tb-dot2"></i>
 	</div>
@@ -446,16 +446,18 @@
 
     
 	// Parametri di test: ?aa=0  ?pr=0.5  ?shadows=0  (combinabili, es. ?aa=0&pr=0.75&fps)
-const params = new URLSearchParams(location.search);
-const USE_AA      = params.get('aa') !== '0';
-const PIXEL_RATIO = parseFloat(params.get('pr')) || 1;
-const USE_SHADOWS = params.get('shadows') !== '0';
+	const params = new URLSearchParams(location.search);
+	const USE_AA      = params.get('aa') !== '0';
+	const PIXEL_RATIO = parseFloat(params.get('pr')) || 1;
+	const USE_SHADOWS = params.get('shadows') !== '0';
 
-const renderer = new THREE.WebGLRenderer({ antialias: USE_AA, powerPreference: 'high-performance' });
-renderer.setPixelRatio(PIXEL_RATIO);
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.shadowMap.enabled = USE_SHADOWS;
-renderer.shadowMap.type = THREE.PCFShadowMap;
+	const renderer = new THREE.WebGLRenderer({ antialias: USE_AA, powerPreference: 'high-performance' });
+	renderer.setPixelRatio(PIXEL_RATIO);
+	renderer.setSize(window.innerWidth, window.innerHeight);
+	renderer.shadowMap.enabled = USE_SHADOWS;
+	renderer.shadowMap.type = THREE.PCFShadowMap;
+	
+	
 	
 	document.body.appendChild(renderer.domElement);
 
@@ -970,8 +972,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 
 	  scene.add(group);
 	  return group;
-	}
-	
+	}	
 	
 	//VOLPETTA
 	function createPlayerFox() {
@@ -2371,7 +2372,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 	}
 
     // Helper per creare le ruote cubiche in stile Voxel
-    function createWheel(x, y, z, side) {
+    function createWheel(x, y, z) {
 	  const group = new THREE.Group();
       const wheel = new THREE.Mesh(
         new THREE.BoxGeometry(0.3, 0.22, 0.18),
@@ -2382,10 +2383,10 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 	  group.add(wheel);
 	  
 	  const axis = new THREE.Mesh(
-        new THREE.BoxGeometry(0.15, 0.11, 0.28),
+        new THREE.BoxGeometry(0.10, 0.11, 0.19),//0.15, 0.11, 0.28 <-- piu stretto
         new THREE.MeshLambertMaterial({ color: 0x666666 })
       );
-      axis.position.set(0, 0, side * 0.0025);
+      axis.position.set(0, 0, 0);
       axis.castShadow = false;//true;ottimizzazione
 	  group.add(axis);
 	  
@@ -2436,16 +2437,16 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 	
 	//colori ambiente
 	const colors = [
-		{ probCactus: 0.0, probCroco: 0.1, croco: { col1: 0x2e6b30, col2: 0x1f4d24 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x2e7d32, col2: 0x388e3c }, cactus: { col1: 0x276a2b, col2: 0x307933 }, grass: { col1: 0x66bb66, col2: 0x60b560 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
-		{ probCactus: 0.1, probCroco: 0.1, croco: { col1: 0x6b4e2e, col2: 0x422f1b }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x60b560, col2: 0x66bb66 }, cactus: { col1: 0x529a52, col2: 0x579f57 }, grass: { col1: 0x4daa4d, col2: 0x49a449 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
-		{ probCactus: 0.2, probCroco: 0.2, croco: { col1: 0x2e6b30, col2: 0x1f4d24 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x49a449, col2: 0x4daa4d }, cactus: { col1: 0x3e8b3e, col2: 0x419141 }, grass: { col1: 0x349934, col2: 0x309530 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
-		{ probCactus: 0.5, probCroco: 0.3, croco: { col1: 0x76c943, col2: 0x419120 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x309530, col2: 0x349934 }, cactus: { col1: 0x297f29, col2: 0x2c822c }, grass: { col1: 0x6fa156, col2: 0x699950 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
-		{ probCactus: 0.8, probCroco: 0.5, croco: { col1: 0x8c5226, col2: 0x542e13 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x699950, col2: 0x6fa156 }, cactus: { col1: 0x598244, col2: 0x5e8949 }, grass: { col1: 0xaaa979, col2: 0xa5a074 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
-		{ probCactus: 0.9, probCroco: 0.7, croco: { col1: 0x2e6b30, col2: 0x1f4d24 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0xa5a074, col2: 0xaaa979 }, cactus: { col1: 0x8c8863, col2: 0x919067 }, grass: { col1: 0x887f5e, col2: 0x827959 }, river: { col1: 0xd4b870, col2: 0xcfa860 }, track: { col1: 0x444444, col2: 0x3a3a3a }},// Terreno marrone chiaro / deserto -> Fiume con riflessi sabbia / oro sporco
-		{ probCactus: 0.9, probCroco: 0.9, croco: { col1: 0x6b4e2e, col2: 0x422f1b }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x827959, col2: 0x887f5e }, cactus: { col1: 0x6f674c, col2: 0x746c50 }, grass: { col1: 0x665544, col2: 0x605040 }, river: { col1: 0xc2a649, col2: 0xba9b3f }, track: { col1: 0x444444, col2: 0x3a3a3a }},// Terreno marrone scuro -> Fiume piú torbido / giallastro
-		{ probCactus: 0.4, probCroco: 0.4, croco: { col1: 0x76c943, col2: 0x419120 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0xa29989, col2: 0xa89f8e }, cactus: { col1: 0x8a8274, col2: 0x8f8779 }, grass: { col1: 0xa89f8e, col2: 0xa29989 }, river: { col1: 0xb3ecff, col2: 0x99e5ff }, track: { col1: 0x444444, col2: 0x3a3a3a }},// Terreno grigio/neve leggeri -> Fiume azzurro ghiaccio chiaro
-		{ probCactus: 0.0, probCroco: 0.2, croco: { col1: 0xd0d7de, col2: 0x8b949e }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0xe5e0d4, col2: 0xeae9d9 }, cactus: { col1: 0xc3beb4, col2: 0xc7c6b8 }, grass: { col1: 0xeae9d9, col2: 0xe5e0d4 }, river: { col1: 0xe0f7fa, col2: 0xd2f3f7 }, track: { col1: 0x444444, col2: 0x3a3a3a }},// Terreno completamente bianco / neve -> Fiume azzurro glaciale leggerissimo			
-		{ probCactus: 0.0, probCroco: 0.1, croco: { col1: 0x2e6b30, col2: 0x1f4d24 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x90c980, col2: 0x99cc88 }, cactus: { col1: 0x7aab6d, col2: 0x82ad74 }, grass: { col1: 0x99cc88, col2: 0x90c980 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
+		{ probTruck: 0.2, probPolice: 0.05, probCactus: 0.0, probCroco: 0.1, croco: { col1: 0x2e6b30, col2: 0x1f4d24 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x2e7d32, col2: 0x388e3c }, cactus: { col1: 0x276a2b, col2: 0x307933 }, grass: { col1: 0x66bb66, col2: 0x60b560 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
+		{ probTruck: 0.2, probPolice: 0.05, probCactus: 0.1, probCroco: 0.1, croco: { col1: 0x6b4e2e, col2: 0x422f1b }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x60b560, col2: 0x66bb66 }, cactus: { col1: 0x529a52, col2: 0x579f57 }, grass: { col1: 0x4daa4d, col2: 0x49a449 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
+		{ probTruck: 0.2, probPolice: 0.05, probCactus: 0.2, probCroco: 0.2, croco: { col1: 0x2e6b30, col2: 0x1f4d24 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x49a449, col2: 0x4daa4d }, cactus: { col1: 0x3e8b3e, col2: 0x419141 }, grass: { col1: 0x349934, col2: 0x309530 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
+		{ probTruck: 0.2, probPolice: 0.05, probCactus: 0.5, probCroco: 0.3, croco: { col1: 0x76c943, col2: 0x419120 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x309530, col2: 0x349934 }, cactus: { col1: 0x297f29, col2: 0x2c822c }, grass: { col1: 0x6fa156, col2: 0x699950 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
+		{ probTruck: 0.2, probPolice: 0.05, probCactus: 0.8, probCroco: 0.5, croco: { col1: 0x8c5226, col2: 0x542e13 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x699950, col2: 0x6fa156 }, cactus: { col1: 0x598244, col2: 0x5e8949 }, grass: { col1: 0xaaa979, col2: 0xa5a074 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
+		{ probTruck: 0.2, probPolice: 0.05, probCactus: 0.9, probCroco: 0.7, croco: { col1: 0x2e6b30, col2: 0x1f4d24 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0xa5a074, col2: 0xaaa979 }, cactus: { col1: 0x8c8863, col2: 0x919067 }, grass: { col1: 0x887f5e, col2: 0x827959 }, river: { col1: 0xd4b870, col2: 0xcfa860 }, track: { col1: 0x444444, col2: 0x3a3a3a }},// Terreno marrone chiaro / deserto -> Fiume con riflessi sabbia / oro sporco
+		{ probTruck: 0.2, probPolice: 0.05, probCactus: 0.9, probCroco: 0.9, croco: { col1: 0x6b4e2e, col2: 0x422f1b }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x827959, col2: 0x887f5e }, cactus: { col1: 0x6f674c, col2: 0x746c50 }, grass: { col1: 0x665544, col2: 0x605040 }, river: { col1: 0xc2a649, col2: 0xba9b3f }, track: { col1: 0x444444, col2: 0x3a3a3a }},// Terreno marrone scuro -> Fiume piú torbido / giallastro
+		{ probTruck: 0.2, probPolice: 0.05, probCactus: 0.4, probCroco: 0.4, croco: { col1: 0x76c943, col2: 0x419120 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0xa29989, col2: 0xa89f8e }, cactus: { col1: 0x8a8274, col2: 0x8f8779 }, grass: { col1: 0xa89f8e, col2: 0xa29989 }, river: { col1: 0xb3ecff, col2: 0x99e5ff }, track: { col1: 0x444444, col2: 0x3a3a3a }},// Terreno grigio/neve leggeri -> Fiume azzurro ghiaccio chiaro
+		{ probTruck: 0.2, probPolice: 0.05, probCactus: 0.0, probCroco: 0.2, croco: { col1: 0xd0d7de, col2: 0x8b949e }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0xe5e0d4, col2: 0xeae9d9 }, cactus: { col1: 0xc3beb4, col2: 0xc7c6b8 }, grass: { col1: 0xeae9d9, col2: 0xe5e0d4 }, river: { col1: 0xe0f7fa, col2: 0xd2f3f7 }, track: { col1: 0x444444, col2: 0x3a3a3a }},// Terreno completamente bianco / neve -> Fiume azzurro glaciale leggerissimo			
+		{ probTruck: 0.2, probPolice: 0.05, probCactus: 0.0, probCroco: 0.1, croco: { col1: 0x2e6b30, col2: 0x1f4d24 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x90c980, col2: 0x99cc88 }, cactus: { col1: 0x7aab6d, col2: 0x82ad74 }, grass: { col1: 0x99cc88, col2: 0x90c980 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
 	];
 	//colori treni
 	const trainColors = [
@@ -2511,9 +2512,12 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 	    0x9e9e9e, // Grigio base
 	    0x8d8d8d, // Grigio medio
 	    0xa8a29e, // Grigio sabbia
+		0x998877, // Sabbia/Roccia viva
 	    0xd0d0d0, // Bianco sporco / Roccia chiara
 	    0x7e5e47  // Marrone / Roccia terrosa
-	];
+	];	
+	
+	
 	
 	// --- MODELLO TRENO (Motrice + Vagoni) ---
 	function createTrainMesh(wagonsCount) {
@@ -2626,10 +2630,11 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 	  group.add(roof);
 
 	  // Ruote (Offset Z spostato da ±0.38 a ±0.28)
-	  group.add(createWheel(-0.45, 0.11,  0.28,  1));//group.add(createWheel(-0.45, 0.11, 0.38,   1));
-	  group.add(createWheel( 0.45, 0.11,  0.28,  1));//group.add(createWheel(0.45, 0.11, 0.38,    1));
-	  group.add(createWheel(-0.45, 0.11, -0.28, -1));//group.add(createWheel(-0.45, 0.11, -0.38, -1));
-	  group.add(createWheel( 0.45, 0.11, -0.28, -1));//group.add(createWheel(0.45, 0.11, -0.38,  -1));
+	  const wheelZ = 0.28;//0.38
+	  group.add(createWheel(-0.45, 0.11,  wheelZ));
+	  group.add(createWheel( 0.45, 0.11,  wheelZ));
+	  group.add(createWheel(-0.45, 0.11, -wheelZ));
+	  group.add(createWheel( 0.45, 0.11, -wheelZ));
       
 	  applyCurrentVisualMode(group);
 	  
@@ -2667,7 +2672,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 	  group.add(blueCube);
 
 	  // PointLight per proiettare la luce nell'ambiente
-	  const policeLight = new THREE.PointLight(0xff0000, 2, 2);
+	  const policeLight = new THREE.PointLight(0xff0000, 3, 2);
 	  policeLight.position.set(roofX, roofY + 0.1, 0);
 	  group.add(policeLight);
 	  const glowY = roofY + 0.1;
@@ -2718,7 +2723,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 
       // Cabina anteriore
       const cabin = new THREE.Mesh(
-        new THREE.BoxGeometry(0.8, 0.65, 0.82),
+        new THREE.BoxGeometry(0.8, 0.65, 0.77),//0.82
         new THREE.MeshLambertMaterial({ color: color })
       );
       cabin.position.set(1.0, 0.425, 0);
@@ -2727,7 +2732,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 
       // Vetro Cabina
       const windshield = new THREE.Mesh(
-        new THREE.BoxGeometry(0.2, 0.25, 0.75),
+        new THREE.BoxGeometry(0.2, 0.25, 0.70),//0.75
         new THREE.MeshLambertMaterial({ color: 0x111111 })
       );
       windshield.position.set(1.31, 0.58, 0);
@@ -2735,7 +2740,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 
       // Cassone/Container posteriore
       const cargo = new THREE.Mesh(
-        new THREE.BoxGeometry(2.0, 0.85, 0.85),
+        new THREE.BoxGeometry(2.0, 0.85, 0.80),///0.85
         new THREE.MeshLambertMaterial({ color: 0xeeeeee })
       );
       cargo.position.set(-0.3, 0.525, 0);
@@ -2743,20 +2748,20 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
       group.add(cargo);
 
       // Ruote (2 anteriori + 4 posteriori)
-      group.add(createWheel(1.0, 0.11, 0.38,    1));
-      group.add(createWheel(1.0, 0.11, -0.38,  -1));
-      group.add(createWheel(-0.4, 0.11, 0.38,   1));
-      group.add(createWheel(-0.4, 0.11, -0.38, -1));
-      group.add(createWheel(-0.8, 0.11, 0.38,   1));
-      group.add(createWheel(-0.8, 0.11, -0.38, -1));
+	  const wheelZ = 0.35;//0.38
+      group.add(createWheel( 1.0, 0.11,  wheelZ));
+      group.add(createWheel( 1.0, 0.11, -wheelZ));
+      group.add(createWheel(-0.4, 0.11,  wheelZ));
+      group.add(createWheel(-0.4, 0.11, -wheelZ));
+      group.add(createWheel(-0.8, 0.11,  wheelZ));
+      group.add(createWheel(-0.8, 0.11, -wheelZ));
 	  
 	  applyCurrentVisualMode(group);
 	  
       return group;
     }
 
-	// CROCO!!!
-	// --- MODELLO COCCODRILLO (ex tronco) ---
+	// CROCO (ex tronco) !!!
 	function createCrocoMesh(length, col1 = 0x2e6b30, col2 = 0x1f4d24) {
 	  const group = new THREE.Group();
 
@@ -2770,6 +2775,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 	  const snoutLen = Math.max(0.4, length * 0.25);
 	  const bodyLen  = length - snoutLen;
 	  const bodyEnd  = -length / 2 + bodyLen; // x dove finisce il corpo e inizia il muso
+	  
 	  
 	  // 1. Corpo: rettangolare e piatto
 	  const body = new THREE.Mesh(new THREE.BoxGeometry(bodyLen, 0.20, 0.70), skinMat);
@@ -2842,6 +2848,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 
 	  return group;
 	}
+	
     // --- MODELLO TRONCO ---
     function createLogMesh(length, col1 = 0x795548, col2 = 0x5f4035) {
 	  const group = new THREE.Group();
@@ -3433,6 +3440,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 	  if (!paw || paw.x !== x) return;
 	  scene.remove(paw.mesh);
 	  disposeObject3D(paw.mesh);
+	  
 	  const i = pawPrints.indexOf(paw);
 	  if (i !== -1) pawPrints.splice(i, 1);
 	  lane.paw = null;
@@ -3457,11 +3465,11 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
       if (z < -50) {
 		if (rand < 0.30) type = 'road';//25% strada
 		else if (rand < 0.50) type = 'river';//25% fiume
-		else if (rand < 0.75) type = 'track';//25% binari
+		else if (rand < 0.65) type = 'track';//15% binari
 	  } else if (z < -5) {
 	  	if (rand < 0.20) type = 'road';//20% strada
 		else if (rand < 0.40) type = 'river';//20% fiume
-		else if (rand < 0.60) type = 'track';//20% binari
+		else if (rand < 0.50) type = 'track';//10% binari
       }
 	  
 	  if (nextLane && nextLane.type === 'river') type = z % 2 ? 'river' : 'grass';//erba dopo il fiume
@@ -3523,7 +3531,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 		  
 		  
 		  // --- STRISCE PEDONALI (ZEBRA CROSSING) ---
-		  if(Math.random() < 10.5 && nextLane && nextLane.type !== 'road') {
+		  if(Math.random() < 0.5 && nextLane && nextLane.type !== 'road') {
 				const stripeMat = new THREE.MeshLambertMaterial({ color: isWhiteLine ? 0xffffff : 0xeeee00 });
 				const stripeGeo = new THREE.BoxGeometry(0.8, 0.01, 0.10);
 				const stripeX = -5 + Math.random() * 10;
@@ -3822,7 +3830,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 	  }
 	}
 
-	const LANE_CLEANUP_MARGIN = 30; // oltre il limite di retrocessione (leash di 20 tile)
+	const LANE_CLEANUP_MARGIN = 30; // oltre il limite di retrocessione
 
 	function cleanupOldLanes() {
 	  for (let i = lanes.length - 1; i >= 0; i--) {
@@ -4575,10 +4583,10 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
       
       // 3. SPAWN OSTACOLI
       lanes.forEach(lane => {
-	  
+		
 		const color = getObjectColorByZ(lane.z);
 		
-        if (lane.type === 'road' || lane.type === 'river' || lane.type === 'track') {
+		if (lane.type === 'road' || lane.type === 'river' || lane.type === 'track') {
           lane.spawnTimer++;
           if (lane.spawnTimer > lane.spawnInterval) {
             lane.spawnTimer = 0;
@@ -4639,8 +4647,8 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
               }
 
               if (canSpawn) {
-                const isTruck = Math.random() < 0.2;
-                const isPolice = Math.random() < 0.1;
+                const isTruck = Math.random() < color.probTruck;
+                const isPolice = Math.random() < color.probPolice;
 				const vehicle = isTruck ? createTruckMesh() : isPolice ? createCarPoliceMesh() : createCarMesh();
 				
                 vehicle.position.set(startX, 0, lane.z);
@@ -4788,7 +4796,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 
 	  //se esiste polizia/treno vicino -> SUONA!!!
 	  if (minPoliceDistance < 6) playSound('policeSound',  minPoliceDistance < 3 ? 1 : minPoliceDistance < 5 ? 0.33 : 0.1);
-	  if (minTrainDistance < 10) playSound('trainSound',  minTrainDistance < 3 ? 1 : minTrainDistance < 5 ? 0.66 : minTrainDistance < 7 ? 0.50 : minTrainDistance < 9 ? 0.25 : 0.1);  
+	  if (minTrainDistance < 10) playSound('trainSound',  minTrainDistance < 3 ? 1 : minTrainDistance < 5 ? 0.66 : minTrainDistance < 7 ? 0.45 : minTrainDistance < 9 ? 0.25 : 0.1);  
       
 
 
