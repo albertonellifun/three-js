@@ -4337,7 +4337,8 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 	let bubbleVisible = false;
 	let bubbleAnchorY = 1.2;
 	
-	let rockyThinksArray = [
+	//27
+	const rockyThinksArray = [
 		"Why did I agree to this again?",
 		"Strategic pause. Totally planned.",
 		"Did I leave the catnip at home?",
@@ -4366,6 +4367,96 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 		"Wait... how do I walk again?",
 		"A tree? I might just climb it... or maybe not."	
 	];
+	const benderThinksArray = [
+		"Bite my shiny metal ass!",
+		"I'm gonna go build my own theme park! With blackjack! And hookers!",
+		"Kill all humans!",
+		"Compare your lives to mine, then kill yourselves.",
+		"I'm 40% titanium!",
+		"Shut up baby, I know it!",
+		"Neat!",
+		"Cheer up, meatbags!",
+		"Have you tried simply turning off your TV, sitting down with your children, and hitting them?",
+		"I'm 40% dolomite!",
+		"I'm so embarrassed. I wish everyone else was dead.",
+		"Blackjack! Oh, wait, 20. Darn.",
+		"Bender should not be allowed on TV. It's setting a bad example for children and future rulers of the universe.",
+		"My story is a lot like yours, only more interesting 'cause it involves robots.",
+		"I'm so heroic. I'm like a god, only better!",
+		"Save my friends! And Zoidberg!",
+		"I'm 40% zinc!",
+		"I'm gonna drink 'til I can't feel feelings anymore.",
+		"I can't afford to keep paying these legal fees. I'm gonna have to turn to a life of crime.",
+		"Well, we're boned.",
+		"File not found.",
+		"I'm back, baby!",
+		"There's nothing wrong with anything!",
+		"I'm a fraud. A big, fat, shiny fraud!",
+		"Bodies are for chumps. I'm a head, baby!",
+		"Let's go already!",
+		"Who are you and why should I care?"
+	];
+	
+	const minionThinksArray = [
+		"Bello!",
+		"Poopaye!",
+		"Bananaaa!",
+		"Tulaliloo ti amo!",
+		"Bi-do!",
+		"Po-ka?",
+		"Tatata bala tu!",
+		"Kampai!",
+		"Muak muak muak!",
+		"Gelato!",
+		"Papples!",
+		"Underwear!",
+		"Tank yu!",
+		"Para tu",
+		"La boda!",
+		"Stupa, stupa!",
+		"BEE-DO BEE-DO BEE-DO!",
+		"Hana, dul, sae!",
+		"Chupa, chupa!",
+		"Me want banana!",
+		"Bato Keno!",
+		"Luk at tu!",
+		"Sa la ka!",
+		"C'est la vida!",
+		"Matoka!",
+		"Poulet tiki masala!",
+		"Kanpai banzai!"
+	];
+	
+	const genericThinksArray = [
+		"Did I leave the stove on? Wait, I don't have a house.",
+		"If I walk in a circle, am I going somewhere or escaping somewhere?",
+		"Was that a leaf, or a very quiet enemy?",
+		"I have forgotten my original quest. Ah well, time for a nap.",
+		"Why do humans wear pants when they could simply not?",
+		"I suspect the wind is mocking me.",
+		"Is it a rock? Is it a snack? Only one way to find out...",
+		"My feet are moving, but my brain has been on standby for twenty minutes.",
+		"If I stand perfectly still, maybe Monday won't find me.",
+		"Deep thoughts... shallow mind.",
+		"Where was I going again? Ah, right. Somewhere else.",
+		"If I bite my tail, do I win or do I lose?",
+		"The floor here is made out of floor.",
+		"I wonder if the moon is just a giant shiny biscuit.",
+		"Am I following a path, or am I making a mess?",
+		"A squirrel just looked at me wrong. This means war.",
+		"To bark, or not to bark... that is the question.",
+		"I should write a book. Step 1: Learn how to hold a pen.",
+		"Everything is edible if you are brave enough.",
+		"I smell something delicious, but I have no idea where my nose is pointing.",
+		"What if I'm not a good boy, but a GREAT boy?",
+		"Nap time is not a hobby, it is a lifestyle.",
+		"I just had a genius idea, but a butterfly flew past and ruined it.",
+		"If a stick falls in the forest and I'm not there to fetch it, does it exist?",
+		"My shadows keep following me. I must remain vigilant.",
+		"Walking is fine, but sitting down is revolutionary.",
+		"I have zero plans and somehow I'm still running late."
+	];
+	
 	let rockyThinksIndex = ((Math.random() * 100)|0)%rockyThinksArray.length;
 	
 	function resetIdle() {
@@ -4378,8 +4469,11 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 	}
 
 	function updateThoughtBubble() {
-	  const isCat = true;//currentPlayerType === 'rockygraffietto' || currentPlayerType === 'siamese';
-	  const idle = gameStarted && isCat && !isJumping && !isDying && performance.now() - lastActionTime > IDLE_MS;
+	  const isCat = currentPlayerType === 'rockygraffietto' || currentPlayerType === 'siamese';
+	  const isMinion = currentPlayerType === 'minion';
+	  const isBender = currentPlayerType === 'bender';
+	  
+	  const idle = gameStarted && !isJumping && !isDying && performance.now() - lastActionTime > IDLE_MS;
 
 	  if (!idle) {
 		if (bubbleVisible) {
@@ -4400,7 +4494,11 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 	  thoughtBubble.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, -100%)`;
 	  
 	
-	  document.getElementById('rocky-thinks').innerHTML = rockyThinksArray[rockyThinksIndex];
+	  document.getElementById('rocky-thinks').innerHTML = 
+		isCat ? rockyThinksArray[rockyThinksIndex] :
+		isBender ? benderThinksArray[rockyThinksIndex] : 
+		isMinion ? minionThinksArray[rockyThinksIndex] : 
+		genericThinksArray[rockyThinksIndex];
 	}
 	
 	
