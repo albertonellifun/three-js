@@ -465,16 +465,16 @@
 
 	
 	// --- CLIPPING: nasconde tutto ciò che è fuori dall'area di gioco ---
-	const VISIBLE_AHEAD  = BOARD_WIDTH * 1; // quanto si vede avanti (verso z negativo, non ancora scoperto)
-	const VISIBLE_BEHIND = BOARD_WIDTH * 1; // quanto si vede indietro (verso z positivo)
+	//const VISIBLE_AHEAD  = BOARD_WIDTH * 1; // quanto si vede avanti (verso z negativo, non ancora scoperto)
+	//const VISIBLE_BEHIND = BOARD_WIDTH * 1; // quanto si vede indietro (verso z positivo)
 	const VISIBLE_SIDE   = BOARD_WIDTH * 0.51; // margine oltre i bordi della plancia
 	
-	const clipFront = new THREE.Plane(new THREE.Vector3(0, 0, 1), VISIBLE_AHEAD);
-	const clipBack  = new THREE.Plane(new THREE.Vector3(0, 0, -1), VISIBLE_BEHIND);
+	//const clipFront = new THREE.Plane(new THREE.Vector3(0, 0, 1), VISIBLE_AHEAD);
+	//const clipBack  = new THREE.Plane(new THREE.Vector3(0, 0, -1), VISIBLE_BEHIND);
 	const clipLeft  = new THREE.Plane(new THREE.Vector3(1, 0, 0), VISIBLE_SIDE);
 	const clipRight = new THREE.Plane(new THREE.Vector3(-1, 0, 0), VISIBLE_SIDE);
 	
-	renderer.clippingPlanes = [clipFront, clipBack, clipLeft, clipRight];
+	renderer.clippingPlanes = [clipLeft,clipRight];//clipFront, clipBack, clipLeft, clipRight];
 
     // Resize Finestra
     window.addEventListener('resize', () => {
@@ -519,7 +519,7 @@
     let isDying = false;
     let gameStarted = false;
 
-	let isMute = 1||false;
+	let isMute = false;
 	let isWireframe = false;//wireframe disabilitato
 	let isShadows = true;//ombre abilitate
 	let immediateRotation = true;//se false, doppia clickata per spostarsi
@@ -527,7 +527,7 @@
 	let isPerspective = false;//prospettiva figherrima++
 	let isGrass = true;//grass on/off
 	
-	const MAX_LANE_BACK = 20;//posso tornare indietro di 20
+	const MAX_LANE_BACK = 15;//posso tornare indietro di 20
 	const LANE_CLEANUP_MARGIN = 25;//cancello le lane oltre 30
 
 
@@ -4229,6 +4229,7 @@
 	  });
 	}
 
+
 	function removeLane(lane) {
 	  scene.remove(lane.mesh);
 	  disposeObject3D(lane.mesh);
@@ -4236,6 +4237,23 @@
 	  if (lane.trafficLight?.mesh) {
 		scene.remove(lane.trafficLight.mesh);
 		disposeObject3D(lane.trafficLight.mesh);
+	  }
+
+	  // NUOVO: veicoli/treni su questa corsia
+	  for (let i = cars.length - 1; i >= 0; i--) {
+		if (cars[i].z === lane.z) {
+		  scene.remove(cars[i].mesh);
+		  disposeObject3D(cars[i].mesh);
+		  cars.splice(i, 1);
+		}
+	  }
+	  // NUOVO: tronchi/coccodrilli su questa corsia
+	  for (let i = logs.length - 1; i >= 0; i--) {
+		if (logs[i].lane === lane) {
+		  scene.remove(logs[i].mesh);
+		  disposeObject3D(logs[i].mesh);
+		  logs.splice(i, 1);
+		}
 	  }
 	  //rimuove zampette
 	  if (lane.paw) {
@@ -4711,6 +4729,7 @@
 	
 	
 	function updateClippingPlanes() {
+	  return;
 	  clipFront.constant = -(player.position.z - VISIBLE_AHEAD);
 	  clipBack.constant  =  (player.position.z + VISIBLE_BEHIND);
 	}
@@ -5398,7 +5417,7 @@
 			roof: mat(0x443322), // tetto 
 			wood: mat(0x443322), // travetti del tetto, finestre
 		};
-		const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
+		const box = (w, h, d) => !useCache ? new THREE.BoxGeometry(w, h, d) : getCachedGeometry('box', w, h, d);
 		const add = (geo, m, x, y, z) => {
 			const o = new THREE.Mesh(geo, m);
 			o.position.set(x, y, z);
@@ -5438,7 +5457,9 @@
 		add(box(1.5, portH, 0.08), M.trim, dx, PL + portH * 0.5, Z + 0.04);
 		
 		const arch = (r, y, m, z) => {
-			const a = add(new THREE.CylinderGeometry(r, r, 0.08, 6, 1, false, Math.PI / 2, Math.PI), m, dx, y, z);
+			const a = add(
+				!useCache ? new THREE.CylinderGeometry(r, r, 0.08, 6, 1, false, Math.PI / 2, Math.PI) : getCachedGeometry('cylinder', r, r, 0.08, 6, 1, false, Math.PI / 2, Math.PI),
+				m, dx, y, z);
 			a.rotation.x = Math.PI / 2;
 		};
 
@@ -5598,7 +5619,8 @@
 		// ripulisce decorazioni già generate nelle caselle della casa
 		lane.decor = lane.decor.filter(m => {
 		  if (!inX(m.position.x)) return true;
-		  scene.remove(m); disposeObject3D(m);
+		  scene.remove(m); 
+		  disposeObject3D(m);
 		  return false;
 		});
 		if (lane.grassRefs) {
