@@ -398,6 +398,9 @@
   <audio id="splashSound" preload="auto">
     <source src="./crossy-splash.mp3" type="audio/mpeg">
   </audio>
+  <audio id="crocoSound" preload="auto">
+    <source src="./crossy-croco.mp3" type="audio/mpeg">
+  </audio>
   <audio id="bonusSound" preload="auto">
     <source src="./crossy-bonus.mp3" type="audio/mpeg">
   </audio>
@@ -2562,8 +2565,134 @@
 	    0xd0d0d0, // Bianco sporco / Roccia chiara
 	    0x7e5e47  // Marrone / Roccia terrosa
 	];	
+	//colori fiori e aiuole
+	const flowerColors = [0xff4d6d, 0xffd23f, 0xff8fab, 0xffffff, 0x9b5de5, 0xff7f11, 0x4cc9f0];
 	
 	
+	//figlio dei fiori!!!	
+	const flowerMatCache = new Map();
+	function getFlowerMaterial(colorHex) {
+	  if (!flowerMatCache.has(colorHex)) {
+		flowerMatCache.set(colorHex, new THREE.MeshLambertMaterial({ color: colorHex }));
+	  }
+	  return flowerMatCache.get(colorHex);
+	}
+
+	// Aggiunge N fiori (stelo + boccio) in posizioni pseudo-casuali entro un raggio.
+	// Stelo e boccio riusano sempre le stesse due geometrie cachate: solo il colore
+	// del boccio varia (a livello di materiale, non di geometria).
+	function addFlowerProps(group, count, radiusX, radiusZ, baseY) {
+	  const stemGeo = !useCache ? new THREE.BoxGeometry(0.03, 0.12, 0.03) : getCachedGeometry('box', 0.03, 0.12, 0.03);
+	  const headGeo = !useCache ? new THREE.BoxGeometry(0.09, 0.09, 0.09) : getCachedGeometry('box', 0.09, 0.09, 0.09);
+	  const stemMat = getFlowerMaterial(0x3e7d3e); // verde stelo, condiviso
+
+	  // Distribuzione a raggiera: ogni fiore occupa un proprio settore angolare
+	  // esclusivo (360°/count), con un jitter limitato al 12% del settore.
+	  // Questo garantisce SEMPRE una separazione minima tra fiori adiacenti,
+	  // a differenza del posizionamento puramente casuale che può far
+	  // sovrapporre due bocci (causa dello z-fighting/flicker che vedevi).
+	  const angleStep = (Math.PI * 2) / count;
+	  const angleJitter = angleStep * 0.12;
+
+	  for (let i = 0; i < count; i++) {
+		const angle = i * angleStep + (Math.random() * 2 - 1) * angleJitter;
+		// raggio variabile ma poco (55%-100% del massimo): evita di allinearli
+		// su un cerchio perfetto senza introdurre variazioni che riducano
+		// troppo la distanza garantita dalla separazione angolare
+		const rFactor = 0.55 + Math.random() * 0.45;
+		const fx = Math.cos(angle) * radiusX * rFactor;
+		const fz = Math.sin(angle) * radiusZ * rFactor;
+
+		const headMat = getFlowerMaterial(flowerColors[Math.floor(Math.random() * flowerColors.length)]);
+
+		const stem = new THREE.Mesh(stemGeo, stemMat);
+		stem.position.set(fx, baseY + 0.06, fz);
+		group.add(stem);
+
+		const head = new THREE.Mesh(headGeo, headMat);
+		head.position.set(fx, baseY + 0.14, fz);
+		group.add(head);
+	  }
+	}
+	// --- AIUOLA DI FIORI (decorazione pavement, al posto degli alberi) ---
+	function createFlowerBedMesh() {
+	  const group = new THREE.Group();
+
+	  const soilMat = getFlowerMaterial(0x4a3423);   // terra scura
+	  const borderMat = getFlowerMaterial(0x8a6d4b); // bordo in legno chiaro
+
+	  // Terriccio: ridotto rispetto al footprint esterno, in modo che i muri del
+	  // bordo restino FUORI dal suo volume (si toccano, non si sovrappongono) —
+	  // evita lo z-fighting sulle facce superiori coplanari.
+	  const soil = new THREE.Mesh(
+		!useCache ? new THREE.BoxGeometry(0.68, 0.12, 0.48) : getCachedGeometry('box', 0.68, 0.12, 0.48),
+		soilMat
+	  );
+	  soil.position.y = 0.06;
+	  soil.receiveShadow = true;
+	  soil.castShadow = false;
+	  group.add(soil);
+
+	  const wallFB = !useCache ? new THREE.BoxGeometry(0.8, 0.12, 0.06) : getCachedGeometry('box', 0.8, 0.12, 0.06);
+	  // wallLR: profondità allineata a quella del terriccio (0.48, non più 0.6),
+	  // altrimenti sporgeva oltre wallFB creando sovrapposizione anche agli angoli.
+	  const wallLR = !useCache ? new THREE.BoxGeometry(0.06, 0.12, 0.48) : getCachedGeometry('box', 0.06, 0.12, 0.48);
+
+	  const front = new THREE.Mesh(wallFB, borderMat);
+	  front.position.set(0, 0.06, 0.27);
+	  front.castShadow = false;
+	  group.add(front);
+
+	  const back = new THREE.Mesh(wallFB, borderMat);
+	  back.position.set(0, 0.06, -0.27);
+	  back.castShadow = false;
+	  group.add(back);
+
+	  const left = new THREE.Mesh(wallLR, borderMat);
+	  left.position.set(-0.37, 0.06, 0);
+	  left.castShadow = false;
+	  group.add(left);
+
+	  const right = new THREE.Mesh(wallLR, borderMat);
+	  right.position.set(0.37, 0.06, 0);
+	  right.castShadow = false;
+	  group.add(right);
+
+	  addFlowerProps(group, 7, 0.27, 0.18, 0.12);   // raggi ridotti per stare dentro il nuovo terriccio
+
+	  group.position.set(0, 0, 0);
+	  applyCurrentVisualMode(group);
+	  return group;
+	}
+	// --- VASO DI FIORI (decorazione pavement, al posto degli alberi) ---
+	function createFlowerPotMesh() {
+	  const group = new THREE.Group();
+
+	  const potMat = getFlowerMaterial(0xc1673f);  // terracotta
+	  const soilMat = getFlowerMaterial(0x4a3423); // terra scura
+
+	  const pot = new THREE.Mesh(
+		!useCache ? new THREE.CylinderGeometry(0.28, 0.22, 0.32, 4) : getCachedGeometry('cylinder', 0.28, 0.22, 0.32, 4),
+		potMat
+	  );
+	  pot.position.y = 0.11;
+	  pot.castShadow = true;
+	  group.add(pot);
+
+	  const soilTop = new THREE.Mesh(
+		!useCache ? new THREE.CylinderGeometry(0.26, 0.26, 0.01, 4) : getCachedGeometry('cylinder', 0.26, 0.26, 0.01, 4),
+		soilMat
+	  );
+	  soilTop.position.y = 0.29;
+	  soilTop.castShadow = false;
+	  group.add(soilTop);
+
+	  addFlowerProps(group, 5, 0.18, 0.18, 0.34);
+
+	  group.position.set(0, 0, 0);
+	  applyCurrentVisualMode(group);
+	  return group;
+	}
 	
 	// --- MODELLO TRENO (Motrice + Vagoni) ---
 	function createTrainMesh(wagonsCount) {
@@ -3745,17 +3874,24 @@
       
       let isLight = z % 2 === 0;
 	  let isWhiteLine = z % 6;	
+	  
+	  const isGrass = type === 'grass';
+	  const isPavement = type === 'pavement';
+	  const isRoad = type === 'road';
+	  const isRiver = type === 'river';
+	  const isTrack = type === 'track';
+		
 
 	  let color = getObjectColorByZ(z);
 	  
 	  
-      if (type === 'grass') {
+      if (isGrass) {
         laneGeo = !useCache ? new THREE.BoxGeometry(BOARD_WIDTH, 0.2, 1) : getCachedGeometry('box', BOARD_WIDTH, 0.2, 1);
 		laneMat = new THREE.MeshLambertMaterial({ color: isLight ? color.grass.col1 : color.grass.col2 });
-      } else if (type === 'pavement') {
+      } else if (isPavement) {
         laneGeo = !useCache ? new THREE.BoxGeometry(BOARD_WIDTH, 0.2, 1) : getCachedGeometry('box', BOARD_WIDTH, 0.2, 1);
 		laneMat = new THREE.MeshLambertMaterial({ color: isLight ? 0x444444 : 0x404040 });
-      } else if (type === 'road') {
+      } else if (isRoad) {
         laneGeo = !useCache ? new THREE.BoxGeometry(BOARD_WIDTH, 0.2, 1) : getCachedGeometry('box', BOARD_WIDTH, 0.2, 1);
         laneMat = new THREE.MeshLambertMaterial({ color: isLight ? 0x444444 : 0x404040 });
 		
@@ -3818,11 +3954,11 @@
 				  }
 		  }
 			  
-      } else if (type === 'river') {
+      } else if (isRiver) {
         laneGeo = !useCache ? new THREE.BoxGeometry(BOARD_WIDTH, 0.15, 1) : getCachedGeometry('box', BOARD_WIDTH, 0.15, 1);
         laneMat = new THREE.MeshLambertMaterial({ color: isLight ? color.river.col1 : color.river.col2, map: z % 3 ? riverTextureLeft : riverTextureRight });
         laneY = -0.15;
-      } else if (type === 'track') {
+      } else if (isTrack) {
         laneGeo = !useCache ? new THREE.BoxGeometry(BOARD_WIDTH, 0.2, 1) : getCachedGeometry('box', BOARD_WIDTH, 0.2, 1);
         laneMat = new THREE.MeshLambertMaterial({ color: isLight ? color.track.col1 : color.track.col2  });
 		
@@ -3848,7 +3984,7 @@
 		const isQuasiBorder = Math.abs(x) > X_LIMIT - 1 || z === MIN_LANE - 1;
 		const isQuasiPlayerStart = Math.abs(x) < 2 && Math.abs(z) < 2;
         
-		if (type === 'grass' || type === 'pavement') {
+		if (isGrass || isPavement) {
           const isPlayerStart = (x === 0 && z === 0);
 		  if (isBorder) {
             const tree = Math.random() < color.probCactus ? createCactusMesh(color.cactus.col1, color.cactus.col2) : createTreeMesh(color.tree.col1, color.tree.col2);
@@ -3856,60 +3992,82 @@
             scene.add(tree);
             laneData.obstacles.push(x);
 			laneData.decor.push(tree);//anche nelle decorazioni
-			
-			if (type === 'pavement') {
-				const border = createTreeBorder(color.tree.col1);
-				border.position.set(x, 0, z);
-				scene.add(border);
-				laneData.decor.push(border);//anche nelle decorazioni				
-			}
           } else if (isQuasiBorder && Math.random() < 0.5) {
-		    const tree = Math.random() < color.probCactus ? createCactusMesh(color.cactus.col1, color.cactus.col2) : createTreeMesh(color.tree.col1, color.tree.col2);
-            tree.position.set(x, 0, z);
-            scene.add(tree);
-            laneData.obstacles.push(x);
-			laneData.decor.push(tree);//anche nelle decorazioni
-			
-			if (type === 'pavement') {
-				const border = createTreeBorder(color.tree.col1);
-				border.position.set(x, 0, z);
-				scene.add(border);
-				laneData.decor.push(border);//anche nelle decorazioni				
+			if (isPavement) {
+				//albero 33%
+				if (Math.random() < 0.75) {
+					const tree = Math.random() < color.probCactus ? createCactusMesh(color.cactus.col1, color.cactus.col2) : createTreeMesh(color.tree.col1, color.tree.col2);
+					tree.position.set(x, 0, z);
+					scene.add(tree);
+					laneData.obstacles.push(x);
+					laneData.decor.push(tree);//anche nelle decorazioni
+					
+					//bordo aiuola intorno
+					const border = createTreeBorder(color.tree.col1);
+					border.position.set(x, 0, z);
+					scene.add(border);
+					laneData.decor.push(border);//anche nelle decorazioni
+				} else {
+					//vaso di fiori o aiuola 25%
+					const flower = createFlowerBedMesh();
+					flower.position.set(x, 0, z);
+					scene.add(flower);
+					laneData.obstacles.push(x);
+					laneData.decor.push(flower);//anche nelle decorazioni
+				}
+			} else {
+				//albero
+				const tree = Math.random() < color.probCactus ? createCactusMesh(color.cactus.col1, color.cactus.col2) : createTreeMesh(color.tree.col1, color.tree.col2);
+				tree.position.set(x, 0, z);
+				scene.add(tree);
+				laneData.obstacles.push(x);
+				laneData.decor.push(tree);//anche nelle decorazioni
 			}
 		  } else if (!isPlayerStart && !isQuasiPlayerStart) {
             const rand = Math.random();
-            if (rand < 0.10) {
-              const tree = Math.random() < color.probCactus ? createCactusMesh(color.cactus.col1, color.cactus.col2) : createTreeMesh(color.tree.col1, color.tree.col2);
-              tree.position.set(x, 0, z);
-              scene.add(tree);
-              laneData.obstacles.push(x);
-			  laneData.decor.push(tree);//anche nelle decorazioni
-			  
-			  if (type === 'pavement') {
-				const border = createTreeBorder(color.tree.col1);
-				border.position.set(x, 0, z);
-				scene.add(border);
-				laneData.decor.push(border);//anche nelle decorazioni				
-			  }
-			} else if (rand < 0.15 && type !== 'pavement') {
-              const rock = createRockMesh();
-              rock.position.set(x, 0, z);
-              scene.add(rock);
-              laneData.obstacles.push(x);
-			  laneData.decor.push(rock);//anche nelle decorazioni
-            } else if (rand < 0.35 && type !== 'pavement' && isGrass) {
-              const tuft = createGrassTuftMesh(Math.random() < 0.5 ? color.tree.col1 : color.tree.col2);
-              tuft.position.set(x, 0, z);
-              scene.add(tuft);
-              /////laneData.decor.push(tuft); // solo decorazione, NON un ostacolo - RIMOSSO 
-			  const tuftData = { mesh: tuft, phase: Math.random() * Math.PI * 2, speed: 0.8 + Math.random() * 0.6 };
-              grassTufts.push(tuftData);
-              (laneData.grassRefs || (laneData.grassRefs = [])).push(tuftData);
+            if (rand < 0.08) {
+				//albero 75%
+				if (Math.random() < 0.75) {
+					const tree = Math.random() < color.probCactus ? createCactusMesh(color.cactus.col1, color.cactus.col2) : createTreeMesh(color.tree.col1, color.tree.col2);
+					tree.position.set(x, 0, z);
+					scene.add(tree);
+					laneData.obstacles.push(x);
+					laneData.decor.push(tree);//anche nelle decorazioni
+					if (isPavement) {
+						const border = createTreeBorder(color.tree.col1);
+						border.position.set(x, 0, z);
+						scene.add(border);
+						laneData.decor.push(border);//anche nelle decorazioni				
+					}
+				} else {
+					//vaso di fiori o aiuola 25%
+					const flower = isPavement ? createFlowerBedMesh() : createFlowerPotMesh();
+					flower.position.set(x, 0, z);
+					scene.add(flower);
+					laneData.obstacles.push(x);
+					laneData.decor.push(flower);//anche nelle decorazioni
+				}
+			} else if (rand < 0.10 && !isPavement) {
+				//roccia
+				const rock = createRockMesh();
+				rock.position.set(x, 0, z);
+				scene.add(rock);
+				laneData.obstacles.push(x);
+				laneData.decor.push(rock);//anche nelle decorazioni
+            } else if (rand < 0.35 && !isPavement && isGrass) {
+				//erbetta
+				const tuft = createGrassTuftMesh(Math.random() < 0.5 ? color.tree.col1 : color.tree.col2);
+				tuft.position.set(x, 0, z);
+				scene.add(tuft);
+				/////laneData.decor.push(tuft); // solo decorazione, NON un ostacolo - RIMOSSO 
+				const tuftData = { mesh: tuft, phase: Math.random() * Math.PI * 2, speed: 0.8 + Math.random() * 0.6 };
+				grassTufts.push(tuftData);
+				(laneData.grassRefs || (laneData.grassRefs = [])).push(tuftData);
             }
           }
         } else {
           if (isBorder) {
-			if(type === 'track' || type === 'road') {
+			if(isTrack || isRoad) {
 				const tunnel = createTunnelPortal();
 				tunnel.position.set(x, 0, z);
 				tunnel.rotation.y = x < 0 ? Math.PI / 2 : -Math.PI / 2;
@@ -3929,7 +4087,7 @@
 
 	  //ZAMPETTE BONUS
 	  // Zampetta bonus: solo su erba, su una casella libera
-	  if (type === 'grass' && z < -2 && Math.random() < PAW_CHANCE) {
+	  if (isGrass && z < -2 && Math.random() < PAW_CHANCE) {
 	    const free = [];
 	    for (let x = -X_LIMIT; x <= X_LIMIT; x++) {
 			if (!laneData.obstacles.includes(x)) free.push(x);
@@ -3947,26 +4105,22 @@
 
 
 	  // Impostazioni velocità e spawn							   
-      if (type === 'road') {
+      if (isRoad) {
         laneData.speed = (Math.random() * 0.025 + 0.018) * (Math.random() > 0.5 ? 1 : -1);
         laneData.spawnTimer = 0;
         laneData.spawnInterval = Math.random() * 240 + 240;
-	  }
-		
-	  if (type === 'river') {
+	  } else if (isRiver) {
 		laneData.speed = (Math.random() * 0.020 + 0.010) * (z % 3 ? 1 : -1);
         laneData.spawnTimer = 0;
         laneData.spawnInterval = Math.random() * 240 + 120;
-	  }
-	  
-	  if (type === 'track') {
+	  } else if (isTrack) {
 	  	laneData.speed = (Math.random() * 0.050 + 0.020) * (Math.random() > 0.5 ? 1 : -1);
         laneData.spawnTimer = 0;
         laneData.spawnInterval = Math.random() * 480 + 720;
 	  }
 
 	  // 50% di possibilità di avere un semaforo su questa strada
-		if (type === 'road' && Math.random() < 0.5 && nextLane && nextLane.type !== 'road') {
+		if (isRoad && Math.random() < 0.5 && nextLane && nextLane.type !== 'road') {
 				const trafficLightMesh = createTrafficLightMesh();
 				// Posizioniamo il semaforo a bordo strada (es. x = 5)
 				trafficLightMesh.position.set(-5 + Math.random() * 10, 0, z + 0.6);
@@ -3981,7 +4135,7 @@
 				};
 		}
 		
-		if (type === 'track' && Math.random() < 0.75 && nextLane && nextLane.type !== 'road') {
+		if (isTrack && Math.random() < 0.75 && nextLane && nextLane.type !== 'road') {
 			const trafficLightMesh = createTrainSignalMesh();
 				// Posizioniamo il semaforo a bordo strada (es. x = 5)
 				trafficLightMesh.position.set(-5 + Math.random() * 10, 0, z + 0.6);
@@ -4436,7 +4590,7 @@
         m1.pause();
 		m2.pause();
 		m3.pause();
-		let sounds = ["trainSound","policeSound","splashSound"];
+		let sounds = ["trainSound","policeSound","splashSound","crocoSound"];
 		sounds.forEach(s => {
 			let elem = document.getElementById(s);
 			if (elem) elem.pause();
@@ -4476,7 +4630,7 @@
       if (audio) {
         //audio.currentTime = 0;
         audio.volume = vol;
-        audio.play();
+        if (audio.paused) audio.play();//solo se non sta gia riproducendo il suono, altrimenti appesantisce cpu
       }
     }
 
@@ -4973,7 +5127,8 @@
 					z: lane.z,
 					length: logLength,
 					lane: lane,
-					type: 'river'
+					type: 'river',
+					isCroco: isCroco
 				  });
 		      }
             }
@@ -5078,8 +5233,8 @@
       }
 
 	  //se esiste polizia/treno vicino -> SUONA!!!
-	  if (minPoliceDistance < 6) playSound('policeSound',  minPoliceDistance < 3 ? 1 : minPoliceDistance < 5 ? 0.33 : 0.1);
-	  if (minTrainDistance < 10) playSound('trainSound',  minTrainDistance < 3 ? 1 : minTrainDistance < 5 ? 0.66 : minTrainDistance < 7 ? 0.45 : minTrainDistance < 9 ? 0.25 : 0.1);  
+	  if (minPoliceDistance < 9) playSound('policeSound',  minPoliceDistance < 3 ? 1 : minPoliceDistance < 6 ? 0.33 : 0.1);
+	  if (minTrainDistance < 14) playSound('trainSound',  minTrainDistance < 3 ? 1 : minTrainDistance < 6 ? 0.66 : minTrainDistance < 9 ? 0.45 : minTrainDistance < 12 ? 0.25 : 0.1);  
       
 
 
@@ -5108,7 +5263,7 @@
             playerPos.x = player.position.x;
             targetPos.x = player.position.x;
 			
-			if (log.mesh.position.y !== -0.075) playSound('splashSound');//splash solo appena il tronco affonda
+			if (log.mesh.position.y !== -0.075) playSound(log.isCroco ? 'crocoSound' : 'splashSound');//splash solo appena il tronco affonda
 			
 			//tronco affonda leggermente
 			//console.log(log.mesh.position.y);
