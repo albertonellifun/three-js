@@ -408,7 +408,7 @@
   <script>
     // --- COSTANTI DI GIOCO ---
     const GRID = 1;
-    const BOARD_WIDTH = 18.45; 
+    const BOARD_WIDTH = 38.45; 
     const X_LIMIT = Math.floor(BOARD_WIDTH / 2) - 1; // Limiti laterali
 	const MIN_LANE = 5;
 	const MAX_LANE = -30;
@@ -519,7 +519,7 @@
     let isDying = false;
     let gameStarted = false;
 
-	let isMute = false;
+	let isMute = 1||false;
 	let isWireframe = false;//wireframe disabilitato
 	let isShadows = true;//ombre abilitate
 	let immediateRotation = true;//se false, doppia clickata per spostarsi
@@ -5380,6 +5380,249 @@
 		}
 	  });
 	}
+	
+	
+	
+	//CONCA
+	function createConcaHouse() {
+		const house = new THREE.Group();
+		const mat = (c, r = 0.1) => new THREE.MeshStandardMaterial({ color: c, roughness: r });
+		const M = {
+			wall: mat(0xf4f1e9), // pareti bianche
+			concrete: mat(0x8d8b85), // cemento
+			concreteBase: mat(0x7d7b75), //base cemento
+			white: mat(0xf5f5f5), // ferro ringhiera
+			trim: mat(0xe6dcc0), // portone bordo pietra
+			shutter: mat(0x664433), // persiane cacarella
+			iron: mat(0x1b1b1b, 0.5), // griglia inferriate
+			roof: mat(0x443322), // tetto 
+			wood: mat(0x443322), // travetti del tetto, finestre
+		};
+		const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
+		const add = (geo, m, x, y, z) => {
+			const o = new THREE.Mesh(geo, m);
+			o.position.set(x, y, z);
+			o.castShadow = o.receiveShadow = true;
+			house.add(o);
+			return o;
+		};
+
+		const W = 8, D = 6, H = 6.4, PL = 1.0, Z = D / 2; // facciata principale verso +z
+
+		// Corpo + zoccolo + base (sfalsati di 0.001 su Y/Z per evitare z-fight)
+		add(box(W, H, D), M.wall, 0, H / 2, 0);
+		add(box(W + 0.06, PL, D + 0.06), M.concrete, 0, PL / 2, 0);
+		add(box(W + 1.0, 0.1, D + 3.2), M.concrete, 0, 0.05, 0.001);
+
+		// Tetto a due falde con gronda larga
+		const shape = new THREE.Shape();
+		shape.moveTo(-Z - 0.9, 0); 
+		shape.lineTo(Z + 0.9, 0); 
+		shape.lineTo(0, 1.2); // altezza tetto
+		shape.closePath();
+		const L = W + 0.5; // quanto sbalza il tetto
+		const roofGeo = new THREE.ExtrudeGeometry(shape, { depth: L, bevelEnabled: false });
+		roofGeo.translate(0, 0, -L / 2);
+		const roof = add(roofGeo, M.roof, 0, H + 0.001, 0);
+		roof.rotation.y = Math.PI / 2;
+
+		// Sottogronda in legno con travetti a vista
+		for (const s of [1, -1]) {
+			add(box(L, 0.06, 0.9), M.wood, 0, H - 0.03, s * (Z + 0.45));
+			for (let i = 0; i < 9; i++) add(box(0.14, 0.16, 0.9), M.wood, -3.6 + i * 0.9, H - 0.11, s * (Z + 0.45));
+		}
+
+		// Portone ad arco
+		const dx = 0;
+		const portH = 1.6;
+		add(box(1.5, portH, 0.08), M.trim, dx, PL + portH * 0.5, Z + 0.04);
+		
+		const arch = (r, y, m, z) => {
+			const a = add(new THREE.CylinderGeometry(r, r, 0.08, 6, 1, false, Math.PI / 2, Math.PI), m, dx, y, z);
+			a.rotation.x = Math.PI / 2;
+		};
+
+		arch(0.75, PL + portH, M.trim, Z + 0.04);
+		add(box(1.1, portH - 0.1, 0.1), M.wood, dx, PL + portH * 0.5 - 0.05, Z + 0.091); // +0.001 per staccare dal trim
+		arch(0.55, PL + portH - 0.1, M.wood, Z + 0.091);
+		
+		// Parametri Balcone per riferimento
+		const balW = 2.0; // larghezza balcone
+		const balD = 1.1; // profondita balcone
+		const gradD = balD * 1.5; // profondita gradini
+		const stepH = 0.3;
+
+		// Gradini risolti (ognuno ha la propria altezza precisa per non compenetrarsi sulle facce Y)
+		// Gradino 1 (più basso)
+		const step1W = balW + 0.6; // 2.6
+		add(box(step1W, stepH, gradD), M.concrete, dx - 0.3, stepH * 0.5, Z + gradD * 0.5);
+
+		// Gradino 2 (medio - impilato sopra il primo per evitare Z-fighting interno)
+		const step2W = balW + 0.3; // 2.3
+		add(box(step2W, stepH, gradD - 0.002), M.concrete, dx - 0.15, stepH * 1.5, Z + gradD * 0.5);
+
+		// Gradino 3 (alto - impilato sopra il secondo)
+		const step3W = balW; // 2.0
+		add(box(step3W, stepH, gradD - 0.004), M.concrete, dx, stepH * 2.5, Z + gradD * 0.5);
+		
+		// Inferriata dei gradini
+		const post = (x, z, rh, ry) => add(box(0.04, rh, 0.04), M.white, x, ry, z);
+		const railH = 0.9;
+		const railY = stepH * 3 + railH * 0.5;
+		const railTopY = stepH * 3 + railH;
+		const frontZ = Z + gradD - 0.05;
+
+		// Corrimano frontale gradino alto (offset +0.001 su Z)
+		add(box(balW, 0.05, 0.05), M.white, dx, railTopY, frontZ + 0.001);
+		for (let i = 0; i <= 6; i++) {
+			post(dx - balW / 2 + i * (balW / 6), frontZ, railH, railY);
+		}
+
+		// Corrimano laterale gradino alto
+		const sideX = dx + (balW / 2);
+		add(box(0.05, 0.05, gradD - 0.05), M.white, sideX + 0.001, railTopY, Z + (gradD - 0.05) / 2);
+		for (let i = 1; i <= 3; i++) {
+			post(sideX, frontZ - i * (gradD / 3), railH, railY);
+		}
+		
+		// Balcone superiore con ringhiera in ferro
+		const by = 3.8; 
+		const persBy = by + 0.92; 
+		const rh = 0.9;
+		const ry = by + 0.07 + rh / 2;
+		
+		// Base piano balcone
+		add(box(balW, 0.14, balD), M.trim, dx, by, Z + balD * 0.5);
+		
+		// Barra superiore frontale
+		add(box(balW, 0.05, 0.05), M.white, dx, by + 0.07 + rh, Z + balD - 0.05 + 0.001);
+		for (let i = 0; i <= 6; i++) {
+			post(dx - (balW / 2) + i * ((balW - 0.1) / 6), Z + balD - 0.05, rh, ry);
+		}
+		
+		// Barre superiori laterali
+		for (const s of [-1, 1]) {
+			add(box(0.05, 0.05, balD - 0.05), M.white, dx + s * (balW / 2) + s * 0.001, by + 0.07 + rh, Z + (balD - 0.05) / 2);
+		}
+		for (let i = 1; i <= 3; i++) {
+			for (const s of [-1, 1]) {
+				post(dx + s * (balW / 2), Z + balD - 0.05 - i * 0.25, rh, ry);
+			}
+		}
+		
+		// Porta-finestra del balcone (offset incrementati per sovrapposizione stratificata)
+		add(box(0.5, 1.5, 0.06), M.trim, dx - 0.25, persBy, Z + 0.041);
+		add(box(0.5, 1.5, 0.06), M.trim, dx + 0.25, persBy, Z + 0.041);
+		// Persiane aperte
+		for (const s of [-1, 1]) {
+			const sh = add(box(0.5, 1.5, 0.05), M.shutter, dx + s * 0.72, persBy, Z + 0.25);
+			sh.rotation.y = -s * 1.0;
+		}
+
+		// Finestre
+		const win = (x, y, w, h, shut, noborder, overrideZ = Z) => {
+			if (!noborder) add(box(w + 0.3, h + 0.3, 0.05), M.trim, x, y, overrideZ + 0.026);
+			add(box(w, h, 0.06), M.wood, x, y, overrideZ + 0.041);
+			if (!noborder) add(box(w + 0.4, 0.08, 0.2), M.trim, x, y - h / 2 - 0.15, overrideZ + 0.101);
+			if (shut) {
+				// persiane
+				for (const s of [-1, 1]) {
+					add(box(w / 2 - 0.02, h, 0.05), M.shutter, x + s * w / 4, y, overrideZ + 0.081);
+					for (let j = 0; j <= 4; j++) add(box(w / 2 - 0.1, 0.02, 0.02), M.wood, x + s * w / 4, y - h / 2 + 0.1 + j * (h - 0.2) / 4, overrideZ + 0.111);
+				}
+			} else {
+				// griglia scura
+				for (let k = -1; k <= 1; k++) add(box(0.03, h, 0.03), M.iron, x + k * w / 3, y, overrideZ + 0.091);
+			}
+		};
+		
+		// Funzione per finestre sulle pareti laterali
+		const winSide = (z, y, w, h, shut, noborder, side = 1) => {
+			const xWall = side * (W / 2);
+			
+			if (!noborder) add(box(0.05, h + 0.3, w + 0.3), M.trim, xWall + side * 0.026, y, z);
+			add(box(0.06, h, w), M.wood, xWall + side * 0.041, y, z);
+			if (!noborder) add(box(0.2, 0.08, w + 0.4), M.trim, xWall + side * 0.101, y - h / 2 - 0.15, z);
+
+			if (shut) {
+				for (const s of [-1, 1]) {
+					add(box(0.05, h, w / 2 - 0.02), M.shutter, xWall + side * 0.081, y, z + s * w / 4);
+				}
+			} else {
+				for (let k = -1; k <= 1; k++) {
+					add(box(0.03, h, 0.03), M.iron, xWall + side * 0.091, y, z + k * w / 3);
+				}
+			}
+		};
+
+		win(-2.4, 0.5, 1.0, 0.5, false, true);   // facciata cantina
+		win(-2.4, 2.4, 1.0, 1.2, false, false);  // facciata piano terra
+		win(-2.4, 5.0, 1.0, 1.2, true,  false);  // facciata primo piano sinistra
+		win(2.4, 2.4,  1.0, 1.2, false, false);  // facciata piano terra
+		win(2.4, 5.0,  1.0, 1.2, true,  false);  // facciata primo piano destra
+		
+		// lato mela
+		winSide(0, 2.4, 1.0, 1.2, false, false, 1);
+		winSide(0, 5.0, 1.0, 1.2, true,  false, 1);
+		
+		// lato fico
+		winSide(0, 2.4, 1.0, 1.2, false, false, -1);
+		winSide(0, 5.0, 1.0, 1.2, true,  false, -1);
+		
+		// bagni
+		win(-2.4, 5.3, 0.6, 0.4, true, true, -Z - 0.18);
+		win(2.4, 5.3,  0.6, 0.4, true, true, -Z - 0.18);
+
+		return house;
+	}
+	
+	// --- CASA COME OSTACOLO 3x5 CASELLE ---
+	function placeHouse(cx, cz, cellsX, cellsZ) {
+	  const x0 = cx - Math.floor(cellsX / 2), x1 = x0 + cellsX - 1;   // x: -7..-5
+	  const z0 = cz - Math.floor(cellsZ / 2), z1 = z0 + cellsZ - 1;   // z: -2..2
+	  const inX = x => { const r = Math.round(x); return r >= x0 && r <= x1; };
+
+	  const house = createConcaHouse();
+	  house.position.set(cx, 0, cz);
+	  house.rotation.y = Math.PI / 2;            // facciata verso +x, visibile dalla camera
+	  house.scale.set(
+		(cellsZ * GRID) / 8,                     // locale x (8) -> 5 caselle sulla z del mondo
+		0.5 * GRID,                              // altezza: ~3.2 unità, il portone è più alto del gatto
+		(cellsX * GRID) / 8                      // locale z (6) -> 3 caselle sulla x del mondo
+	  );
+	  scene.add(house);
+
+	  for (const lane of lanes) {
+		if (lane.z < z0 || lane.z > z1) continue;
+
+		// ripulisce decorazioni già generate nelle caselle della casa
+		lane.decor = lane.decor.filter(m => {
+		  if (!inX(m.position.x)) return true;
+		  scene.remove(m); disposeObject3D(m);
+		  return false;
+		});
+		if (lane.grassRefs) {
+		  lane.grassRefs = lane.grassRefs.filter(g => {
+			if (!inX(g.mesh.position.x)) return true;
+			scene.remove(g.mesh);
+			const i = grassTufts.indexOf(g);
+			if (i !== -1) grassTufts.splice(i, 1);
+			return false;
+		  });
+		}
+
+		// segna le caselle come ostacolo (il gatto non ci entra, salvo godmode)
+		lane.obstacles = lane.obstacles.filter(x => x < x0 || x > x1);
+		for (let x = x0; x <= x1; x++) lane.obstacles.push(x);
+	  }
+
+	  // la casa viene rimossa insieme all'ultima corsia che occupa
+	  const lastLane = lanes.find(l => l.z === z0);
+	  if (lastLane) lastLane.decor.push(house);
+	  return house;
+	}
+
+	placeHouse(-12, 0, 3, 5);   // centro (-6, 0), 3 caselle in x, 5 in z
 
     animate();
   </script>
