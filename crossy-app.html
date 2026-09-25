@@ -2185,14 +2185,14 @@
 	}
 	
 	// GENERIC SIAMESE -> I GATTI PIU BELLI DEL MONDO!
-	function createPlayerSiamese() {
+	function createPlayerSiamese(bodyCol = 0xe5d6c3, pointCol = 0x3d2b1f, eyeCol = 0x00a8ff, eyeBackCol = 0x443322) {
 	  const group = new THREE.Group();
 
 	  // Materiali
-	  const bodyMat = new THREE.MeshLambertMaterial({ color: 0xe5d6c3 });    // Crema/Beige (Corpo)
-	  const pointMat = new THREE.MeshLambertMaterial({ color: 0x3d2b1f });   // Marrone scuro (Muso, Orecchie, Zampe, Coda)
-	  const eyeMat = new THREE.MeshLambertMaterial({ color: 0x00a8ff });     // Azzurro intenso (Occhi Siamesi)
-	  const eyeBackMat = new THREE.MeshLambertMaterial({ color: 0x443322 }); // Nero (Sfondo Occhi)
+	  const bodyMat = new THREE.MeshLambertMaterial({ color: bodyCol });    // Crema/Beige (Corpo)
+	  const pointMat = new THREE.MeshLambertMaterial({ color: pointCol });   // Marrone scuro (Muso, Orecchie, Zampe, Coda)
+	  const eyeMat = new THREE.MeshLambertMaterial({ color: eyeCol });     // Azzurro intenso (Occhi Siamesi)
+	  const eyeBackMat = new THREE.MeshLambertMaterial({ color: eyeBackCol }); // Nero (Sfondo Occhi)
 
 	  // 1. Corpo base
 	  const body = new THREE.Mesh(
@@ -3061,6 +3061,24 @@
 	  log.castShadow = true;//ottimizzazione?
 	  group.add(log);
 
+	  //aggiungo tappi
+	  const lighterColor = new THREE.Color(col1).lerp(new THREE.Color(0xffffff), 0.45);
+	  const capThickness = 0.05;
+	  const capGeo = !useCache ? new THREE.BoxGeometry(capThickness, 0.2, 0.70) : getCachedGeometry('box', capThickness, 0.2, 0.70);
+	  const capMat = new THREE.MeshLambertMaterial({ color: lighterColor });
+	  // Tappo attaccato appena FUORI dalla faccia terminale (tocca, non sovrappone)
+	  // per evitare z-fighting con la faccia colorata del tronco sottostante —
+	  // stesso principio usato per i muri della fioriera.
+	  const capFront = new THREE.Mesh(capGeo, capMat);
+	  capFront.position.set(length / 2 + capThickness / 2, 0.02, 0);
+	  capFront.castShadow = false;
+	  group.add(capFront);
+	  
+	  const capBack = new THREE.Mesh(capGeo, capMat);
+	  capBack.position.set(-length / 2 - capThickness / 2, 0.02, 0);
+	  capBack.castShadow = false;
+	  group.add(capBack);
+
 
 	  // --- VENATURE ---
 	  const veinMat = new THREE.MeshLambertMaterial({
@@ -3638,6 +3656,52 @@
 	  return root;
 	}
 	
+	// --- GATTINO BONUS (sostituisce la zampetta, modello Siamese in scala ridotta) ---
+	function createBonusCatMesh() {
+	  let randomCatColors = [ 
+		// Siamese (corpo chiaro, punte scure, occhi azzurri)
+		{ bodyCol: 0xe5d6c3, pointCol: 0x3d2b1f, eyeCol: 0x00a8ff, eyeBackCol: 0x443322 },
+
+		// Nero (occhi verdi vivaci)
+		{ bodyCol: 0x1f1f1f, pointCol: 0x1f1f1f, eyeCol: 0x2ecc71, eyeBackCol: 0x111111 },
+		
+		// Nero (occhi gialli)
+		{ bodyCol: 0x1f1f1f, pointCol: 0x1f1f1f, eyeCol: 0xd4ac0d, eyeBackCol: 0x111111 },
+
+		// Grigio / Certosino (occhi ambra/oro)
+		{ bodyCol: 0x7f8c8d, pointCol: 0x7f8c8d, eyeCol: 0xf39c12, eyeBackCol: 0x6f7c7d },
+
+		// Grigio Chiaro / Argento (occhi azzurro ghiaccio)
+		{ bodyCol: 0xbdc3c7, pointCol: 0x7f8c8d, eyeCol: 0xa9cce3, eyeBackCol: 0x7f8c8d },
+
+		// Bianco (occhi azzurri)
+		{ bodyCol: 0xf5f5f5, pointCol: 0xf5f5f5, eyeCol: 0x3498db, eyeBackCol: 0xe5e5e5 },
+
+		// Arancione (dettagli arancio scuro, occhi oro)
+		{ bodyCol: 0xe67e22, pointCol: 0xd35400, eyeCol: 0xf1c40f, eyeBackCol: 0xd35400 },
+
+		// Crema / Arancio chiaro (occhi miele)
+		{ bodyCol: 0xf8c471, pointCol: 0xe59866, eyeCol: 0xd4ac0d, eyeBackCol: 0xe59866 },
+
+		// Marrone / Cioccolato (occhi nocciola)
+		{ bodyCol: 0x4a2c11, pointCol: 0x331d0a, eyeCol: 0xf39c12, eyeBackCol: 0x331d0a },
+
+		// Tuxedo (Nero con dettagli bianchi, occhi verdi)
+		{ bodyCol: 0x1c1c1c, pointCol: 0xffffff, eyeCol: 0x2ecc71, eyeBackCol: 0x111111 },
+
+		// Tartarugato (base scura con macchie rosse/arancio, occhi rame)
+		{ bodyCol: 0x2c2c2c, pointCol: 0xd35400, eyeCol: 0xe67e22, eyeBackCol: 0xd35400 }
+	  ];
+	  let randomColor = randomCatColors[Math.floor(Math.random() * randomCatColors.length)];
+	  
+	  const cat = createPlayerSiamese(randomColor.bodyCol, randomColor.pointCol, randomColor.eyeCol, randomColor.eyeBackCol); // fa già scene.add() al suo interno
+	  
+	  const scale = 0.85;
+	  cat.scale.set(scale, scale, scale);
+	  cat.rotation.y = Math.random() * Math.PI * 2; // orientamento casuale alla nascita
+	  return cat;
+	}
+	
 	
 	//ciuffetti d'erba non da fumare ma da vomitare tipo esorcista
 	function buildGrassTuftGeometry() {
@@ -3787,7 +3851,7 @@
 	  const i = pawPrints.indexOf(paw);
 	  if (i !== -1) pawPrints.splice(i, 1);
 	  lane.paw = null;
-	  bonusScore += PAW_POINTS;
+	  bonusScore += (paw.isCat ? PAW_POINTS * 2 : PAW_POINTS);
 	  updateScoreBoard();
 	  playSound('bonusSound');
 	  const p = worldToScreen(paw.x, 0.8, paw.z);
@@ -3908,6 +3972,7 @@
 			dashBottom.receiveShadow = true;
 			dashBottom.castShadow = false;//ottimizzazione
 			scene.add(dashBottom);
+			applyCurrentVisualMode(dashBottom);
 			laneDecor.push(dashBottom);
 		  }
 		} else {
@@ -3921,6 +3986,7 @@
 			dashTop.receiveShadow = true;
 			dashTop.castShadow = false;//ottimizzazione
 			scene.add(dashTop);
+			applyCurrentVisualMode(dashTop);
 			
 			// Striscia sul bordo inferiore della corsia (offset Z +0.46)
 			const dashBottom = new THREE.Mesh(dashGeo, dashMat);
@@ -3928,6 +3994,7 @@
 			dashBottom.receiveShadow = true;
 			dashBottom.castShadow = false;//ottimizzazione
 			scene.add(dashBottom);
+			applyCurrentVisualMode(dashBottom);
 			
 			//decorazioni
 			laneDecor.push(dashTop);
@@ -3949,7 +4016,7 @@
 					stripe.receiveShadow = true;
 					stripe.castShadow = false;//ottimizzazione
 					scene.add(stripe);
-					
+					applyCurrentVisualMode(stripe);
 					laneDecor.push(stripe);//decorazione
 				  }
 		  }
@@ -3974,6 +4041,7 @@
       laneMesh.position.set(0, laneY, z);
       laneMesh.receiveShadow = true;
       scene.add(laneMesh);
+	  applyCurrentVisualMode(laneMesh);
 
       const laneData = { mesh: laneMesh, type: type, z: z, obstacles: [], decor: laneDecor };//decorazioni tracciate
 
@@ -4094,10 +4162,11 @@
 	    }
 	    if (free.length) {
 			const px = free[Math.floor(Math.random() * free.length)];
-			const mesh = createPawPrintMesh();
+			const isCat = Math.random() < 0.25;
+			const mesh = isCat ? createBonusCatMesh() : createPawPrintMesh();
 			mesh.position.set(px, 0.3, z);
-			scene.add(mesh);
-			laneData.paw = { mesh, x: px, z };
+			if (!isCat) scene.add(mesh);//cat siamese gia' fa scene.add!!!
+			laneData.paw = { mesh: mesh, x: px, z: z, isCat: isCat };
 			pawPrints.push(laneData.paw);
 	    }
 	  }
@@ -4949,11 +5018,15 @@
 		bubbleVisible = true;
 		thoughtBubble.classList.add('visible');
 		
-		document.getElementById('rocky-thinks').innerHTML = 
-			isCat ? rockyThinksArray[rockyThinksIndex] :
-			isBender ? benderThinksArray[rockyThinksIndex] : 
-			isMinion ? minionThinksArray[rockyThinksIndex] : 
-			genericThinksArray[rockyThinksIndex];
+		if (Math.abs(player.position.x - CONCA_POSITION.x) < 5 && Math.abs(player.position.z - CONCA_POSITION.z) < 5) {
+			document.getElementById('rocky-thinks').innerHTML = "Home sweet home...";
+		} else {
+			document.getElementById('rocky-thinks').innerHTML = 
+				isCat ? rockyThinksArray[rockyThinksIndex] :
+				isBender ? benderThinksArray[rockyThinksIndex] : 
+				isMinion ? minionThinksArray[rockyThinksIndex] : 
+				genericThinksArray[rockyThinksIndex];
+		}
 	  }
 
 	  const p = worldToScreen(player.position.x, bubbleAnchorY, player.position.z);
@@ -5012,8 +5085,13 @@
 	  const tPaw = performance.now() * 0.004;
 	  for (const p of pawPrints) {
 	    if (Math.abs(p.z - player.position.z) > 14) continue;
-	    p.mesh.rotation.y += 0.03;
-	    p.mesh.position.y = 0.3 + Math.sin(tPaw + p.x) * 0.06;
+		if (p.isCat) {
+			p.mesh.rotation.y += 0.01;
+			p.mesh.position.y = Math.sin(tPaw * 2 + p.x) * 0.02;
+		} else {
+			p.mesh.rotation.y += 0.03;
+			p.mesh.position.y = 0.3 + Math.sin(tPaw + p.x) * 0.06;
+		}
 	  }
 	  
 	  // fili d'erba rotanti
@@ -5033,8 +5111,8 @@
 	  
 	  //fiume
 	  if (riverTextureLeft && riverTextureRight) {
-		riverTextureLeft.offset.x -= 0.002;
-		riverTextureRight.offset.x += 0.002;
+		riverTextureLeft.offset.x -= 0.001;
+		riverTextureRight.offset.x += 0.001;
 	  }
       
       // 3. SPAWN OSTACOLI
@@ -5384,6 +5462,7 @@
 			  // 4. Crea i segmenti di linea e aggiungili come figlio della Mesh
 			  wireframeOverlay = new THREE.LineSegments(wireframeGeo, wireframeMat);
 			  wireframeOverlay.userData.isWireframeOverlay = true; // Marker di riconoscimento
+			  wireframeOverlay.scale.setScalar(0.998);//per evitare z-fight
 			  
 			  // Impedisce problemi di Z-fighting tra la linea e la superficie
               wireframeOverlay.renderOrder = child.renderOrder + 1;
@@ -5644,7 +5723,8 @@
 	  return house;
 	}
 
-	placeHouse(-12, 0, 3, 5);   // centro (-6, 0), 3 caselle in x, 5 in z
+	const CONCA_POSITION = {x:-12, z:0};
+	placeHouse(CONCA_POSITION.x, CONCA_POSITION.z, 3, 5);   // centro (-6, 0), 3 caselle in x, 5 in z
 
     animate();
   </script>
