@@ -3855,7 +3855,7 @@
 	  updateScoreBoard();
 	  playSound('bonusSound');
 	  const p = worldToScreen(paw.x, 0.8, paw.z);
-	  showScorePop(p.x, p.y, '+' + PAW_POINTS);
+	  showScorePop(p.x, p.y, '+' + (paw.isCat ? PAW_POINTS * 2 : PAW_POINTS));
 	}
 	
 	
