@@ -3044,49 +3044,48 @@
 	  body.castShadow = true;//ottimizzazione?
 	  group.add(body);
 
-	  // 2. Muso: più stretto e un filo più basso
+	  // 2. Muso: più stretto e un filo più basso — ora quasi a filo d'acqua
 	  const snout = new THREE.Mesh(
 		!useCache ? new THREE.BoxGeometry(snoutLen, 0.16, 0.50) : getCachedGeometry('box', snoutLen, 0.16, 0.50),
 		skinMat);
-	  snout.position.set(bodyEnd + snoutLen / 2, 0.01, 0);
+	  snout.position.set(bodyEnd + snoutLen / 2, -0.03, 0);
 	  snout.receiveShadow = true;
 	  snout.castShadow = true;//ottimizzazione?
 	  group.add(snout);
-	  
+
 	  // 2b. Rettangolo del naso sulla punta del muso, con due buchi per le narici
-	  const noseMat = new THREE.MeshLambertMaterial({ color: col2 }); // Verde un po' più chiaro, così si stacca dal muso
-	  
+	  const noseMat = new THREE.MeshLambertMaterial({ color: col2 });
+
 	  const nose = new THREE.Mesh(
 		!useCache ? new THREE.BoxGeometry(0.16, 0.05, 0.38) : getCachedGeometry('box', 0.16, 0.05, 0.38), 
 		noseMat);
-	  nose.position.set(length / 2 - 0.12, 0.1, 0);
-	  nose.castShadow = false;//true;ottimizzazione
+	  nose.position.set(length / 2 - 0.12, 0.06, 0);
+	  nose.castShadow = false;
 	  group.add(nose);
-	  
+
 	  const nostrilGeo = !useCache ? new THREE.BoxGeometry(0.05, 0.015, 0.05) : getCachedGeometry('box', 0.05, 0.015, 0.05);
 	  [-0.08, 0.08].forEach(z => {
-	    const nostril = new THREE.Mesh(nostrilGeo, pupilMat); // riuso il nero delle pupille
-	    nostril.position.set(length / 2 - 0.12, 0.15, z);
-	    group.add(nostril);
+	  	const nostril = new THREE.Mesh(nostrilGeo, pupilMat);
+	  	nostril.position.set(length / 2 - 0.12, 0.11, z);
+	  	group.add(nostril);
 	  });
+	  // 3. Occhi sopra la testa, dove il corpo incontra il muso - sporgono di più e guardano avanti
+	  const bumpGeo  = !useCache ? new THREE.BoxGeometry(0.15, 0.09, 0.15) : getCachedGeometry('box', 0.15, 0.09, 0.15);
+	  const eyeGeo   = !useCache ? new THREE.BoxGeometry(0.09, 0.06, 0.09) : getCachedGeometry('box', 0.09, 0.06, 0.09);
+	  const pupilGeo = !useCache ? new THREE.BoxGeometry(0.045, 0.062, 0.045) : getCachedGeometry('box', 0.045, 0.062, 0.045);
 
-	  // 3. Occhi sopra la testa, dove il corpo incontra il muso
-	  const bumpGeo  = !useCache ? new THREE.BoxGeometry(0.14, 0.060, 0.14) : getCachedGeometry('box', 0.14, 0.060, 0.14);
-	  const eyeGeo   = !useCache ? new THREE.BoxGeometry(0.08, 0.030, 0.08) : getCachedGeometry('box', 0.08, 0.030, 0.08);
-	  const pupilGeo = !useCache ? new THREE.BoxGeometry(0.04, 0.031, 0.04) : getCachedGeometry('box', 0.04, 0.031, 0.04);
-	  
 	  [-0.22, 0.22].forEach(z => {
-	  	const bump = new THREE.Mesh(bumpGeo, skinMat);
-	  	bump.position.set(bodyEnd - 0.07, 0.18, z);
-	  	group.add(bump);
-	  
-	  	const eye = new THREE.Mesh(eyeGeo, eyeMat);
-	  	eye.position.set(bodyEnd - 0.07, 0.20, z);
-	  	group.add(eye);
-	  
-	  	const pupil = new THREE.Mesh(pupilGeo, pupilMat);
-	  	pupil.position.set((bodyEnd - 0.07) + 0.0355, 0.20, z);
-	  	group.add(pupil);
+		const bump = new THREE.Mesh(bumpGeo, skinMat);
+		bump.position.set(bodyEnd - 0.06, 0.21, z);
+		group.add(bump);
+		
+		const eye = new THREE.Mesh(eyeGeo, eyeMat);
+		eye.position.set(bodyEnd - 0.015, 0.24, z); // prima: bodyEnd - 0.03
+		group.add(eye);
+
+		const pupil = new THREE.Mesh(pupilGeo, pupilMat);
+		pupil.position.set((bodyEnd - 0.015) + 0.045, 0.24, z);
+		group.add(pupil);
 	  });
 
 	  // 4. Scaglie sul dorso (solo sul corpo, prima degli occhi)
@@ -4360,7 +4359,7 @@
 	  } else if (isRiver) {
 		laneData.speed = (Math.random() * 0.020 + 0.010) * (z % 3 ? 1 : -1);
         laneData.spawnTimer = 0;
-        laneData.spawnInterval = Math.random() * 240 + 240;
+        laneData.spawnInterval = Math.random() * 240 + 180;
 		
 		const bridgeStructure = createBridgeMesh();
 		
