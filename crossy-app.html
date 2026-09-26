@@ -5443,7 +5443,8 @@
 					length: logLength,
 					lane: lane,
 					//type: 'river',
-					isCroco: isCroco
+					isCroco: isCroco,
+					isBridge: false
 				  });
 		      }
             }
@@ -5556,7 +5557,10 @@
       // 5. MOVIMENTO TRONCHI E FISICA FIUME
 	  let onLog = false;
 
-	const isPlayerOnBridge = player.position.y === 0.2 && logs.find(x => x.isBridge && x.z === player.position.z && Math.abs(x.mesh.position.x - player.position.x) < 0.2);
+	//const isPlayerOnBridge = Math.abs(player.position.y - 0.2) < 0.01 && 
+	//		logs.find(x => x.isBridge && Math.abs(x.z - player.position.z) < 0.2 && Math.abs(x.mesh.position.x - player.position.x) < 0.2);
+	  const isPlayerOnBridge = !isJumping && !isDying &&
+		logs.some(x => x.isBridge && x.z === Math.round(playerPos.z) && x.mesh.position.x === playerPos.x);
 
 	for (let i = logs.length - 1; i >= 0; i--) {
 	  const log = logs[i];
@@ -5599,7 +5603,7 @@
 			playerPos.x = player.position.x;
 			targetPos.x = player.position.x;
 
-			if (log.mesh.position.y !== -0.075) playSound(log.isCroco ? 'crocoSound' : 'splashSound');
+			if (log.mesh.position.y !== -0.075 && !log.isBridge && !isPlayerOnBridge) playSound(log.isCroco ? 'crocoSound' : 'splashSound');
 			log.mesh.position.y = -0.075;
 		  }
 
