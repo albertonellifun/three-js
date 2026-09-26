@@ -3050,9 +3050,9 @@
 
 	  // 2. Muso: più stretto e un filo più basso — ora quasi a filo d'acqua
 	  const snout = new THREE.Mesh(
-		!useCache ? new THREE.BoxGeometry(snoutLen, 0.16, 0.50) : getCachedGeometry('box', snoutLen, 0.16, 0.50),
+		!useCache ? new THREE.BoxGeometry(snoutLen, 0.12, 0.50) : getCachedGeometry('box', snoutLen, 0.16, 0.50),
 		skinMat);
-	  snout.position.set(bodyEnd + snoutLen / 2, -0.03, 0);
+	  snout.position.set(bodyEnd + snoutLen / 2, -0.01, 0);
 	  snout.receiveShadow = true;
 	  snout.castShadow = true;//ottimizzazione?
 	  group.add(snout);
@@ -3061,34 +3061,34 @@
 	  const noseMat = new THREE.MeshLambertMaterial({ color: col2 });
 
 	  const nose = new THREE.Mesh(
-		!useCache ? new THREE.BoxGeometry(0.16, 0.05, 0.38) : getCachedGeometry('box', 0.16, 0.05, 0.38), 
+		!useCache ? new THREE.BoxGeometry(0.16, 0.06, 0.38) : getCachedGeometry('box', 0.16, 0.06, 0.38), 
 		noseMat);
-	  nose.position.set(length / 2 - 0.12, 0.06, 0);
+	  nose.position.set(length / 2 - 0.12, 0.05, 0);
 	  nose.castShadow = false;
 	  group.add(nose);
 
 	  const nostrilGeo = !useCache ? new THREE.BoxGeometry(0.05, 0.015, 0.05) : getCachedGeometry('box', 0.05, 0.015, 0.05);
-	  [-0.08, 0.08].forEach(z => {
+	  [-0.09, 0.09].forEach(z => {
 	  	const nostril = new THREE.Mesh(nostrilGeo, pupilMat);
-	  	nostril.position.set(length / 2 - 0.12, 0.11, z);
+	  	nostril.position.set(length / 2 - 0.12, 0.085, z);
 	  	group.add(nostril);
 	  });
 	  // 3. Occhi sopra la testa, dove il corpo incontra il muso - sporgono di più e guardano avanti
-	  const bumpGeo  = !useCache ? new THREE.BoxGeometry(0.15, 0.09, 0.15) : getCachedGeometry('box', 0.15, 0.09, 0.15);
-	  const eyeGeo   = !useCache ? new THREE.BoxGeometry(0.09, 0.06, 0.09) : getCachedGeometry('box', 0.09, 0.06, 0.09);
-	  const pupilGeo = !useCache ? new THREE.BoxGeometry(0.045, 0.062, 0.045) : getCachedGeometry('box', 0.045, 0.062, 0.045);
+	  const bumpGeo  = !useCache ? new THREE.BoxGeometry(0.15, 0.09, 0.15) : getCachedGeometry('box', 0.15, 0.04, 0.15);
+	  const eyeGeo   = !useCache ? new THREE.BoxGeometry(0.09, 0.06, 0.09) : getCachedGeometry('box', 0.09, 0.05, 0.09);
+	  const pupilGeo = !useCache ? new THREE.BoxGeometry(0.045, 0.062, 0.045) : getCachedGeometry('box', 0.045, 0.052, 0.045);
 
 	  [-0.22, 0.22].forEach(z => {
 		const bump = new THREE.Mesh(bumpGeo, skinMat);
-		bump.position.set(bodyEnd - 0.06, 0.21, z);
+		bump.position.set(bodyEnd - 0.06, 0.12, z);
 		group.add(bump);
 		
 		const eye = new THREE.Mesh(eyeGeo, eyeMat);
-		eye.position.set(bodyEnd - 0.015, 0.24, z); // prima: bodyEnd - 0.03
+		eye.position.set(bodyEnd - 0.015, 0.14, z); // prima: bodyEnd - 0.03
 		group.add(eye);
 
 		const pupil = new THREE.Mesh(pupilGeo, pupilMat);
-		pupil.position.set((bodyEnd - 0.015) + 0.045, 0.24, z);
+		pupil.position.set((bodyEnd - 0.015) + 0.045, 0.14, z);
 		group.add(pupil);
 	  });
 
@@ -3116,7 +3116,7 @@
 	  	  ? new THREE.BoxGeometry(scaleLength, 0.015, 0.15) : getCachedGeometry('box', scaleLength, 0.015, 0.15);
 	  
 	  	const scale = new THREE.Mesh(scaleGeo, scaleMat);
-	  	scale.position.set(x + scaleLength / 2, 0.12, z);
+	  	scale.position.set(x + scaleLength / 2, 0.14, z);
 	  	group.add(scale);
 	  
 	  	x += scaleLength;
@@ -3196,7 +3196,7 @@
 			  const veinGeo = !useCache ? new THREE.BoxGeometry(actualLength, 0.015, 0.125) : getCachedGeometry('box', actualLength, 0.015, 0.125);
 	  
 			  const vein = new THREE.Mesh(veinGeo, veinMat);
-			  vein.position.set(x + actualLength / 2, 0.12, z);
+			  vein.position.set(x + actualLength / 2, 0.14, z);
 			  group.add(vein);
 	  
 			  x += actualLength;
@@ -4359,11 +4359,11 @@
       if (isRoad) {
         laneData.speed = (Math.random() * 0.025 + 0.018) * (Math.random() > 0.5 ? 1 : -1);
         laneData.spawnTimer = 0;
-        laneData.spawnInterval = Math.random() * 240 + 240;
+        laneData.spawnInterval = Math.random() * 240 + 180;
 	  } else if (isRiver) {
 		laneData.speed = (Math.random() * 0.020 + 0.010) * (z % 3 ? 1 : -1);
         laneData.spawnTimer = 0;
-        laneData.spawnInterval = Math.random() * 240 + 180;
+        laneData.spawnInterval = Math.random() * 240 + 120;
 		
 		const bridgeStructure = createBridgeMesh();
 		
@@ -4382,7 +4382,7 @@
 			z: z,
 			length: 1,
 			lane: laneData,
-			type: 'river',
+			//type: 'river',
 			isCroco: false,
 			isBridge: true
 		});
@@ -5419,7 +5419,7 @@
 			
 			if (lane.type === 'river') {
 			  const startX = lane.speed > 0 ? -BOARD_WIDTH / 2 - 2 : BOARD_WIDTH / 2 + 2;
-			  const lastLogOnLane = logs.filter(c => c.z === lane.z);
+			  const lastLogOnLane = logs.filter(c => c.z === lane.z && !c.isBridge);
 			  let canSpawn = true;
               for (let v of lastLogOnLane) {
 			    if (Math.abs(v.mesh.position.x - startX) < 3) {
@@ -5442,7 +5442,7 @@
 					z: lane.z,
 					length: logLength,
 					lane: lane,
-					type: 'river',
+					//type: 'river',
 					isCroco: isCroco
 				  });
 		      }
