@@ -422,7 +422,7 @@
 	const ZOOM_MAX = 7;
 	const ZOOM_STEP = 0.4;
 	let d = 5; // zoom iniziale (modificabile con i pulsanti +/-)
-    let camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
+    let camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 500);
 	/*camera = new THREE.PerspectiveCamera( 
 		20+d*d, // FOV alto == 120-150 == prospettiva distorta, basso == 40-60 == normale
 		aspect,
@@ -519,7 +519,7 @@
     let isDying = false;
     let gameStarted = false;
 
-	let isMute = false;
+	let isMute = false;//il silenzio e' d'oro
 	let isWireframe = false;//wireframe disabilitato
 	let isShadows = true;//ombre abilitate
 	let immediateRotation = true;//se false, doppia clickata per spostarsi
@@ -527,8 +527,8 @@
 	let isPerspective = false;//prospettiva figherrima++
 	let isGrass = true;//grass on/off
 	
-	const MAX_LANE_BACK = 15;//posso tornare indietro di 20
-	const LANE_CLEANUP_MARGIN = 25;//cancello le lane oltre 30
+	const MAX_LANE_BACK = 15;//posso tornare indietro di 15
+	const LANE_CLEANUP_MARGIN = 25;//cancello le lane oltre 25
 
 
     // Cronologia mosse sicure
@@ -2443,6 +2443,53 @@
 	  return group;
     }
 	
+	//IL PONTE!!!
+	function createBridgeMesh() {
+	  const group = new THREE.Group();
+
+	  // 1. Traverse / Assi di legno del ponte
+	  const tieMat = new THREE.MeshLambertMaterial({ color: 0x4a2e18 });
+	  const tieGeo = !useCache ? new THREE.BoxGeometry(0.95, 0.05, 0.15) : getCachedGeometry('box', 0.95, 0.05, 0.15);
+
+	  for (let z = -0.51; z <= 0.51; z += 0.2) {
+		const tie = new THREE.Mesh(tieGeo, tieMat);
+		tie.position.set(0, 0.15, z);
+		tie.receiveShadow = true;
+		group.add(tie);
+	  }
+
+	  // Montanti grandi agli estremi
+	  const postGeoBig = !useCache ? new THREE.BoxGeometry(0.1, 0.6, 0.1) : getCachedGeometry('box', 0.1, 0.6, 0.1);
+	  const fenceMat = new THREE.MeshLambertMaterial({ color: 0x3d2310 });
+	  const ropeMat = new THREE.MeshLambertMaterial({ color: 0x8a6a4a });
+
+	  [-0.5, 0.5].forEach(xPos => {
+		const postBig1 = new THREE.Mesh(postGeoBig, fenceMat);
+		postBig1.position.set(xPos, 0.3, -0.51);
+		group.add(postBig1);
+
+		const postBig2 = new THREE.Mesh(postGeoBig, fenceMat);
+		postBig2.position.set(xPos, 0.3, 0.51);
+		group.add(postBig2);
+
+		// Corda lenta a forma di arco: parte dalla cima di postBig2, scende al centro, risale fino alla cima di postBig1
+		const ropeStart = new THREE.Vector3(xPos, 0.55, 0.51);
+		const ropeMid   = new THREE.Vector3(xPos, 0.01, 0.00);   // abbassa/alza questo Y per regolare quanto è "lenta"
+		const ropeEnd   = new THREE.Vector3(xPos, 0.55, -0.51);
+
+		const ropeCurve = new THREE.QuadraticBezierCurve3(ropeStart, ropeMid, ropeEnd);
+		const ropeGeo = new THREE.TubeGeometry(ropeCurve, 20, 0.025, 6, false);
+		const rope = new THREE.Mesh(ropeGeo, ropeMat);
+		rope.castShadow = true;
+		group.add(rope);
+	  });
+
+	  applyCurrentVisualMode(group);
+
+	  return group;
+	}
+	
+	
 	// --- MODELLO STRUTTURA BINARI ---
 	function createTrackMesh() {
 	  const group = new THREE.Group();
@@ -2905,18 +2952,50 @@
         !useCache ? new THREE.BoxGeometry(0.8, 0.65, 0.77) : getCachedGeometry('box', 0.8, 0.65, 0.77),
         new THREE.MeshLambertMaterial({ color: color })
       );
-      cabin.position.set(1.0, 0.425, 0);
+      cabin.position.set(1.0, 0.425, 0);//0.6..1.4
       cabin.castShadow = true;
       group.add(cabin);
-
+	  
+	  //spoiler scopiazzato a crossy roads sopra qualche camion
+	  if (Math.random() < 0.5) {
+		  const spoiler = new THREE.Mesh(
+			!useCache ? new THREE.BoxGeometry(0.4, 0.10, 0.65) : getCachedGeometry('box', 0.4, 0.10, 0.65), 
+			new THREE.MeshLambertMaterial({ color: 0xffffff }) // Bianco puro
+		  );
+		  // Posizionato sopra il tetto della cabina (Y = 0.425 + 0.65/2 + 0.10/2 = 0.80) -> 0.75..0.85
+		  spoiler.position.set(0.91, 0.80, 0);//
+		  spoiler.castShadow = true;
+		  group.add(spoiler);
+		  
+		  const spoiler2 = new THREE.Mesh(
+			!useCache ? new THREE.BoxGeometry(0.2, 0.10, 0.60) : getCachedGeometry('box', 0.2, 0.10, 0.60), 
+			new THREE.MeshLambertMaterial({ color: 0xffffff }) // Bianco puro
+		  );
+		  // Posizionato sopra il tetto della cabina (Y = 0.425 + 0.65/2 + 0.10/2 = 0.80 + 0.10) -> 0.85..0.95
+		  spoiler2.position.set(0.81, 0.90, 0);//
+		  spoiler2.castShadow = true;
+		  group.add(spoiler2);		  
+	  }
+	  
       // Vetro Cabina
-      const windshield = new THREE.Mesh(
-        !useCache ? new THREE.BoxGeometry(0.2, 0.25, 0.70) : getCachedGeometry('box', 0.2, 0.25, 0.70),
-        new THREE.MeshLambertMaterial({ color: 0x111111 })
-      );
-      windshield.position.set(1.31, 0.58, 0);
-      group.add(windshield);
-
+	  if (Math.random() < 0.5) {
+		//gira intorno
+		const windshield = new THREE.Mesh(
+			!useCache ? new THREE.BoxGeometry(0.3, 0.25, 0.79) : getCachedGeometry('box', 0.3, 0.25, 0.79),
+			new THREE.MeshLambertMaterial({ color: 0x111111 })
+		);
+		windshield.position.set(1.26, 0.58, 0);//1.11 (+/-0.15) -> 1.11..1.41
+		group.add(windshield);
+	  } else {
+		//vintage solo frontale
+		const windshield = new THREE.Mesh(
+			!useCache ? new THREE.BoxGeometry(0.2, 0.25, 0.70) : getCachedGeometry('box', 0.2, 0.25, 0.70),
+			new THREE.MeshLambertMaterial({ color: 0x111111 })
+		);
+		windshield.position.set(1.31, 0.58, 0);//1.31 (+/-0.1) -> 1.21..1.41
+		group.add(windshield);
+	  }
+	  
       // Cassone/Container posteriore
       const cargo = new THREE.Mesh(
         !useCache ? new THREE.BoxGeometry(2.0, 0.85, 0.80) : getCachedGeometry('box', 2.0, 0.85, 0.80),
@@ -3062,7 +3141,7 @@
 	  group.add(log);
 
 	  //aggiungo tappi
-	  const lighterColor = new THREE.Color(col1).lerp(new THREE.Color(0xffffff), 0.45);
+	  const lighterColor = new THREE.Color(col1).lerp(new THREE.Color(0xffeeee), 0.30);
 	  const capThickness = 0.05;
 	  const capGeo = !useCache ? new THREE.BoxGeometry(capThickness, 0.2, 0.70) : getCachedGeometry('box', capThickness, 0.2, 0.70);
 	  const capMat = new THREE.MeshLambertMaterial({ color: lighterColor });
@@ -3887,6 +3966,9 @@
 		case 'ring':
 		  geo = new THREE.RingGeometry(...params);
 		  break;
+		case 'plane':
+		  geo = new THREE.PlaneGeometry(...params);
+		  break;
 		default:
 		  throw new Error('getCachedGeometry: tipo non supportato "' + type + '"');
 	  }
@@ -3902,7 +3984,79 @@
 	
 	
 	
-	
+	function createDashedLineMesh(z, x, color, position) {
+		//const dashGeo = !useCache ? new THREE.BoxGeometry(0.4, 0.01, 0.08) : getCachedGeometry('box', 0.4, 0.01, 0.08);
+		const dashGeo = !useCache ? new THREE.PlaneGeometry(0.4, 0.08) : getCachedGeometry('plane', 0.4, 0.08);
+		//const dashMat = new THREE.MeshLambertMaterial({ color: isWhiteLine ? 0xffffff : 0xeeee00 });
+		const dashMat = new THREE.MeshLambertMaterial({ 
+			color: color,
+			polygonOffset: true,
+			polygonOffsetFactor: -1, // Dice alla GPU: "Disegna questa faccia SOPRA allo stesso livello Y"
+			polygonOffsetUnits: -1
+		  });
+		// Striscia sul bordo inferiore della corsia (offset Z +0.46)
+		const dashBottom = new THREE.Mesh(dashGeo, dashMat);
+		//dashBottom.position.set(x, 0.101, z + 0.56); // Cambiato da 0.1 a 0.101
+		dashBottom.rotation.x = -Math.PI / 2; // Steso in orizzontale
+		dashBottom.position.set(x, 0.000, z + (position === 'bottom' ? 0.5 : -0.56)); // ESATTAMENTE a filo dell'asfalto (Y = 0.10)
+		
+		dashBottom.receiveShadow = true;
+		dashBottom.castShadow = false;//ottimizzazione
+		dashBottom.userData.isSolid = false;
+		dashBottom.userData.isDashed = true;
+		dashBottom.userData.position = position;
+		dashBottom.userData.whiteLineColor = color;
+		return dashBottom;
+	  }
+	  
+	  function createSolidLineMesh(z, color, position) {
+		//const dashGeo = !useCache ? new THREE.BoxGeometry(BOARD_WIDTH * 2, 0.01, 0.04) : getCachedGeometry('box', BOARD_WIDTH * 2, 0.01, 0.04); // Segmenti tratteggiati spessi 40cm
+		const dashGeo = !useCache ? new THREE.PlaneGeometry(BOARD_WIDTH * 2, 0.04) : getCachedGeometry('plane', BOARD_WIDTH * 2, 0.04);
+		//const dashMat = new THREE.MeshLambertMaterial({ color: color });
+		const dashMat = new THREE.MeshLambertMaterial({ 
+			color: color,
+			polygonOffset: true,
+			polygonOffsetFactor: -1, // Dice alla GPU: "Disegna questa faccia SOPRA allo stesso livello Y"
+			polygonOffsetUnits: -1
+		});
+		
+		// Striscia sul bordo superiore della corsia
+		const dashTop = new THREE.Mesh(dashGeo, dashMat);
+		//dashTop.position.set(-BOARD_WIDTH/2, 0.101, z - 0.46 + 1);   // Cambiato da 0.01 a 0.101
+		dashTop.rotation.x = -Math.PI / 2; // Steso in orizzontale
+		dashTop.position.set(-BOARD_WIDTH/2, 0.000, z + (position === 'top' ? -0.46 : 0.46)); // ESATTAMENTE a filo dell'asfalto (Y = 0.10)
+			
+		dashTop.receiveShadow = true;
+		dashTop.castShadow = false;//ottimizzazione
+		dashTop.userData.isSolid = true;
+		dashTop.userData.isDashed = false;
+		dashTop.userData.position = position;
+		dashTop.userData.whiteLineColor = color;
+		return dashTop;
+	  }
+	  
+	  function createZebraLineMesh(z, x, color, position) {
+		//const stripeGeo = !useCache ? new THREE.BoxGeometry(1.0, 0.01, 0.10) : getCachedGeometry('box', 1.0, 0.01, 0.10);
+		const stripeGeo = !useCache ? new THREE.PlaneGeometry(1.0, 0.10) : getCachedGeometry('plane', 1.0, 0.10);
+		//const stripeMat = new THREE.MeshLambertMaterial({ color: isWhiteLine ? 0xffffff : 0xeeee00 });
+		const stripeMat = new THREE.MeshLambertMaterial({ 
+			color: color,
+			polygonOffset: true,
+			polygonOffsetFactor: -1, // Dice alla GPU: "Disegna questa faccia SOPRA allo stesso livello Y"
+			polygonOffsetUnits: -1
+		});
+				
+	  	const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+		//stripe.position.set(x, 0.101, z + zOffset);// Posizionate a Y = 0.105 per evitare z-fighting
+		stripe.rotation.x = -Math.PI / 2; // Steso in orizzontale
+		stripe.position.set(x, 0.000, z); // ESATTAMENTE a filo dell'asfalto (Y = 0.10)
+					
+		stripe.receiveShadow = true;
+		stripe.castShadow = false;//ottimizzazione
+		stripe.userData.whiteLineColor = color;
+		stripe.userData.position = 'zebra';
+		return stripe;
+	}
 	
 	
 	
@@ -3919,32 +4073,32 @@
       if (z < -50) {
 		if (rand < 0.25) type = 'road';//25% strada
 		else if (rand < 0.45) type = 'river';//20% fiume
-		else if (rand < 0.60) type = 'track';//15% binari
-		else if (rand < 0.70) type = 'pavement';//10% marciapiede/selciato
+		else if (rand < 0.55) type = 'track';//10% binari
+		else if (rand < 0.60) type = 'pavement';//5% marciapiede/selciato
 	  } else if (z < -5) {
 	  	if (rand < 0.20) type = 'road';//20% strada
 		else if (rand < 0.40) type = 'river';//20% fiume
 		else if (rand < 0.50) type = 'track';//10% binari
-		else if (rand < 0.60) type = 'pavement';//10% marciapiede/selciato
+		else if (rand < 0.55) type = 'pavement';//5% marciapiede/selciato
       }
 	  
 	  if (nextLane && nextLane.type === 'river') type = z % 2 ? 'river' : 'grass';//erba dopo il fiume
 	  if (type === 'river' && nextLane && nextLane.type === 'track') type = 'grass';//no fiume attaccato a ferrovia!
-
+	  
 	  const laneDecor = [];//decorazioni
 	  
       let laneGeo, laneMat;
       let laneY = -0.1;
       
       let isLight = z % 2 === 0;
-	  let isWhiteLine = z % 6;	
+	  let isWhiteLine = Math.random() < 0.9;
 	  
 	  const isGrass = type === 'grass';
 	  const isPavement = type === 'pavement';
 	  const isRoad = type === 'road';
 	  const isRiver = type === 'river';
 	  const isTrack = type === 'track';
-		
+
 
 	  let color = getObjectColorByZ(z);
 	  
@@ -3960,61 +4114,56 @@
         laneMat = new THREE.MeshLambertMaterial({ color: isLight ? 0x444444 : 0x404040 });
 		
 		if(nextLane && nextLane.type === 'road') {
-		  // --- CREAZIONE RIGHE TRATTEGGIATE BIANCHE ---
-		  const dashGeo = !useCache ? new THREE.BoxGeometry(0.4, 0.01, 0.08) : getCachedGeometry('box', 0.4, 0.01, 0.08);
-		  const dashMat = new THREE.MeshLambertMaterial({ color: isWhiteLine ? 0xffffff : 0xeeee00 });
-		  
-		  // Ciclo lungo la larghezza della mappa per posizionare i tratti
-		  for (let x = -BOARD_WIDTH / 2; x <= BOARD_WIDTH / 2; x += 1) {
-		    // Striscia sul bordo inferiore della corsia (offset Z +0.46)
-			const dashBottom = new THREE.Mesh(dashGeo, dashMat);
-			dashBottom.position.set(x, 0.1, z + 0.56);
-			dashBottom.receiveShadow = true;
-			dashBottom.castShadow = false;//ottimizzazione
-			scene.add(dashBottom);
-			applyCurrentVisualMode(dashBottom);
-			laneDecor.push(dashBottom);
+		  if (nextLane.decor && nextLane.decor.find(d => d.userData.isSolid)) {
+			//la precedente è continua, togli la riga continua con position === 'top' (z minore)
+			let dashTop = nextLane.decor.find(d => d.userData.isSolid && d.userData.position === 'top');
+			nextLane.decor = nextLane.decor.filter(x => x !== dashTop);
+			scene.remove(dashTop);
+			disposeObject3D(dashTop);			
+			
+			// Ciclo lungo la larghezza della mappa per posizionare i tratti
+			for (let x = -BOARD_WIDTH / 2; x <= BOARD_WIDTH / 2; x += 1) {
+				const dashBottom = createDashedLineMesh(z, x, dashTop.whiteLineColor, 'bottom');// Striscia sul bordo inferiore della corsia (offset Z +0.46)
+				scene.add(dashBottom);
+				applyCurrentVisualMode(dashBottom);
+				laneDecor.push(dashBottom);//decorazioni
+			}
+			
+		  } else if (nextLane.decor && nextLane.decor.find(d => d.userData.isDashed)) {
+			  //la precedente è tratteggiata -> ci piace!
+			  let dashTop = nextLane.decor.find(d => d.userData.isDashed);
+			  			  
+			  // Ciclo lungo la larghezza della mappa per posizionare i tratti
+			  for (let x = -BOARD_WIDTH / 2; x <= BOARD_WIDTH / 2; x += 1) {
+				const dashBottom = createDashedLineMesh(z, x, dashTop.whiteLineColor, 'bottom');
+				scene.add(dashBottom);
+				applyCurrentVisualMode(dashBottom);
+				laneDecor.push(dashBottom);//decorazioni
+			  }
 		  }
 		} else {
-			//linea continua?
-			const dashGeo = !useCache ? new THREE.BoxGeometry(BOARD_WIDTH * 2, 0.01, 0.04) : getCachedGeometry('box', BOARD_WIDTH * 2, 0.01, 0.04); // Segmenti tratteggiati spessi 40cm
-			const dashMat = new THREE.MeshLambertMaterial({ color: isWhiteLine ? 0xffffff : 0xeeee00 });
-			
-			// Striscia sul bordo superiore della corsia (offset Z -0.46)
-			const dashTop = new THREE.Mesh(dashGeo, dashMat);
-			dashTop.position.set(-BOARD_WIDTH/2, 0.01, z - 0.45);
-			dashTop.receiveShadow = true;
-			dashTop.castShadow = false;//ottimizzazione
+			//linea continua top
+			const dashTop = createSolidLineMesh(z, isWhiteLine ? 0xffffff : 0xffff00, 'top');
 			scene.add(dashTop);
 			applyCurrentVisualMode(dashTop);
+			laneDecor.push(dashTop);//decorazioni
 			
-			// Striscia sul bordo inferiore della corsia (offset Z +0.46)
-			const dashBottom = new THREE.Mesh(dashGeo, dashMat);
-			dashBottom.position.set(-BOARD_WIDTH/2, 0.01, z + 0.45);
-			dashBottom.receiveShadow = true;
-			dashBottom.castShadow = false;//ottimizzazione
+			//linea continua bottom
+			const dashBottom = createSolidLineMesh(z, isWhiteLine ? 0xffffff : 0xffff00, 'bottom');
 			scene.add(dashBottom);
 			applyCurrentVisualMode(dashBottom);
-			
-			//decorazioni
-			laneDecor.push(dashTop);
-			laneDecor.push(dashBottom);
+			laneDecor.push(dashBottom);//decorazioni
 		  }
 		  
 		  
 		  // --- STRISCE PEDONALI (ZEBRA CROSSING) ---
 		  if(Math.random() < 0.5 && nextLane && nextLane.type !== 'road') {
-				const stripeGeo = !useCache ? new THREE.BoxGeometry(0.8, 0.01, 0.10) : getCachedGeometry('box', 0.8, 0.01, 0.10);
-				const stripeMat = new THREE.MeshLambertMaterial({ color: isWhiteLine ? 0xffffff : 0xeeee00 });
-				const stripeX = -5 + Math.random() * 10;
+				
+				const stripeX = -BOARD_WIDTH * 0.5 + ((Math.random() * 10)|0) * BOARD_WIDTH * 0.1;
 
 				// Crea un blocco di strisce parallele
 				for (let zOffset = -0.30; zOffset <= 0.4; zOffset += 0.2) {
-				  	const stripe = new THREE.Mesh(stripeGeo, stripeMat);
-					// Posizionate a Y = 0.105 per evitare z-fighting
-					stripe.position.set(stripeX, 0.105, z + zOffset);
-					stripe.receiveShadow = true;
-					stripe.castShadow = false;//ottimizzazione
+					const stripe = createZebraLineMesh(z + zOffset, stripeX, isWhiteLine ? 0xffffff : 0xffff00, 'zebra');
 					scene.add(stripe);
 					applyCurrentVisualMode(stripe);
 					laneDecor.push(stripe);//decorazione
@@ -4035,10 +4184,40 @@
 		scene.add(trackStructure);
 		
 		laneDecor.push(trackStructure);//decorazione
-	  }
+	  } 
+	  
+		//se ho una strada tratteggiata, aggiungi alla strada la linea continua top!
+		if((isRiver || isGrass || isPavement || isTrack) && nextLane && nextLane.type === 'road' && nextLane.decor && nextLane.decor.find(d => d.userData.isDashed)) {
+			//linea continua z + 1
+			const whiteLineColor = nextLane.decor.find(d => d.userData.isDashed).whiteLineColor;
+			const dashTop = createSolidLineMesh(z+1, whiteLineColor, 'top');
+			scene.add(dashTop);
+			applyCurrentVisualMode(dashTop);
+			nextLane.decor.push(dashTop);//decorazioni
+		}
+		
+		//se avevo delle strisce zebrate, aggiungile alla attuale
+		if(isRoad && nextLane && nextLane.type === 'road' && nextLane.decor && nextLane.decor.find(d => d.userData.position === 'zebra')) {
+			//linea zebrata -> aggiungila anche alla attuale
+			const zebrona = nextLane.decor.find(d => d.userData.position === 'zebra');
+			const whiteLineColor = zebrona.whiteLineColor;
+			const stripeX = zebrona.position.x;
+
+			// Crea un blocco di strisce parallele, iniziano prima per coprire eventuali righe a terra tratteggiate (0.4 <- 0.7)
+			for (let zOffset = -0.30; zOffset <= 0.7; zOffset += 0.2) {
+				const stripe = createZebraLineMesh(z + zOffset, stripeX, whiteLineColor, 'zebra');
+				scene.add(stripe);
+				applyCurrentVisualMode(stripe);
+				laneDecor.push(stripe);//decorazione
+			}
+		}
+	  
+	  
+	  
+	  
 
       const laneMesh = new THREE.Mesh(laneGeo, laneMat);
-      laneMesh.position.set(0, laneY, z);
+      laneMesh.position.set(0, laneY, z);//y=-0.1
       laneMesh.receiveShadow = true;
       scene.add(laneMesh);
 	  applyCurrentVisualMode(laneMesh);
@@ -4181,7 +4360,37 @@
 	  } else if (isRiver) {
 		laneData.speed = (Math.random() * 0.020 + 0.010) * (z % 3 ? 1 : -1);
         laneData.spawnTimer = 0;
-        laneData.spawnInterval = Math.random() * 240 + 120;
+        laneData.spawnInterval = Math.random() * 240 + 240;
+		
+		const bridgeStructure = createBridgeMesh();
+		
+		if(nextLane && nextLane.type === 'river' && logs && logs.find(x => x.isBridge && x.z === z+1)) {
+			bridgeStructure.position.set(logs.find(x => x.isBridge && x.z === z+1).mesh.position.x, 0, z);//continua ponte precedente
+		} else {
+			const randomX = -BOARD_WIDTH * 0.5 + Math.random() * BOARD_WIDTH;
+			const snappedX = Math.round(randomX / 2) * 2; //arrotonda a multiplo di 2
+			bridgeStructure.position.set(snappedX, 0, z);
+		}
+		scene.add(bridgeStructure);
+		laneDecor.push(bridgeStructure);
+		logs.push({
+			mesh: bridgeStructure,
+			speed: 0,
+			z: z,
+			length: 1,
+			lane: laneData,
+			type: 'river',
+			isCroco: false,
+			isBridge: true
+		});
+		
+		
+		
+		
+		
+		
+		
+		
 	  } else if (isTrack) {
 	  	laneData.speed = (Math.random() * 0.050 + 0.020) * (Math.random() > 0.5 ? 1 : -1);
         laneData.spawnTimer = 0;
@@ -5018,23 +5227,29 @@
 		bubbleVisible = true;
 		thoughtBubble.classList.add('visible');
 		
-		if (Math.abs(player.position.x - CONCA_POSITION.x) < 5 && Math.abs(player.position.z - CONCA_POSITION.z) < 5) {
-			document.getElementById('rocky-thinks').innerHTML = "Home sweet home...";
-		} else {
-			document.getElementById('rocky-thinks').innerHTML = 
-				isCat ? rockyThinksArray[rockyThinksIndex] :
-				isBender ? benderThinksArray[rockyThinksIndex] : 
-				isMinion ? minionThinksArray[rockyThinksIndex] : 
-				genericThinksArray[rockyThinksIndex];
-		}
+		document.getElementById('rocky-thinks').innerHTML = 
+			isNearConcaHouse() ? "Home sweet home..." :
+			isNearBonusCat() ? "❤️" :
+			isCat ? rockyThinksArray[rockyThinksIndex] :
+			isBender ? benderThinksArray[rockyThinksIndex] : 
+			isMinion ? minionThinksArray[rockyThinksIndex] : 
+			genericThinksArray[rockyThinksIndex];
 	  }
 
 	  const p = worldToScreen(player.position.x, bubbleAnchorY, player.position.z);
 	  thoughtBubble.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, -100%)`;
 	}
 	
+	function isNearConcaHouse() {
+		return Math.abs(player.position.x - CONCA_POSITION.x) < 5 && Math.abs(player.position.z - CONCA_POSITION.z) < 5;
+	}
 	
-	
+	function isNearBonusCat() {
+	  for (const p of pawPrints) {
+		if (p.isCat && Math.abs(player.position.z - p.mesh.position.z) < 2.5 && Math.abs(player.position.x - p.mesh.position.x) < 2.5) return true;
+	  }
+	  return false;
+	}
 	
 
 	// --- LOOP DI ANIMAZIONE ---
@@ -5084,10 +5299,10 @@
 	  // zampette rotanti
 	  const tPaw = performance.now() * 0.004;
 	  for (const p of pawPrints) {
-	    if (Math.abs(p.z - player.position.z) > 14) continue;
+	    if (Math.abs(p.z - player.position.z) > 20) continue;
 		if (p.isCat) {
 			p.mesh.rotation.y += 0.01;
-			p.mesh.position.y = Math.sin(tPaw * 2 + p.x) * 0.02;
+			p.mesh.position.y = 0.05 + Math.sin(tPaw + p.x) * 0.02;
 		} else {
 			p.mesh.rotation.y += 0.03;
 			p.mesh.position.y = 0.3 + Math.sin(tPaw + p.x) * 0.06;
@@ -5097,7 +5312,7 @@
 	  // fili d'erba rotanti
 	  const tWind = performance.now() * 0.0012;
 	  for (const g of grassTufts) {
-	    if (Math.abs(g.mesh.position.z - player.position.z) > 14) continue; // stesso raggio delle zampette, ciuffi lontani non si animano
+	    if (Math.abs(g.mesh.position.z - player.position.z) > 20) continue; // stesso raggio delle zampette, ciuffi lontani non si animano
 	    g.mesh.rotation.z = Math.sin(tWind * g.speed + g.phase) * 0.14;
 	    g.mesh.rotation.x = Math.cos(tWind * g.speed * 0.6 + g.phase) * 0.06;
 	  }
@@ -5336,55 +5551,69 @@
 
 
       // 5. MOVIMENTO TRONCHI E FISICA FIUME
-      let onLog = false;
+	  let onLog = false;
 
-		for (let i = logs.length - 1; i >= 0; i--) {
-		  const log = logs[i];
+	const isPlayerOnBridge = player.position.y === 0.2 && logs.find(x => x.isBridge && x.z === player.position.z && Math.abs(x.mesh.position.x - player.position.x) < 0.2);
 
-		  // Un tronco può appartenere esclusivamente a una corsia fiume
-		  if (!log.lane || log.lane.type !== 'river') {
-			scene.remove(log.mesh);
-			disposeObject3D(log.mesh);
-			logs.splice(i, 1);
-			continue;
+	for (let i = logs.length - 1; i >= 0; i--) {
+	  const log = logs[i];
+
+	  if (!log.lane || log.lane.type !== 'river') {
+		scene.remove(log.mesh);
+		disposeObject3D(log.mesh);
+		logs.splice(i, 1);
+		continue;
+	  }
+
+	  if (!log.isBridge) log.mesh.position.x += log.speed;
+
+	  // rimozione tronchi fuori schermo
+	  if (Math.abs(log.mesh.position.x) > BOARD_WIDTH / 2 + 4) {
+		scene.remove(log.mesh);
+		disposeObject3D(log.mesh);
+		logs.splice(i, 1);
+		continue;
+	  }
+
+	  // quando sto sul ponte, i tronchi sotto non spostano il gatto
+	  if (!log.isBridge && isPlayerOnBridge) {
+		continue;
+	  }
+
+	  if (!isJumping && !isDying && Math.abs(player.position.z - log.z) < 0.1) {
+		const dx = Math.abs(player.position.x - log.mesh.position.x);
+		if (dx < log.length / 2 + 0.15) {
+		  onLog = true;
+
+		  if (log.isBridge) {
+			player.position.y = 0.2;
+			player.position.x = log.mesh.position.x;
+			playerPos.x = log.mesh.position.x;
+			targetPos.x = log.mesh.position.x;
+		  } else {
+			player.position.x += log.speed;
+			playerPos.x = player.position.x;
+			targetPos.x = player.position.x;
+
+			if (log.mesh.position.y !== -0.075) playSound(log.isCroco ? 'crocoSound' : 'splashSound');
+			log.mesh.position.y = -0.075;
 		  }
 
-		  log.mesh.position.x += log.speed;
-
-
-        if (!isJumping && !isDying && Math.abs(player.position.z - log.z) < 0.1) {
-          const dx = Math.abs(player.position.x - log.mesh.position.x);
-          if (dx < log.length / 2 + 0.15) {
-            onLog = true;
-            player.position.x += log.speed;
-            playerPos.x = player.position.x;
-            targetPos.x = player.position.x;
-			
-			if (log.mesh.position.y !== -0.075) playSound(log.isCroco ? 'crocoSound' : 'splashSound');//splash solo appena il tronco affonda
-			
-			//tronco affonda leggermente
-			//console.log(log.mesh.position.y);
-			log.mesh.position.y = -0.075;
-			
-            if (Math.abs(player.position.x) > X_LIMIT) {
-			  if (isGod) {
-				player.position.x = player.position.x > 0 ? X_LIMIT : -X_LIMIT; 
-			  } else {
-                handleDeath();
-			  }
-            }
-          }
-        } else {
-			//ripristina tronco affondato
-			log.mesh.position.y = 0;
+		  if (Math.abs(player.position.x) > X_LIMIT) {
+			if (isGod) {
+			  player.position.x = player.position.x > 0 ? X_LIMIT : -X_LIMIT;
+			} else {
+			  handleDeath();
+			}
+		  }
 		}
-
-        if (Math.abs(log.mesh.position.x) > BOARD_WIDTH / 2 + 4) {
-          scene.remove(log.mesh);
-		  disposeObject3D(log.mesh);
-          logs.splice(i, 1);
-        }
-      }
+	  } else if (!log.isBridge) {
+		log.mesh.position.y = 0;
+	  }
+	}
+	  
+	  
+	  
 
       // Controllo caduta in acqua
       const currentLane = lanes.find( l => l.z === Math.round(player.position.z) );
