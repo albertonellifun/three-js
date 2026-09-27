@@ -399,6 +399,9 @@
   <audio id="deadSoundChick" preload="auto">
     <source src="./crossy-dead-chick.mp3" type="audio/mpeg">
   </audio>
+  <audio id="deadSoundPumpkin" preload="auto">
+    <source src="./crossy-dead-pumpkin.mp3" type="audio/mpeg">
+  </audio>
   
   <audio id="trainSound" preload="auto">
     <source src="./crossy-train.mp3" type="audio/mpeg">
@@ -549,8 +552,24 @@
     const cars = [];
     const logs = [];
 
-	let currentPlayerType = 'rockygraffietto'; // tiene traccia del modello attivo
-	let currentPlayerDeadSound = 'deadSoundCat';
+
+
+	//halloween
+	function isHalloweenWeek() {
+	  const date1 = new Date();
+	  const date2 = new Date(date1.getFullYear(), 9, 31);//9-31
+	  const MS_PER_DAY = 1000 * 60 * 60 * 24;
+	  const d1 = new Date(date1.getFullYear(), date1.getMonth(), date1.getDate());
+	  const d2 = new Date(date2.getFullYear(), date2.getMonth(), date2.getDate());
+	  return Math.round(Math.abs(d2 - d1) / MS_PER_DAY) < 20;
+	}
+	
+
+	let currentPlayerType = isHalloweenWeek() ? 'pumpkin' : 'rockygraffietto'; // tiene traccia del modello attivo
+	if (currentPlayerType === 'pumpkin') document.getElementById('btn-player').innerText = '🎃';
+	let currentPlayerDeadSound = isHalloweenWeek() ? 'deadSoundPumpkin' : 'deadSoundCat';
+
+
 
 	function togglePlayerModel() {
 	  const pos = player.position.clone();
@@ -590,8 +609,8 @@
 		case 'pig': 	
 			currentPlayerType = 'horse'; player = createPlayerHorse(); document.getElementById('btn-player').innerText = '🐴'; 
 			currentPlayerDeadSound = 'deadSoundHorse';
-			break;
-			
+			break;		
+		
 		case 'horse':
 			currentPlayerType = 'bender'; player = createPlayerBender(); document.getElementById('btn-player').innerText = '🤖'; 
 			currentPlayerDeadSound = 'deadSoundBender';
@@ -621,8 +640,13 @@
 			currentPlayerType = 'chick'; player = createPlayerChick(); document.getElementById('btn-player').innerText = '🐤';
 			currentPlayerDeadSound = 'deadSoundChick';
 			break;
-			
+					
 		case 'chick':
+			currentPlayerType = 'pumpkin'; player = createPlayerPumpkin(); document.getElementById('btn-player').innerText = '🎃';
+			currentPlayerDeadSound = 'deadSoundPumpkin';
+			break;
+
+		case 'pumpkin':
 			currentPlayerType = 'unicorn'; player = createPlayerUnicorn(); document.getElementById('btn-player').innerText = '🦄';
 			currentPlayerDeadSound = 'deadSoundHorse';
 			break;
@@ -636,7 +660,7 @@
 			currentPlayerType = 'siamese'; player = createPlayerSiamese(); document.getElementById('btn-player').innerText = '😸'; 
 			currentPlayerDeadSound = 'deadSoundCat';
 			break;
-		
+			
 		case 'siamese': 
 			currentPlayerType = 'chicken'; player = createPlayerChicken(); document.getElementById('btn-player').innerText = '🐔'; 
 			currentPlayerDeadSound = 'deadSoundChicken';
@@ -1688,6 +1712,109 @@
 	  return group;
 	}
 	
+	// LA ZUCCA DI HALLOWEEN!!!
+	function createPlayerPumpkin() {
+	  const group = new THREE.Group();
+
+	  const bodyMat = new THREE.MeshLambertMaterial({ color: 0xff7f11 });
+	  const topMat  = new THREE.MeshLambertMaterial({ color: 0xe8690a }); // gradino superiore, più scuro
+	  const leafMat = new THREE.MeshLambertMaterial({ color: 0x4a9c3f }); // ciuffo verde
+	  const leafDarkMat = new THREE.MeshLambertMaterial({ color: 0x357a2c });
+
+	  // Solo gli occhi sono emissivi (restano lucenti anche senza luce diretta)
+	  const eyeGlowMat = new THREE.MeshLambertMaterial({
+		color: 0x1a0d00,
+		emissive: 0xffcc33,
+		emissiveIntensity: 1.4
+	  });
+
+	  // Bocca: scura ma NON emissiva
+	  const mouthMat = new THREE.MeshLambertMaterial({ color: 0x1a0d00 });
+
+	  // Corpo principale
+	  const body = new THREE.Mesh(
+		!useCache ? new THREE.BoxGeometry(0.72, 0.66, 0.72) : getCachedGeometry('box', 0.72, 0.66, 0.72),
+		bodyMat
+	  );
+	  body.position.set(0, 0.33, 0);
+	  body.castShadow = true;
+	  group.add(body);
+
+	  // --- "GUANCE" LATERALI: rompono la forma a cubo simulando un minimo di rotondità ---
+	  const cheekGeo = !useCache ? new THREE.BoxGeometry(0.08, 0.36, 0.40) : getCachedGeometry('box', 0.08, 0.36, 0.40);
+	  const leftCheek = new THREE.Mesh(cheekGeo, bodyMat);
+	  leftCheek.position.set(-0.40, 0.33, 0);
+	  leftCheek.castShadow = true;
+	  group.add(leftCheek);
+
+	  const rightCheek = new THREE.Mesh(cheekGeo, bodyMat);
+	  rightCheek.position.set(0.40, 0.33, 0);
+	  rightCheek.castShadow = true;
+	  group.add(rightCheek);
+
+	  // Gradino superiore (dove nasce il ciuffo)
+	  const topStep = new THREE.Mesh(
+		!useCache ? new THREE.BoxGeometry(0.22, 0.14, 0.22) : getCachedGeometry('box', 0.22, 0.14, 0.22),
+		topMat
+	  );
+	  topStep.position.set(0.14, 0.73, 0.14);
+	  topStep.castShadow = true;
+	  group.add(topStep);
+
+	  // Ciuffo verde al posto del picciolo arancione
+	  const leafCenter = new THREE.Mesh(
+		!useCache ? new THREE.BoxGeometry(0.14, 0.14, 0.14) : getCachedGeometry('box', 0.14, 0.14, 0.14),
+		leafMat
+	  );
+	  leafCenter.position.set(0.14, 0.87, 0.14);
+	  leafCenter.castShadow = true;
+	  group.add(leafCenter);
+
+	  [[-0.10, -1], [0.10, 1]].forEach(([dx, s]) => {
+		const leaf = new THREE.Mesh(
+		  !useCache ? new THREE.BoxGeometry(0.16, 0.05, 0.12) : getCachedGeometry('box', 0.16, 0.05, 0.12),
+		  leafDarkMat
+		);
+		leaf.position.set(0.14 + dx, 0.83, 0.14);
+		leaf.rotation.y = s * 0.5;
+		group.add(leaf);
+	  });
+
+	  // Occhi lucenti: nucleo nero con glow emissivo
+	  const eyeGeo = !useCache ? new THREE.BoxGeometry(0.13, 0.13, 0.04) : getCachedGeometry('box', 0.13, 0.13, 0.04);
+	  [-0.16, 0.16].forEach(x => {
+		const eye = new THREE.Mesh(eyeGeo, eyeGlowMat);
+		eye.position.set(x, 0.40, -0.365);
+		group.add(eye);
+	  });
+
+	  // --- BOCCA: sezione orizzontale con 3 tagli verticali (--|--|--|--) ---
+	  const mouth = new THREE.Mesh(
+		!useCache ? new THREE.BoxGeometry(0.44, 0.14, 0.04) : getCachedGeometry('box', 0.44, 0.14, 0.04),
+		mouthMat
+	  );
+	  mouth.position.set(0, 0.18, -0.365);
+	  group.add(mouth);
+
+	  const cutGeo = !useCache ? new THREE.BoxGeometry(0.03, 0.14, 0.045) : getCachedGeometry('box', 0.03, 0.14, 0.045);
+	  [-0.145, 0, 0.145].forEach(x => {
+		const cut = new THREE.Mesh(cutGeo, bodyMat);
+		cut.position.set(x, 0.18, -0.37);
+		group.add(cut);
+	  });
+
+	  // --- LUCE VERA: emana dagli occhi e illumina davvero l'ambiente circostante ---
+	  const glow = new THREE.PointLight(0xffaa33, 1.5, 3.5);
+	  glow.position.set(0, 0.40, -0.30);
+	  group.add(glow);
+
+	  group.position.set(0, 0, 0);
+	  applyCurrentVisualMode(group);
+	  scene.add(group);
+	  return group;
+	}
+
+
 	// LUMACA!!!
 	function createPlayerSnail() {
 	  const group = new THREE.Group();
@@ -1767,6 +1894,180 @@
 	  scene.add(group);
 	  return group;
 	}
+	
+	
+	// LAPIDE / TOMBA stile Halloween, sostituisce il cactus
+	function createGraveMesh() {
+	  const group = new THREE.Group();
+	  const isCross = Math.random() < 0.35;
+
+	  const stoneColors = [0x8a8a86, 0x767672, 0x9a968f, 0x6f6f6b];
+	  const stoneCol = stoneColors[Math.floor(Math.random() * stoneColors.length)];
+	  const stoneMat = new THREE.MeshLambertMaterial({ color: stoneCol });
+	  const stoneDarkMat = new THREE.MeshLambertMaterial({ color: 0x2a2a28 });
+	  const dirtMat = new THREE.MeshLambertMaterial({ color: 0x3c2e1f });
+
+	  // Cumulo di terra alla base (leggermente più ampio)
+	  const mound = new THREE.Mesh(
+		!useCache ? new THREE.BoxGeometry(0.68, 0.10, 0.48) : getCachedGeometry('box', 0.68, 0.10, 0.48),
+		dirtMat
+	  );
+	  mound.position.set(0, 0.05, 0);
+	  mound.receiveShadow = true;
+	  group.add(mound);
+
+	  if (isCross) {
+		// --- VARIANTE: croce (più alta e più spessa) ---
+		const vert = new THREE.Mesh(
+		  !useCache ? new THREE.BoxGeometry(0.18, 0.85, 0.15) : getCachedGeometry('box', 0.18, 0.85, 0.15),
+		  stoneMat
+		);
+		vert.position.set(0, 0.10 + 0.425, 0);
+		vert.castShadow = true;
+		group.add(vert);
+
+		const horiz = new THREE.Mesh(
+		  !useCache ? new THREE.BoxGeometry(0.52, 0.16, 0.15) : getCachedGeometry('box', 0.52, 0.16, 0.15),
+		  stoneMat
+		);
+		horiz.position.set(0, 0.10 + 0.58, 0);
+		horiz.castShadow = true;
+		group.add(horiz);
+
+		const crack = new THREE.Mesh(
+		  !useCache ? new THREE.BoxGeometry(0.04, 0.44, 0.155) : getCachedGeometry('box', 0.04, 0.44, 0.155),
+		  stoneDarkMat
+		);
+		crack.position.set(0.03, 0.10 + 0.26, 0);
+		crack.rotation.z = 0.25;
+		group.add(crack);
+
+	  } else {
+		// --- VARIANTE: lapide "a gradini" (proporzionalmente più grande) ---
+		const tiers = [
+		  { w: 0.62, h: 0.44, d: 0.18 },
+		  { w: 0.52, h: 0.11, d: 0.18 },
+		  { w: 0.40, h: 0.08, d: 0.18 },
+		  { w: 0.26, h: 0.07, d: 0.18 }
+		];
+
+		let y = 0.10;
+		tiers.forEach(t => {
+		  const tier = new THREE.Mesh(
+			!useCache ? new THREE.BoxGeometry(t.w, t.h, t.d) : getCachedGeometry('box', t.w, t.h, t.d),
+			stoneMat
+		  );
+		  tier.position.set(0, y + t.h / 2, 0);
+		  tier.castShadow = true;
+		  group.add(tier);
+		  y += t.h;
+		});
+
+		const lineGeo = !useCache ? new THREE.BoxGeometry(0.38, 0.03, 0.03) : getCachedGeometry('box', 0.38, 0.03, 0.03);
+		[0.26, 0.35, 0.44].forEach(ly => {
+		  const line = new THREE.Mesh(lineGeo, stoneDarkMat);
+		  line.position.set(0, ly, 0.105);
+		  group.add(line);
+		});
+	  }
+
+	  group.rotation.y = (Math.random() - 0.5) * 0.5;
+
+	  // Variazione di taglia tra una lapide e l'altra, oltre all'ingrandimento base
+	  const scaleVariance = 0.9 + Math.random() * 0.35; // 0.9x - 1.25x
+	  group.scale.set(scaleVariance, scaleVariance, scaleVariance);
+	  group.position.y = 0;
+
+	  applyCurrentVisualMode(group);
+
+	  return group;
+	}
+	
+	
+	// ALBERO SECCO stile Halloween: tronco contorto, nero, senza foglie
+	function createDeadTreeMesh(col1, col2) {
+	  const group = new THREE.Group();
+	  const isTall = Math.random() > 0.5;
+
+	  const barkMat = new THREE.MeshLambertMaterial({ color: 0x161616 });
+	  const barkDarkMat = new THREE.MeshLambertMaterial({ color: 0x0a0a0a });
+
+	  const trunkHeight = isTall ? 1.3 : 0.95;
+
+	  // --- TRONCO: due segmenti leggermente disassati per un profilo contorto ---
+	  const trunkLower = new THREE.Mesh(
+		!useCache ? new THREE.BoxGeometry(0.22, trunkHeight * 0.6, 0.22) : getCachedGeometry('box', 0.22, trunkHeight * 0.6, 0.22),
+		barkMat
+	  );
+	  trunkLower.position.set(0, trunkHeight * 0.3, 0);
+	  trunkLower.castShadow = true;
+	  group.add(trunkLower);
+
+	  const trunkUpper = new THREE.Mesh(
+		!useCache ? new THREE.BoxGeometry(0.17, trunkHeight * 0.45, 0.17) : getCachedGeometry('box', 0.17, trunkHeight * 0.45, 0.17),
+		barkMat
+	  );
+	  trunkUpper.position.set(0.07, trunkHeight * 0.82, -0.04);
+	  trunkUpper.rotation.z = 0.15;
+	  trunkUpper.castShadow = true;
+	  group.add(trunkUpper);
+
+	  // Crea un ramo come gruppo: il pivot è alla base, così ruota/si estende correttamente dal punto di attacco
+	  function addBranch(parent, anchorY, len, thick, ry, rz, mat) {
+		const branchGroup = new THREE.Group();
+		branchGroup.position.set(0.07, anchorY, -0.04);
+		branchGroup.rotation.set(0, ry, rz);
+		parent.add(branchGroup);
+
+		const branch = new THREE.Mesh(
+		  !useCache ? new THREE.BoxGeometry(thick, len, thick) : getCachedGeometry('box', thick, len, thick),
+		  mat
+		);
+		branch.position.y = len / 2;
+		branch.castShadow = true;
+		branchGroup.add(branch);
+
+		return branchGroup; // per attaccarci eventuali rametti in punta
+	  }
+
+	  // --- RAMI PRINCIPALI: molto più lunghi, distribuiti lungo tutto il tronco ---
+	  const mainBranches = [
+		{ y: trunkHeight * 0.45, len: 0.75, thick: 0.09, ry: 0.5,  rz: 1.05 },
+		{ y: trunkHeight * 0.50, len: 0.68, thick: 0.09, ry: -0.7, rz: -1.0 },
+		{ y: trunkHeight * 0.68, len: 0.62, thick: 0.08, ry: 2.0,  rz: 0.95 },
+		{ y: trunkHeight * 0.72, len: 0.58, thick: 0.08, ry: -2.2, rz: -0.9 },
+		{ y: trunkHeight * 0.92, len: 0.52, thick: 0.07, ry: 0.2,  rz: 1.2  },
+		{ y: trunkHeight * 0.96, len: 0.48, thick: 0.07, ry: -1.3, rz: -1.15 }
+	  ];
+
+	  mainBranches.forEach(b => {
+		const mat = Math.random() > 0.5 ? barkMat : barkDarkMat;
+		const branchGroup = addBranch(group, b.y, b.len, b.thick, b.ry, b.rz, mat);
+
+		// 1-2 rametti secondari in punta, per l'effetto "artiglio"
+		const twigCount = 1 + Math.floor(Math.random() * 2);
+		for (let i = 0; i < twigCount; i++) {
+		  const twigLen = b.len * (0.35 + Math.random() * 0.2);
+		  const twig = addBranch(
+			branchGroup,
+			b.len, // parte dalla punta del ramo padre
+			twigLen,
+			b.thick * 0.7,
+			(Math.random() - 0.5) * 1.6,
+			(Math.random() - 0.5) * 1.4,
+			mat
+		  );
+		}
+	  });
+
+	  group.rotation.y = Math.random() * Math.PI * 2;
+
+	  applyCurrentVisualMode(group);
+
+	  return group;
+	}
+	
+	
 	
 	// U PUORC
 	function createPlayerPig() {
@@ -3235,6 +3536,7 @@
 
     // --- MODELLO ALBERO ---
     function createTreeMesh(col1 = 0x2e7d32, col2 = 0x388e3c) {
+	  if (currentPlayerType === 'pumpkin') return createDeadTreeMesh();
       const group = new THREE.Group();
       const isTall = Math.random() > 0.5;
 	  
@@ -3271,6 +3573,7 @@
     }
 	
 	function createCactusMesh(col1 = 0x2e7d32, col2 = 0x388e3c) {
+	  if (currentPlayerType === 'pumpkin') return createGraveMesh();
 	  const group = new THREE.Group();
 	  const isTall = Math.random() > 0.25;
 	  const col = Math.random() > 0.5 ? col1 : col2;
@@ -4170,7 +4473,24 @@ function createGrassGridMesh() {
 	  
       if (isGrass) {
         laneGeo = !useCache ? new THREE.BoxGeometry(BOARD_WIDTH, 0.2, 1) : getCachedGeometry('box', BOARD_WIDTH, 0.2, 1);
-		laneMat = new THREE.MeshLambertMaterial({ color: isLight ? color.grass.col1 : color.grass.col2 });
+		
+		if (currentPlayerType === 'pumpkin') {
+			const pumpkinGrassPalette = [
+				{ col1: 0xff8800, col2: 0xf08000 }, // arancione chiaro/zucca
+				{ col1: 0xe8690a, col2: 0xd35f08 },
+				{ col1: 0xcc5500, col2: 0xb84900 },
+				{ col1: 0xff7f11, col2: 0xe86f0a },
+				{ col1: 0xd35400, col2: 0xba4900 },
+				{ col1: 0x8a3a0a, col2: 0x7a3208 },  // bruciato/carbonizzato verso la fine
+				{ col1: 0xff7f11, col2: 0xe86f0a },
+				{ col1: 0xe8690a, col2: 0xd35f08 }
+			];
+			const idx = ((-z * 0.025) | 0) % pumpkinGrassPalette.length;
+			laneMat = new THREE.MeshLambertMaterial({ color: isLight ? pumpkinGrassPalette[idx].col1 : pumpkinGrassPalette[idx].col2 });
+		}
+		else {
+			laneMat = new THREE.MeshLambertMaterial({ color: isLight ? color.grass.col1 : color.grass.col2 });
+		}
       } else if (isPavement) {
         laneGeo = !useCache ? new THREE.BoxGeometry(BOARD_WIDTH, 0.2, 1) : getCachedGeometry('box', BOARD_WIDTH, 0.2, 1);
 		laneMat = new THREE.MeshLambertMaterial({ color: isLight ? 0x444444 : 0x404040 });
@@ -4653,7 +4973,7 @@ if (isGrass) {
       createLane(z);
     }
 
-    player = createPlayerRockyGraffietto();
+    player = isHalloweenWeek() ? createPlayerPumpkin() : createPlayerRockyGraffietto();
     playSpawnEffect(player.position);
 
     // --- CONTROLLI UTENTE ---
@@ -5311,8 +5631,8 @@ if (isGrass) {
 		thoughtBubble.classList.add('visible');
 		
 		document.getElementById('rocky-thinks').innerHTML = 
-			isNearConcaHouse() ? "Home sweet home..." :
 			isNearBonusCat() ? "❤️" :
+			isNearConcaHouse() ? "Home sweet home..." :
 			isCat ? rockyThinksArray[rockyThinksIndex] :
 			isBender ? benderThinksArray[rockyThinksIndex] : 
 			isMinion ? minionThinksArray[rockyThinksIndex] : 
@@ -5324,7 +5644,7 @@ if (isGrass) {
 	}
 	
 	function isNearConcaHouse() {
-		return Math.abs(player.position.x - CONCA_POSITION.x) < 5 && Math.abs(player.position.z - CONCA_POSITION.z) < 5;
+		return Math.abs(player.position.x - HOUSE_POSITION.x) < 5 && Math.abs(player.position.z - HOUSE_POSITION.z) < 5;
 	}
 	
 	function isNearBonusCat() {
