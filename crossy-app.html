@@ -82,7 +82,14 @@
       cursor: pointer;
       box-shadow: 0 6px 0 #1e8449, 0 12px 22px rgba(0,0,0,0.4);
       transition: transform 0.08s ease;
+	  opacity: 0; /* Parte invisibile */
+	  animation: fadeIn 0.5s ease-in 1s forwards; /* Durata 0.5s, ritardo di 1s */
     }
+
+    @keyframes fadeIn {
+      to { opacity: 1; } 
+	}
+  
     #play-btn:active {
       transform: translateY(5px);
       box-shadow: 0 1px 0 #1e8449, 0 4px 10px rgba(0,0,0,0.4);
@@ -4001,7 +4008,7 @@
 		const dashBottom = new THREE.Mesh(dashGeo, dashMat);
 		//dashBottom.position.set(x, 0.101, z + 0.56); // Cambiato da 0.1 a 0.101
 		dashBottom.rotation.x = -Math.PI / 2; // Steso in orizzontale
-		dashBottom.position.set(x, 0.000, z + (position === 'bottom' ? 0.5 : -0.56)); // ESATTAMENTE a filo dell'asfalto (Y = 0.10)
+		dashBottom.position.set(x, 0.0001, z + (position === 'bottom' ? 0.5 : -0.56)); // ESATTAMENTE a filo dell'asfalto (Y = 0.10)
 		
 		dashBottom.receiveShadow = true;
 		dashBottom.castShadow = false;//ottimizzazione
@@ -4027,7 +4034,7 @@
 		const dashTop = new THREE.Mesh(dashGeo, dashMat);
 		//dashTop.position.set(-BOARD_WIDTH/2, 0.101, z - 0.46 + 1);   // Cambiato da 0.01 a 0.101
 		dashTop.rotation.x = -Math.PI / 2; // Steso in orizzontale
-		dashTop.position.set(-BOARD_WIDTH/2, 0.000, z + (position === 'top' ? -0.46 : 0.46)); // ESATTAMENTE a filo dell'asfalto (Y = 0.10)
+		dashTop.position.set(-BOARD_WIDTH/2, 0.0001, z + (position === 'top' ? -0.46 : 0.46)); // ESATTAMENTE a filo dell'asfalto (Y = 0.10)
 			
 		dashTop.receiveShadow = true;
 		dashTop.castShadow = false;//ottimizzazione
@@ -4052,7 +4059,7 @@
 	  	const stripe = new THREE.Mesh(stripeGeo, stripeMat);
 		//stripe.position.set(x, 0.101, z + zOffset);// Posizionate a Y = 0.105 per evitare z-fighting
 		stripe.rotation.x = -Math.PI / 2; // Steso in orizzontale
-		stripe.position.set(x, 0.000, z); // ESATTAMENTE a filo dell'asfalto (Y = 0.10)
+		stripe.position.set(x, 0.0001, z); // ESATTAMENTE a filo dell'asfalto (Y = 0.10)
 					
 		stripe.receiveShadow = true;
 		stripe.castShadow = false;//ottimizzazione
@@ -4060,6 +4067,61 @@
 		stripe.userData.position = 'zebra';
 		return stripe;
 	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	// Griglia di bordi 1x1 condivisa: una riga = tanti quadrati affiancati, un solo draw call per corsia
+function buildGrassGridGeometry() {
+  const points = [];
+  const half = Math.floor(BOARD_WIDTH / 2);
+  // linee verticali: bordo laterale di ogni casella, passo 1
+  for (let x = -half; x <= half; x++) {
+    points.push(new THREE.Vector3(x, 0, -0.5), new THREE.Vector3(x, 0, 0.5));
+  }
+  // due linee orizzontali: bordo superiore e inferiore della corsia
+  points.push(new THREE.Vector3(-half, 0, -0.5), new THREE.Vector3(half, 0, -0.5));
+  points.push(new THREE.Vector3(-half, 0,  0.5), new THREE.Vector3(half, 0,  0.5));
+
+  const geo = new THREE.BufferGeometry().setFromPoints(points);
+  geo.userData.shared = true; // niente dispose: condivisa da tutte le corsie d'erba
+  return geo;
+}
+const grassGridGeo = buildGrassGridGeometry();
+const grassGridMat = new THREE.LineBasicMaterial({ color: 0x2f5f2f, transparent: true, opacity: 0.35 });
+  
+function createGrassGridMesh() {
+  const mesh = new THREE.LineSegments(grassGridGeo, grassGridMat);
+  mesh.userData.isGrassGrid = true;
+  mesh.visible = isWireframe;
+  return mesh;
+}
+
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	
 	
 	
@@ -4077,12 +4139,12 @@
 		if (rand < 0.25) type = 'road';//25% strada
 		else if (rand < 0.45) type = 'river';//20% fiume
 		else if (rand < 0.55) type = 'track';//10% binari
-		else if (rand < 0.60) type = 'pavement';//5% marciapiede/selciato
+		else if (rand < 0.60) type = 'pavement';//5% marciapiede/selciato alberato
 	  } else if (z < -5) {
 	  	if (rand < 0.20) type = 'road';//20% strada
 		else if (rand < 0.40) type = 'river';//20% fiume
 		else if (rand < 0.50) type = 'track';//10% binari
-		else if (rand < 0.55) type = 'pavement';//5% marciapiede/selciato
+		else if (rand < 0.55) type = 'pavement';//5% marciapiede/selciato alberato
       }
 	  
 	  if (nextLane && nextLane.type === 'river') type = z % 2 ? 'river' : 'grass';//erba dopo il fiume
@@ -4275,7 +4337,7 @@
 			}
 		  } else if (!isPlayerStart && !isQuasiPlayerStart) {
             const rand = Math.random();
-            if (rand < 0.08) {
+            if ((isPavement && (Math.abs(x-z) % 3 === 0)) || (!isPavement && rand < 0.08)) {
 				//albero 75%
 				if (Math.random() < 0.75) {
 					const tree = Math.random() < color.probCactus ? createCactusMesh(color.cactus.col1, color.cactus.col2) : createTreeMesh(color.tree.col1, color.tree.col2);
@@ -4430,6 +4492,24 @@
 				  switchInterval: 300 // Cambia stato ogni ~5 secondi (300 frame)
 				};
 		}
+		
+		
+
+
+
+
+if (isGrass) {
+  const grid = createGrassGridMesh();
+  grid.position.set(0, 0.001, z); // leggermente sopra la superficie erba (top a y=0), evita z-fighting
+  scene.add(grid);
+  laneDecor.push(grid); // viene rimossa automaticamente con removeLane()
+}
+
+
+
+		
+		
+		
 
       lanes.push(laneData);
     }
@@ -4986,7 +5066,7 @@
 
 	function setCameraAndLights() {
 	  cameraAngle = THREE.MathUtils.lerp(cameraAngle, targetCameraAngle, 0.1);
-	  if(Math.abs(cameraAngle - targetCameraAngle)<0.0001) cameraAngle = targetCameraAngle;//fix zompetti
+	  if(Math.abs(cameraAngle - targetCameraAngle)<0.001) cameraAngle = targetCameraAngle;//fix zompetti
 	  
       const rotatedOffset = getRotatedCameraOffset();
 
@@ -5273,7 +5353,7 @@
         jumpProgress += 0.12; 
         player.position.x = THREE.MathUtils.lerp(playerPos.x, targetPos.x, jumpProgress);
         player.position.z = THREE.MathUtils.lerp(playerPos.z, targetPos.z, jumpProgress);
-        player.position.y = Math.sin(jumpProgress * Math.PI) * 0.4;
+        player.position.y = Math.abs(Math.sin(jumpProgress * Math.PI) * 0.4);
 
         if (jumpProgress >= 1) {
           isJumping = false;
@@ -5676,6 +5756,9 @@
 	
 	function toggleWorldWireframeOverlay(target = scene, enableWireframe = true) {
 	  target.traverse((child) => {
+        if (child.userData && child.userData.isGrassGrid) {
+          child.visible = enableWireframe;
+        }
 		if (child.isMesh) {
 		  // 1. Cerca se la mesh ha già un overlay wireframe come figlio
 		  let wireframeOverlay = child.children.find(c => c.userData.isWireframeOverlay);
@@ -5913,21 +5996,207 @@
 		return house;
 	}
 	
+	// MONTE
+	function createMonteHouse() {
+		const house = new THREE.Group();
+		const mat = (c, r = 0.1) => new THREE.MeshStandardMaterial({ color: c, roughness: r });
+		const M = {
+			wall: mat(0xe0c060),      // giallo ocra pareti
+			base: mat(0x8B4632),      // zoccolo terracotta
+			roof: mat(0x3d2b1e),      // tetto scuro
+			eaveWood: mat(0x443322),  // travetti/sottogronda scuri
+			trim: mat(0xeeeeee),      // cornice chiara finestre/porta
+			shutter: mat(0x7B2E22),   // persiane/inferriate rossastre
+			iron: mat(0xbbbbcc, 0.5)  // dettagli zincati
+		};
+		const box = (w, h, d) => !useCache ? new THREE.BoxGeometry(w, h, d) : getCachedGeometry('box', w, h, d);
+		const add = (geo, m, x, y, z) => {
+			const o = new THREE.Mesh(geo, m);
+			o.position.set(x, y, z);
+			o.castShadow = o.receiveShadow = true;
+			house.add(o);
+			return o;
+		};
+
+		const W = 8, D = 6, H = 6.4, PL = 1.0, Zf = D / 2, Xs = W / 2; // Zf: facciata (timpano), Xs: lati (gronda)
+
+		// Corpo + zoccolo + base
+		add(box(W, H, D), M.wall, 0, H / 2, 0);
+		add(box(W + 0.06, PL, D + 0.06), M.base, 0, PL / 2, 0);
+		add(box(W + 1.0, 0.1, D + 1.0), M.base, 0, 0.05, 0.001);
+
+		// --- TETTO: timpano su fronte/retro (Z), gronda sui lati (X) ---
+		const roofPeak = 1.5;
+		const shape = new THREE.Shape();
+		shape.moveTo(-Xs - 0.9, 0);
+		shape.lineTo(Xs + 0.9, 0);
+		shape.lineTo(0, roofPeak);
+		shape.closePath();
+		const L = D + 0.5; // piccolo sbalzo sul timpano
+		const roofGeo = new THREE.ExtrudeGeometry(shape, { depth: L, bevelEnabled: false });
+		roofGeo.translate(0, 0, -L / 2);
+		add(roofGeo, M.roof, 0, H + 0.001, 0); // niente rotazione: il timpano resta su Z
+
+		// Sottogronda con travetti a vista sui lati (gronda lunga)
+		for (const s of [1, -1]) {
+			add(box(0.9, 0.06, L), M.eaveWood, s * (Xs + 0.45), H - 0.03, 0);
+			for (let i = 0; i < 4; i++) {
+				add(box(0.9, 0.16, 0.14), M.eaveWood, s * (Xs + 0.45), H - 0.11, -L / 2 + 0.4 + i * (L - 0.8) / 3);
+			}
+		}
+
+		// Finestra generica sulla facciata (Z)
+		const win = (x, y, w, h, overrideZ = Zf) => {
+			add(box(w + 0.3, h + 0.3, 0.05), M.iron, x, y, overrideZ + 0.026);
+			add(box(w, h, 0.06), M.shutter, x, y, overrideZ + 0.041);
+			add(box(w + 0.4, 0.08, 0.2), M.trim, x, y - h / 2 - 0.15, overrideZ + 0.101);
+			for (let j = 0; j <= 4; j++) {
+				add(box(w - 0.1, 0.02, 0.02), M.iron, x, y - h / 2 + 0.1 + j * (h - 0.2) / 4, overrideZ + 0.081);
+			}
+		};
+
+		// Finestra generica sul lato (X)
+		const winSide = (z, y, w, h, side) => {
+			const xWall = side * Xs;
+			add(box(0.05, h + 0.3, w + 0.3), M.iron, xWall + side * 0.026, y, z);
+			add(box(0.06, h, w), M.shutter, xWall + side * 0.041, y, z);
+			add(box(0.2, 0.08, w + 0.4), M.trim, xWall + side * 0.101, y - h / 2 - 0.15, z);
+			for (let j = 0; j <= 4; j++) {
+				add(box(0.02, 0.02, w - 0.1), M.iron, xWall + side * 0.081, y - h / 2 + 0.1 + j * (h - 0.2) / 4, z);
+			}
+		};
+
+		// --- FACCIATA (timpano): porta a sinistra + finestra a fianco, 2 finestre sopra ---
+		const WIN_WIDTH = 0.8;
+		const WIN_HEIGHT = 1.0;
+		const DOOR_HEIGHT = 2.0;
+		
+		const doorX = 2.5, sideWinX = 0.5;
+		const doorW = 0.8, doorH = 2.0;
+		
+		win(doorX,    PL + 0.40, WIN_WIDTH, DOOR_HEIGHT, Zf); // porta finestra piano terra
+		win(sideWinX, PL + 1.05, WIN_WIDTH, WIN_HEIGHT, Zf);  // finestra piano terra a fianco della porta
+		win(doorX,    4.6,       WIN_WIDTH, WIN_HEIGHT, Zf);  // finestra sopra la porta
+		win(sideWinX, 4.6,       WIN_WIDTH, WIN_HEIGHT, Zf);  // finestra sopra la finestra del piano terra
+
+
+		// --- LATO MARE: 2 finestre piano terra + balcone con 3 finestre sopra ---
+		let side = 1;
+		let z1 = 1.6, z2 = -0.4;
+		winSide(z1, PL + 1.05,   WIN_WIDTH, WIN_HEIGHT, side);
+		winSide(z2, PL + 1.05,   WIN_WIDTH, WIN_HEIGHT, side);
+
+		const balY = 3.6, balProt = 0.9, balZFrom = -2.8, balZTo = 2.8;
+		add(box(balProt, 0.14, balZTo - balZFrom), M.trim, side * (Xs + balProt / 2), balY, 0);
+		const railH = 0.9, railY = balY + 0.07 + railH / 2, railTopY = balY + 0.07 + railH;
+		const outerX = side * (Xs + balProt);
+		add(box(0.05, 0.05, balZTo - balZFrom), M.iron, outerX + side * 0.001, railTopY, 0);
+		for (let i = 0; i <= 6; i++) {
+			add(box(0.04, railH, 0.04), M.iron, outerX, railY, balZFrom + i * (balZTo - balZFrom) / 6);
+		}
+		//lato mare altezza balcone
+		for (const zEnd of [balZTo]) {
+			add(box(balProt, 0.05, 0.05), M.iron, side * (Xs + balProt / 2), railTopY, zEnd);
+		}
+		
+		winSide(z1, balY + 0.9, WIN_WIDTH, DOOR_HEIGHT, side);
+		winSide(z2, balY + 0.9, WIN_WIDTH, WIN_HEIGHT,  side);
+		
+		// --- LATO strada: 1 porta + 1 finestra
+		side = -1;
+		z1 = -1.6;
+		winSide(z1, PL + 0.40,   WIN_WIDTH, DOOR_HEIGHT, side);
+		winSide(z1, balY + 0.9,  WIN_WIDTH, WIN_HEIGHT, side);
+
+
+
+			
+		
+		// --- SECONDO CORPO: appoggiato sulla parete di retro, senza aperture ---
+		const W2 = 10, D2 = 6, H2 = 6.4;
+		const Xs2 = W2 / 2;                 // 6
+		const Zback = -Zf - D2 / 2;         // si appoggia esattamente sulla parete retro (-Zf)
+
+		// 1) Box del secondo corpo (nessuna finestra, nessun dettaglio)
+		add(box(W2, H2, D2), M.wall, 0, H2 / 2, Zback);
+		add(box(W2 + 0.06, PL, D2 + 0.06), M.base, 0, PL / 2, Zback);
+		add(box(W2 + 1.0, 0.1, D2 + 1.0), M.base, 0, 0.05, Zback + 0.001);
+
+
+		// 2) Tetto del secondo corpo: stessa pendenza del primo, a timpano fronte/retro
+		const roofPeak2 = roofPeak * (Xs2 + 0.9) / (Xs + 0.9); // mantiene la stessa inclinazione di falda
+		const shape2 = new THREE.Shape();
+		shape2.moveTo(-Xs2 - 0.9, 0);
+		shape2.lineTo(Xs2 + 0.9, 0);
+		shape2.lineTo(0, roofPeak2);
+		shape2.closePath();
+		const L2 = D2 + 0.5;
+		const roofGeo2 = new THREE.ExtrudeGeometry(shape2, { depth: L2, bevelEnabled: false });
+		roofGeo2.translate(0, 0, -L2 / 2);
+		add(roofGeo2, M.roof, 0, H2 + 0.001, Zback);
+
+		// Sottogronda del secondo corpo (stesso stile del primo, senza finestre sotto)
+		for (const s of [1, -1]) {
+			add(box(0.9, 0.06, L2), M.eaveWood, s * (Xs2 + 0.45), H2 - 0.03, Zback);
+			for (let i = 0; i < 4; i++) {
+				add(box(0.9, 0.16, 0.14), M.eaveWood, s * (Xs2 + 0.45), H2 - 0.11, Zback - L2 / 2 + 0.4 + i * (L2 - 0.8) / 3);
+			}
+		}
+		
+		// Finestra sulla facciata RETRO del secondo corpo (offset di profondità invertiti: qui l'esterno è -Z)
+		const winBack = (x, y, w, h, overrideZ) => {
+			add(box(w + 0.3, h + 0.3, 0.05), M.iron, x, y, overrideZ - 0.026);
+			add(box(w, h, 0.06), M.shutter, x, y, overrideZ - 0.041);
+			add(box(w + 0.4, 0.08, 0.2), M.trim, x, y - h / 2 - 0.15, overrideZ - 0.101);
+			for (let j = 0; j <= 4; j++) {
+				add(box(w - 0.1, 0.02, 0.02), M.iron, x, y - h / 2 + 0.1 + j * (h - 0.2) / 4, overrideZ - 0.081);
+			}
+		};
+		
+		// Finestra laterale generica, riutilizzabile su qualunque corpo (passando la sua semilarghezza)
+		const winSideAt = (z, y, w, h, side, xHalf) => {
+			const xWall = side * xHalf;
+			add(box(0.05, h + 0.3, w + 0.3), M.iron, xWall + side * 0.026, y, z);
+			add(box(0.06, h, w), M.shutter, xWall + side * 0.041, y, z);
+			add(box(0.2, 0.08, w + 0.4), M.trim, xWall + side * 0.101, y - h / 2 - 0.15, z);
+			for (let j = 0; j <= 4; j++) {
+				add(box(0.02, 0.02, w - 0.1), M.iron, xWall + side * 0.081, y - h / 2 + 0.1 + j * (h - 0.2) / 4, z);
+			}
+		};
+
+		const Zback2 = Zback - D2 / 2; // parete retro effettiva del secondo corpo (la più esterna)
+		side = 1;
+		
+		winBack(0, PL + 1.05, 	WIN_WIDTH, WIN_HEIGHT, Zback2); // finestra piano terra
+		winBack(0, 4.6, 		WIN_WIDTH, WIN_HEIGHT, Zback2); // finestra primo piano
+		
+		// --- Lato BALCONE del secondo corpo: 1 finestra centrata per piano ---
+		winSideAt(Zback, PL + 1.05, WIN_WIDTH, WIN_HEIGHT, side, Xs2); // piano terra, centrata
+		winSideAt(Zback, 4.6,       WIN_WIDTH, WIN_HEIGHT, side, Xs2); // primo piano, centrata
+
+		// --- Parete OPPOSTA al balcone: 2 finestre laterali per piano ---
+		const oppSide = -side;
+		winSideAt(Zback - 1.7, PL + 1.05, WIN_WIDTH, WIN_HEIGHT,  oppSide, Xs2); // piano terra, sinistra
+		winSideAt(Zback + 1.7, PL + 0.40, WIN_WIDTH, DOOR_HEIGHT, oppSide, Xs2); // piano terra, destra
+		winSideAt(Zback - 1.7, 4.6,       WIN_WIDTH, WIN_HEIGHT,  oppSide, Xs2); // primo piano, sinistra
+		winSideAt(Zback + 1.7, 4.6,       WIN_WIDTH, WIN_HEIGHT,  oppSide, Xs2); // primo piano, destra
+		
+		
+		
+		
+		return house;
+	}
+	
+	isMute=1;
+	
+	
+	
+	
 	// --- CASA COME OSTACOLO 3x5 CASELLE ---
-	function placeHouse(cx, cz, cellsX, cellsZ) {
+	function placeHouse(cx, cz, cellsX, cellsZ, house) {
 	  const x0 = cx - Math.floor(cellsX / 2), x1 = x0 + cellsX - 1;   // x: -7..-5
 	  const z0 = cz - Math.floor(cellsZ / 2), z1 = z0 + cellsZ - 1;   // z: -2..2
 	  const inX = x => { const r = Math.round(x); return r >= x0 && r <= x1; };
-
-	  const house = createConcaHouse();
-	  house.position.set(cx, 0, cz);
-	  house.rotation.y = Math.PI / 2;            // facciata verso +x, visibile dalla camera
-	  house.scale.set(
-		(cellsZ * GRID) / 8,                     // locale x (8) -> 5 caselle sulla z del mondo
-		0.5 * GRID,                              // altezza: ~3.2 unità, il portone è più alto del gatto
-		(cellsX * GRID) / 8                      // locale z (6) -> 3 caselle sulla x del mondo
-	  );
-	  scene.add(house);
 
 	  for (const lane of lanes) {
 		if (lane.z < z0 || lane.z > z1) continue;
@@ -5957,12 +6226,34 @@
 	  // la casa viene rimossa insieme all'ultima corsia che occupa
 	  const lastLane = lanes.find(l => l.z === z0);
 	  if (lastLane) lastLane.decor.push(house);
-	  return house;
 	}
 
-	const CONCA_POSITION = {x:-12, z:0};
-	placeHouse(CONCA_POSITION.x, CONCA_POSITION.z, 3, 5);   // centro (-6, 0), 3 caselle in x, 5 in z
+	const HOUSE_POSITION = {x:-12, z:0};
+	const CONCA_SIZE = {x:3, z:5};
+	const MONTE_SIZE = {x:6, z:5};
+	
+	let isConca = new Date().getSeconds() % 2;
+	if (isConca) {
+		const house = createConcaHouse();//8x6x6.4 + scale -> 10x6 -> 5x3
+		house.rotation.y = Math.PI / 2;  // facciata verso +x, visibile dalla camera
+	    house.scale.set(5/8, 0.5, 3/8);//scalata storta	    
+		house.position.set(HOUSE_POSITION.x, 0, HOUSE_POSITION.z);//centrata in base al size
+	    scene.add(house);
 
+		placeHouse(HOUSE_POSITION.x, HOUSE_POSITION.z, CONCA_SIZE.x, CONCA_SIZE.z, house);   // centro (-12, 0), 3 caselle in x, 5 in z
+	} else {
+		const house = createMonteHouse();//8x6x6.4 + 10x6x6.4 -> 10x12 -> 5x6
+		house.rotation.y = Math.PI / 2;  // facciata verso +x, visibile dalla camera
+		house.scale.set(4/10, 0.5, 4/10);//scalata 2:1 circa
+	    house.position.set(HOUSE_POSITION.x, 0, HOUSE_POSITION.z);//centrata in base al size
+		scene.add(house);
+
+		placeHouse(HOUSE_POSITION.x, HOUSE_POSITION.z, MONTE_SIZE.x, MONTE_SIZE.z, house);   // centro (-12, 0), 6 caselle in x, 5 in z
+	}
+	
+	
+		
+	
     animate();
   </script>
 </body>
