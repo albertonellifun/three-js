@@ -494,7 +494,7 @@
 	// --- CLIPPING: nasconde tutto ciò che è fuori dall'area di gioco ---
 	//const VISIBLE_AHEAD  = BOARD_WIDTH * 1; // quanto si vede avanti (verso z negativo, non ancora scoperto)
 	//const VISIBLE_BEHIND = BOARD_WIDTH * 1; // quanto si vede indietro (verso z positivo)
-	const VISIBLE_SIDE = BOARD_WIDTH * 0.51; // margine oltre i bordi della plancia
+	const VISIBLE_SIDE = BOARD_WIDTH * 0.50 + 0.11; // margine oltre i bordi della plancia
 
 	//const clipFront = new THREE.Plane(new THREE.Vector3(0, 0, 1), VISIBLE_AHEAD);
 	//const clipBack  = new THREE.Plane(new THREE.Vector3(0, 0, -1), VISIBLE_BEHIND);
