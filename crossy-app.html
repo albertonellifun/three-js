@@ -3981,7 +3981,7 @@
 		const VEIN_LENGTHS = [0.20, 0.24, 0.28, 0.32, 0.36, 0.40, 0.44, 0.48, 0.52, 0.56, 0.60, 0.64, 0.68];
 
 		// 3 righe di venature
-		const rows = [-0.25, -0.1, 0.1, 0.25];
+		const rows = [-0.20, 0, 0.20];
 
 		rows.forEach((z, rowIndex) => {
 			// Partenza casuale per rendere ogni riga diversa
@@ -4001,7 +4001,7 @@
 
 				const actualLength = fitting[Math.floor(Math.random() * fitting.length)];
 
-				const veinGeo = !useCache ? new THREE.BoxGeometry(actualLength, 0.015, 0.125) : getCachedGeometry('box', actualLength, 0.015, 0.125);
+				const veinGeo = !useCache ? new THREE.BoxGeometry(actualLength, 0.015, z === 0 ? 0.180 : 0.125) : getCachedGeometry('box', actualLength, 0.015, z === 0 ? 0.180 : 0.125);
 
 				const vein = new THREE.Mesh(veinGeo, veinMat);
 				vein.position.set(x + actualLength / 2, 0.14, z);
@@ -5097,67 +5097,30 @@
 			laneGeo = !useCache ? new THREE.BoxGeometry(BOARD_WIDTH, 0.2, 1) : getCachedGeometry('box', BOARD_WIDTH, 0.2, 1);
 
 			if (currentPlayerType === 'pumpkin') {
-				const pumpkinGrassPalette = [{
-						col1: 0xd35400,
-						col2: 0xba4900
-					}, // arancio moscio
-					{
-						col1: 0xcc5500,
-						col2: 0xb84900
-					}, //
-					{
-						col1: 0x8a5a2b,
-						col2: 0x7a4f26
-					}, // marrone caramello
-					{
-						col1: 0x8a3a0a,
-						col2: 0x7a3208
-					}, // bruciato/carbonizzato
-					{
-						col1: 0x6b4423,
-						col2: 0x5e3b1f
-					}, // marrone terra
-					{
-						col1: 0x5a3a1e,
-						col2: 0x4e3119
-					}, // marrone scuro
-					{
-						col1: 0x4a2f18,
-						col2: 0x3f2714
-					}, // marrone cioccolato
+				const pumpkinGrassPalette = [
+					{ col1: 0xd35400, col2: 0xba4900 }, // arancio moscio
+					{ col1: 0xcc5500, col2: 0xb84900 }, //
+					{ col1: 0x8a5a2b, col2: 0x7a4f26 }, // marrone caramello
+					{ col1: 0x8a3a0a, col2: 0x7a3208 }, // bruciato/carbonizzato
+					{ col1: 0x6b4423, col2: 0x5e3b1f }, // marrone terra
+					{ col1: 0x5a3a1e, col2: 0x4e3119 }, // marrone scuro
+					{ col1: 0x4a2f18, col2: 0x3f2714 }, // marrone cioccolato
 
-					{
-						col1: 0x6b4423,
-						col2: 0x5e3b1f
-					}, // marrone terra
-					{
-						col1: 0xcc5500,
-						col2: 0xb84900
-					}, //
-					{
-						col1: 0x8a5a2b,
-						col2: 0x7a4f26
-					}, // marrone caramello
+					{ col1: 0x6b4423, col2: 0x5e3b1f }, // marrone terra
+					{ col1: 0xcc5500, col2: 0xb84900 }, //
+					{ col1: 0x8a5a2b, col2: 0x7a4f26 }, // marrone caramello
 				];
 				const idx = ((-z * 0.025) | 0) % pumpkinGrassPalette.length;
-				laneMat = new THREE.MeshLambertMaterial({
-					color: isLight ? pumpkinGrassPalette[idx].col1 : pumpkinGrassPalette[idx].col2
-				});
+				laneMat = new THREE.MeshLambertMaterial({ color: isLight ? pumpkinGrassPalette[idx].col1 : pumpkinGrassPalette[idx].col2 });
 			} else {
-				laneMat = new THREE.MeshLambertMaterial({
-					color: isLight ? color.grass.col1 : color.grass.col2
-				});
+				laneMat = new THREE.MeshLambertMaterial({ color: isLight ? color.grass.col1 : color.grass.col2 });
 			}
 		} else if (isPavement) {
 			laneGeo = !useCache ? new THREE.BoxGeometry(BOARD_WIDTH, 0.2, 1) : getCachedGeometry('box', BOARD_WIDTH, 0.2, 1);
-			laneMat = new THREE.MeshLambertMaterial({
-				color: isLight ? 0x444444 : 0x404040
-			});
+			laneMat = new THREE.MeshLambertMaterial({ color: isLight ? 0x444444 : 0x404040 });
 		} else if (isRoad) {
 			laneGeo = !useCache ? new THREE.BoxGeometry(BOARD_WIDTH, 0.2, 1) : getCachedGeometry('box', BOARD_WIDTH, 0.2, 1);
-			laneMat = new THREE.MeshLambertMaterial({
-				color: isLight ? 0x444444 : 0x404040
-			});
+			laneMat = new THREE.MeshLambertMaterial({ color: isLight ? 0x444444 : 0x404040 });
 
 			if (nextLane && nextLane.type === 'road') {
 				if (nextLane.decor && nextLane.decor.find(d => d.userData.isSolid)) {
@@ -5169,19 +5132,18 @@
 
 					// Ciclo lungo la larghezza della mappa per posizionare i tratti
 					for (let x = -BOARD_WIDTH / 2; x <= BOARD_WIDTH / 2; x += 1) {
-						const dashBottom = createDashedLineMesh(z, x, dashTop.whiteLineColor, 'bottom'); // Striscia sul bordo inferiore della corsia (offset Z +0.46)
+						const dashBottom = createDashedLineMesh(z, x, dashTop.userData.whiteLineColor, 'bottom'); // Striscia sul bordo inferiore della corsia (offset Z +0.46)
 						scene.add(dashBottom);
 						applyCurrentVisualMode(dashBottom);
 						laneDecor.push(dashBottom); //decorazioni
 					}
-
 				} else if (nextLane.decor && nextLane.decor.find(d => d.userData.isDashed)) {
 					//la precedente è tratteggiata -> ci piace!
 					let dashTop = nextLane.decor.find(d => d.userData.isDashed);
 
 					// Ciclo lungo la larghezza della mappa per posizionare i tratti
 					for (let x = -BOARD_WIDTH / 2; x <= BOARD_WIDTH / 2; x += 1) {
-						const dashBottom = createDashedLineMesh(z, x, dashTop.whiteLineColor, 'bottom');
+						const dashBottom = createDashedLineMesh(z, x, dashTop.userData.whiteLineColor, 'bottom');
 						scene.add(dashBottom);
 						applyCurrentVisualMode(dashBottom);
 						laneDecor.push(dashBottom); //decorazioni
@@ -5240,7 +5202,7 @@
 		//se ho una strada tratteggiata, aggiungi alla strada la linea continua top!
 		if ((isRiver || isGrass || isPavement || isTrack) && nextLane && nextLane.type === 'road' && nextLane.decor && nextLane.decor.find(d => d.userData.isDashed)) {
 			//linea continua z + 1
-			const whiteLineColor = nextLane.decor.find(d => d.userData.isDashed).whiteLineColor;
+			const whiteLineColor = nextLane.decor.find(d => d.userData.isDashed).userData.whiteLineColor;
 			const dashTop = createSolidLineMesh(z + 1, whiteLineColor, 'top');
 			scene.add(dashTop);
 			applyCurrentVisualMode(dashTop);
@@ -5251,7 +5213,7 @@
 		if (isRoad && nextLane && nextLane.type === 'road' && nextLane.decor && nextLane.decor.find(d => d.userData.position === 'zebra')) {
 			//linea zebrata -> aggiungila anche alla attuale
 			const zebrona = nextLane.decor.find(d => d.userData.position === 'zebra');
-			const whiteLineColor = zebrona.whiteLineColor;
+			const whiteLineColor = zebrona.userData.whiteLineColor;
 			const stripeX = zebrona.position.x;
 
 			// Crea un blocco di strisce parallele, iniziano prima per coprire eventuali righe a terra tratteggiate (0.4 <- 0.7)
@@ -6098,31 +6060,11 @@
 		}, 1500);
 	}
 
-	function setCameraAndLightsOLD() {
-		cameraAngle = THREE.MathUtils.lerp(cameraAngle, targetCameraAngle, 0.1);
-		if (Math.abs(cameraAngle - targetCameraAngle) < 0.0001) cameraAngle = targetCameraAngle; //fix zompetti
 
-		const rotatedOffset = getRotatedCameraOffset();
-
-		camera.position.z = THREE.MathUtils.lerp(camera.position.z, player.position.z + rotatedOffset.z, 0.08);
-		camera.position.x = THREE.MathUtils.lerp(camera.position.x, player.position.x + rotatedOffset.x, 0.08);
-
-		//console.log(rotatedOffset, camera.position.x, camera.position.z);
-
-		//fix zompetti
-		if (cameraAngle !== targetCameraAngle) {
-			camera.lookAt(player.position.x, player.position.y, player.position.z);
-			//console.log(cameraAngle, targetCameraAngle);
-		}
-
-		let sunHeight = new Date().getHours(); //4..5..6......24..23..22.....4
-		if (sunHeight <= 12) sunHeight = 4 + (sunHeight * 20 / 12);
-		else sunHeight = 24 - ((sunHeight - 12) * 20 / 12);
-
-		dirLightTarget.position.set(player.position.x, 0, player.position.z);
-		dirLight.position.set(player.position.x + 15, sunHeight, player.position.z + 10); //era 25, quasi a mezzogiorno
-	}
-
+	let sunHeight = new Date().getHours(); //4..5..6......24..23..22.....4
+	if (sunHeight <= 12) sunHeight = 4 + (sunHeight * 20 / 12);
+	else sunHeight = 24 - ((sunHeight - 12) * 20 / 12);
+	
 	function setCameraAndLights() {
 		cameraAngle = THREE.MathUtils.lerp(cameraAngle, targetCameraAngle, 0.1);
 		if (Math.abs(cameraAngle - targetCameraAngle) < 0.0001) {
@@ -6159,11 +6101,12 @@
 		}
 
 		//console.log(camera.position.x, camera.position.z);
-
+		/*
 		let sunHeight = new Date().getHours(); //4..5..6......24..23..22.....4
 		if (sunHeight <= 12) sunHeight = 4 + (sunHeight * 20 / 12);
 		else sunHeight = 24 - ((sunHeight - 12) * 20 / 12);
-
+		*/
+		
 		dirLightTarget.position.set(player.position.x, 0, player.position.z);
 		dirLight.position.set(player.position.x + 15, sunHeight, player.position.z + 10); //era 25, quasi a mezzogiorno
 	}
@@ -6450,6 +6393,40 @@
 		return false;
 	}
 
+	// zampette rotanti
+	function updatePawsRotation() {
+		const tPaw = performance.now() * 0.004;
+		for (const p of pawPrints) {
+			if (Math.abs(p.z - player.position.z) > 20) continue;
+			if (p.isCat) {
+				p.mesh.rotation.y += 0.01;
+				p.mesh.position.y = 0.05 + Math.sin(tPaw + p.x) * 0.02;
+			} else {
+				p.mesh.rotation.y += 0.03;
+				p.mesh.position.y = 0.3 + Math.sin(tPaw + p.x) * 0.06;
+			}
+		}
+	}
+	
+	// fili d'erba rotanti
+	function updateGrassTuftRotation() {
+		const tWind = performance.now() * 0.0012;
+		for (const g of grassTufts) {
+			if (Math.abs(g.mesh.position.z - player.position.z) > 20) continue; // stesso raggio delle zampette, ciuffi lontani non si animano
+			g.mesh.rotation.z = Math.sin(tWind * g.speed + g.phase) * 0.14;
+			g.mesh.rotation.x = Math.cos(tWind * g.speed * 0.6 + g.phase) * 0.06;
+		}
+	}
+	
+	//fiume
+	function updateRiverTexture() {
+		if (riverTextureLeft && riverTextureRight) {
+			riverTextureLeft.offset.x -= 0.001;
+			riverTextureRight.offset.x += 0.001;
+		}
+	}
+
+	
 
 	// --- LOOP DI ANIMAZIONE ---
 	const FRAME_MS = 1000 / 60;
@@ -6498,40 +6475,18 @@
 
 		updatePlayerRotation();
 
-		// zampette rotanti
-		const tPaw = performance.now() * 0.004;
-		for (const p of pawPrints) {
-			if (Math.abs(p.z - player.position.z) > 20) continue;
-			if (p.isCat) {
-				p.mesh.rotation.y += 0.01;
-				p.mesh.position.y = 0.05 + Math.sin(tPaw + p.x) * 0.02;
-			} else {
-				p.mesh.rotation.y += 0.03;
-				p.mesh.position.y = 0.3 + Math.sin(tPaw + p.x) * 0.06;
-			}
-		}
-
-		// fili d'erba rotanti
-		const tWind = performance.now() * 0.0012;
-		for (const g of grassTufts) {
-			if (Math.abs(g.mesh.position.z - player.position.z) > 20) continue; // stesso raggio delle zampette, ciuffi lontani non si animano
-			g.mesh.rotation.z = Math.sin(tWind * g.speed + g.phase) * 0.14;
-			g.mesh.rotation.x = Math.cos(tWind * g.speed * 0.6 + g.phase) * 0.06;
-		}
-
-
+		updatePawsRotation();
+		updateGrassTuftRotation();
+		
 		// 2. CAMERA E LUCI
 		setCameraAndLights();
 		updateClippingPlanes();
 
 		//updateClouds();
 
-		//fiume
-		if (riverTextureLeft && riverTextureRight) {
-			riverTextureLeft.offset.x -= 0.001;
-			riverTextureRight.offset.x += 0.001;
-		}
-
+		updateRiverTexture();
+		
+		
 		// 3. SPAWN OSTACOLI
 		lanes.forEach(lane => {
 
@@ -6759,8 +6714,6 @@
 		// 5. MOVIMENTO TRONCHI E FISICA FIUME
 		let onLog = false;
 
-		//const isPlayerOnBridge = Math.abs(player.position.y - 0.2) < 0.01 && 
-		//		logs.find(x => x.isBridge && Math.abs(x.z - player.position.z) < 0.2 && Math.abs(x.mesh.position.x - player.position.x) < 0.2);
 		const isPlayerOnBridge = !isJumping && !isDying &&
 			logs.some(x => x.isBridge && x.z === Math.round(playerPos.z) && x.mesh.position.x === playerPos.x);
 
@@ -6845,8 +6798,6 @@
 				log.mesh.userData.lowerJawPivot.rotation.z = -CROCO_LOWER_MAX_ANGLE * log.mouthOpen;
 			}
 		}
-
-
 
 
 		// Controllo caduta in acqua
@@ -7260,7 +7211,7 @@
 			balProt = 0.9,
 			balZFrom = -2.8,
 			balZTo = 2.8;
-		add(box(balProt, 0.14, balZTo - balZFrom), M.trim, side * (Xs + balProt / 2), balY, 0);
+		add(box(balProt, 0.14, balZTo - balZFrom), M.base, side * (Xs + balProt / 2), balY, 0);
 		const railH = 0.9,
 			railY = balY + 0.07 + railH / 2,
 			railTopY = balY + 0.07 + railH;
@@ -7413,18 +7364,9 @@
 		if (lastLane) lastLane.decor.push(house);
 	}
 
-	const HOUSE_POSITION = {
-		x: -12,
-		z: 0
-	};
-	const CONCA_SIZE = {
-		x: 3,
-		z: 5
-	};
-	const MONTE_SIZE = {
-		x: 6,
-		z: 5
-	};
+	const HOUSE_POSITION = { x: -11, z: -1 };
+	const CONCA_SIZE = { x: 3, z: 5 };
+	const MONTE_SIZE = { x: 6, z: 5 };
 
 	let isConca = new Date().getSeconds() % 2;
 	if (isConca) {
