@@ -422,7 +422,7 @@
   <script>
     // --- COSTANTI DI GIOCO ---
     const GRID = 1;
-    const BOARD_WIDTH = 38.45; 
+    const BOARD_WIDTH = 36.5; 
     const X_LIMIT = Math.floor(BOARD_WIDTH / 2) - 1; // Limiti laterali
 	const MIN_LANE = 5;
 	const MAX_LANE = -30;
@@ -1971,10 +1971,14 @@
 		});
 	  }
 
-	  group.rotation.y = (Math.random() - 0.5) * 0.5;
+	  let VALUES = [-0.5, -0.4, -0.3, -0.2, -0.1, 0, 0.1, 0.2, 0.3, 0.4, 0.5];
+	  let randRotation = VALUES[Math.floor(Math.random() * VALUES.length)];
+	  let randScale = Math.abs( VALUES[Math.floor(Math.random() * VALUES.length)] );
+
+	  group.rotation.y = randRotation * 0.5;
 
 	  // Variazione di taglia tra una lapide e l'altra, oltre all'ingrandimento base
-	  const scaleVariance = 0.9 + Math.random() * 0.35; // 0.9x - 1.25x
+	  const scaleVariance = 0.9 + randScale; // 0.9x - 1.4x
 	  group.scale.set(scaleVariance, scaleVariance, scaleVariance);
 	  group.position.y = 0;
 
@@ -2045,9 +2049,11 @@
 		const branchGroup = addBranch(group, b.y, b.len, b.thick, b.ry, b.rz, mat);
 
 		// 1-2 rametti secondari in punta, per l'effetto "artiglio"
+		const VALUES = [0.35, 0.38, 0.41, 0.44, 0.47, 0.50, 0.53, 0.56, 0.59];
+		
 		const twigCount = 1 + Math.floor(Math.random() * 2);
 		for (let i = 0; i < twigCount; i++) {
-		  const twigLen = b.len * (0.35 + Math.random() * 0.2);
+		  const twigLen = b.len * VALUES[Math.floor(Math.random() * VALUES.length)];
 		  const twig = addBranch(
 			branchGroup,
 			b.len, // parte dalla punta del ramo padre
@@ -3341,6 +3347,8 @@
 	  const eyeMat   = new THREE.MeshLambertMaterial({ color: 0xffe000 }); // Giallo (occhi)
 	  const pupilMat = new THREE.MeshLambertMaterial({ color: 0x111111 }); // Nero (pupille)
 
+
+
 	  // Il muso è verso +x (senso di marcia)
 	  const snoutLen = Math.max(0.4, length * 0.25);
 	  const bodyLen  = length - snoutLen;
@@ -3356,6 +3364,7 @@
 	  body.castShadow = true;//ottimizzazione?
 	  group.add(body);
 
+	  /*
 	  // 2. Muso: più stretto e un filo più basso — ora quasi a filo d'acqua
 	  const snout = new THREE.Mesh(
 		!useCache ? new THREE.BoxGeometry(snoutLen, 0.12, 0.50) : getCachedGeometry('box', snoutLen, 0.16, 0.50),
@@ -3364,7 +3373,7 @@
 	  snout.receiveShadow = true;
 	  snout.castShadow = true;//ottimizzazione?
 	  group.add(snout);
-
+	  
 	  // 2b. Rettangolo del naso sulla punta del muso, con due buchi per le narici
 	  const noseMat = new THREE.MeshLambertMaterial({ color: col2 });
 
@@ -3374,13 +3383,89 @@
 	  nose.position.set(length / 2 - 0.12, 0.05, 0);
 	  nose.castShadow = false;
 	  group.add(nose);
-
+	  
 	  const nostrilGeo = !useCache ? new THREE.BoxGeometry(0.05, 0.015, 0.05) : getCachedGeometry('box', 0.05, 0.015, 0.05);
 	  [-0.09, 0.09].forEach(z => {
 	  	const nostril = new THREE.Mesh(nostrilGeo, pupilMat);
 	  	nostril.position.set(length / 2 - 0.12, 0.085, z);
 	  	group.add(nostril);
 	  });
+	  */
+	  
+	  //apertura bocca croco
+
+//apertura bocca
+const teethMat = new THREE.MeshLambertMaterial({ color: 0xf5f0e6 });
+
+// cerniera ALTA: le mascelle restano sopra il pelo dell'acqua anche col croco affondato
+const jawRoot = new THREE.Group();
+jawRoot.position.set(bodyEnd, 0.07, 0);
+group.add(jawRoot);
+
+// Mascella superiore (si alza)
+const upperJawPivot = new THREE.Group();
+jawRoot.add(upperJawPivot);
+const upperJaw = new THREE.Mesh(
+  !useCache ? new THREE.BoxGeometry(snoutLen, 0.05, 0.50) : getCachedGeometry('box', snoutLen, 0.05, 0.50),
+  skinMat);
+upperJaw.position.set(snoutLen / 2, 0.025, 0);
+upperJaw.receiveShadow = true;
+upperJaw.castShadow = true;
+upperJawPivot.add(upperJaw);
+
+// Mascella inferiore (scende di poco)
+const lowerJawPivot = new THREE.Group();
+jawRoot.add(lowerJawPivot);
+const lowerJaw = new THREE.Mesh(
+  !useCache ? new THREE.BoxGeometry(snoutLen, 0.05, 0.46) : getCachedGeometry('box', snoutLen, 0.05, 0.46),
+  skinMat);
+lowerJaw.position.set(snoutLen / 2, -0.025, 0);
+lowerJaw.castShadow = true;
+lowerJawPivot.add(lowerJaw);
+
+// Denti: 2 sopra (larghi) e 2 sotto (più piccoli), uno per lato
+const toothTopGeo    = !useCache ? new THREE.BoxGeometry(0.08, 0.03, 0.05)  : getCachedGeometry('box', 0.08, 0.03, 0.05);
+const toothBottomGeo = !useCache ? new THREE.BoxGeometry(0.08, 0.03, 0.05)  : getCachedGeometry('box', 0.08, 0.03, 0.05);
+const TOOTH_Z_TOP = 0.19;
+const TOOTH_Z_BOTTOM = 0.15;
+
+[-1, 1].forEach(s => {
+  // superiori: sotto la mascella superiore, puntano in giù
+  const toothTop = new THREE.Mesh(toothTopGeo, teethMat);
+  toothTop.position.set(snoutLen * 0.45, -0.04, s * TOOTH_Z_TOP);
+  upperJaw.add(toothTop);
+
+  // inferiori: sopra la mascella inferiore, puntano in su, sfalsati in avanti
+  const toothBottom = new THREE.Mesh(toothBottomGeo, teethMat);
+  toothBottom.position.set(snoutLen * 0.40, 0.04, s * TOOTH_Z_BOTTOM);
+  lowerJaw.add(toothBottom);
+});
+
+group.userData.upperJawPivot = upperJawPivot;
+group.userData.lowerJawPivot = lowerJawPivot;
+
+// 2b. Naso + narici sopra la punta della mascella superiore
+const noseMat = new THREE.MeshLambertMaterial({ color: col2 });
+const nose = new THREE.Mesh(
+  !useCache ? new THREE.BoxGeometry(0.16, 0.04, 0.38) : getCachedGeometry('box', 0.16, 0.04, 0.38),
+  noseMat);
+nose.position.set(snoutLen - 0.12, 0.07, 0);
+nose.castShadow = false;
+upperJawPivot.add(nose);
+
+const nostrilGeo = !useCache ? new THREE.BoxGeometry(0.05, 0.015, 0.05) : getCachedGeometry('box', 0.05, 0.015, 0.05);
+[-0.09, 0.09].forEach(z => {
+  const nostril = new THREE.Mesh(nostrilGeo, pupilMat);
+  nostril.position.set(snoutLen - 0.12, 0.0975, z);
+  upperJawPivot.add(nostril);
+});
+	  
+	  
+	  
+	  
+	  
+	  
+	  
 	  // 3. Occhi sopra la testa, dove il corpo incontra il muso - sporgono di più e guardano avanti
 	  const bumpGeo  = !useCache ? new THREE.BoxGeometry(0.15, 0.09, 0.15) : getCachedGeometry('box', 0.15, 0.04, 0.15);
 	  const eyeGeo   = !useCache ? new THREE.BoxGeometry(0.09, 0.06, 0.09) : getCachedGeometry('box', 0.09, 0.05, 0.09);
@@ -4478,12 +4563,17 @@ function createGrassGridMesh() {
 			const pumpkinGrassPalette = [
 				{ col1: 0xff8800, col2: 0xf08000 }, // arancione chiaro/zucca
 				{ col1: 0xe8690a, col2: 0xd35f08 },
+				{ col1: 0xd35400, col2: 0xba4900 },  // arancio moscio
 				{ col1: 0xcc5500, col2: 0xb84900 },
-				{ col1: 0xff7f11, col2: 0xe86f0a },
-				{ col1: 0xd35400, col2: 0xba4900 },
-				{ col1: 0x8a3a0a, col2: 0x7a3208 },  // bruciato/carbonizzato verso la fine
-				{ col1: 0xff7f11, col2: 0xe86f0a },
-				{ col1: 0xe8690a, col2: 0xd35f08 }
+				{ col1: 0x8a5a2b, col2: 0x7a4f26 },  // marrone caramello
+				{ col1: 0x8a3a0a, col2: 0x7a3208 },  // bruciato/carbonizzato
+				{ col1: 0x6b4423, col2: 0x5e3b1f },  // marrone terra
+				{ col1: 0x5a3a1e, col2: 0x4e3119 },  // marrone scuro
+				{ col1: 0x4a2f18, col2: 0x3f2714 },  // marrone cioccolato
+				
+				{ col1: 0x6b4423, col2: 0x5e3b1f },  // marrone terra
+				{ col1: 0x8a5a2b, col2: 0x7a4f26 },  // marrone caramello
+				{ col1: 0xd35400, col2: 0xba4900 }   // arancio moscio
 			];
 			const idx = ((-z * 0.025) | 0) % pumpkinGrassPalette.length;
 			laneMat = new THREE.MeshLambertMaterial({ color: isLight ? pumpkinGrassPalette[idx].col1 : pumpkinGrassPalette[idx].col2 });
@@ -5582,6 +5672,36 @@ if (isGrass) {
 		"I have zero plans and somehow I'm still running late."
 	];
 	
+	const pumpkinThinksArray = [
+		"Trick or treat!",
+		"I have a candle in my brain and nobody seems concerned.",
+		"I'm only smiling because they carved my face this way.",
+		"Don't look at me, I'm completely empty inside.",
+		"Watch where you put your hands... or I'll bite.",
+		"I hope this inner glow brings out my best wrinkles.",
+		"Blow out my candle and I'll haunt you until Christmas.",
+		"Hand over the candy or I turn your front yard into a graveyard.",
+		"Blank stare, zero thoughts, strictly seeds.",
+		"I'm watching you... even without pupils.",
+		"I'm not terrifying, I was just carved poorly.",
+		"Watch out, my little flame burns hot!",
+		"The darker it gets, the brighter I shine.",
+		"Do you want a treat, or would you prefer I scare you to death?",
+		"The ghosts behind you say you look like a great snack.",
+		"Last year I was just a seed, look at me now!",
+		"No humans were harmed in the making of this face... maybe.",
+		"The only thing brighter than my orange skin is your fear.",
+		"Double, double, toil and trouble... the witches are out!",
+		"Lighting up the night to guide the monsters straight to your porch.",
+		"I smell something sweet... or is that just pure dread?",
+		"Hands off! I'm a high-risk masterpiece.",
+		"A chilling grin for a night of nightmares.",
+		"Did you bring the sweets, or do I need to start tricking?",
+		"The bats told me we're going hunting tonight.",
+		"If you hear footsteps behind you... don't turn around.",
+		"Sweet to the rind, spooky to the core!"
+	];
+	
 	let rockyThinksIndex = ((Math.random() * 100)|0)%rockyThinksArray.length;
 	
 	function resetIdle() {
@@ -5606,6 +5726,7 @@ if (isGrass) {
 	  const isCat = currentPlayerType === 'rockygraffietto' || currentPlayerType === 'siamese';
 	  const isMinion = currentPlayerType === 'minion';
 	  const isBender = currentPlayerType === 'bender';
+	  const isPumpkin = currentPlayerType === 'pumpkin';
 	  
 	  // Bolla forzata attiva per limite indietro superato -> ignora la logica di idle!
 	  if (performance.now() < forcedThoughtUntil) {
@@ -5636,6 +5757,7 @@ if (isGrass) {
 			isCat ? rockyThinksArray[rockyThinksIndex] :
 			isBender ? benderThinksArray[rockyThinksIndex] : 
 			isMinion ? minionThinksArray[rockyThinksIndex] : 
+			isPumpkin ? pumpkinThinksArray[rockyThinksIndex] :
 			genericThinksArray[rockyThinksIndex];
 	  }
 
@@ -5987,11 +6109,15 @@ if (isGrass) {
 		log.mesh.position.y = 0;//reset
 		continue;
 	  }
+	  
+	  let isPlayerOnThisLog = false;//apertura bocca croco
 
 	  if (!isJumping && !isDying && Math.abs(player.position.z - log.z) < 0.1) {
 		const dx = Math.abs(player.position.x - log.mesh.position.x);
 		if (dx < log.length / 2 + 0.15) {
 		  onLog = true;
+		  
+		  isPlayerOnThisLog = true;//apertura bocca croco
 
 		  if (log.isBridge) {
 			player.position.y = 0.2;
@@ -6017,6 +6143,26 @@ if (isGrass) {
 		}
 	  } else if (!log.isBridge) {
 		log.mesh.position.y = 0;
+	  }
+	  
+
+
+	  //apertura bocca croco
+	  if (log.isCroco && log.mesh.userData.upperJawPivot) {
+	    const tNow = performance.now();
+	  
+	    // il gatto è appena atterrato sul croco -> parte il morso
+	    if (isPlayerOnThisLog && !log.hadPlayer) log.chompUntil = tNow + 300;
+	    log.hadPlayer = isPlayerOnThisLog;
+	  
+	    const targetOpen = tNow < (log.chompUntil || 0) ? 1 : 0;
+	    const CROCO_UPPER_MAX_ANGLE = 0.5;
+	    const CROCO_LOWER_MAX_ANGLE = 0.08;
+	    const CROCO_MOUTH_SPEED = 0.20; // un po' più scattante per un morso vero
+	  
+	    log.mouthOpen = THREE.MathUtils.lerp(log.mouthOpen || 0, targetOpen, CROCO_MOUTH_SPEED);
+	    log.mesh.userData.upperJawPivot.rotation.z =  CROCO_UPPER_MAX_ANGLE * log.mouthOpen;
+	    log.mesh.userData.lowerJawPivot.rotation.z = -CROCO_LOWER_MAX_ANGLE * log.mouthOpen;
 	  }
 	}
 	  
