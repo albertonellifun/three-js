@@ -4501,10 +4501,11 @@
 	}
 
 
+	//texture fiume
 	function createAnimatedRiverTexture() {
 		const canvas = document.createElement('canvas');
 		canvas.width = 512;
-		canvas.height = 64;
+		canvas.height = 128;
 		const ctx = canvas.getContext('2d');
 
 		// Sfondo azzurro sfumato
@@ -4518,11 +4519,12 @@
 
 		// Strisce di schiuma bianca (dettagli di corrente)
 		ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; // Bianco semi-trasparente
+		let rndHeights = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
 		for (let i = 0; i < 20; i++) {
-			const x = Math.random() * canvas.width;
-			const y = Math.random() * canvas.height;
-			const w = 20 + Math.random() * 20; // Lunghezza striscia
-			const h = 4 + Math.random() * 2; // Spessore
+			const x = (Math.random() * canvas.width * 0.1) * 10;
+			const y = (Math.random() * canvas.height * 0.1) * 10;
+			const w = 10 + rndHeights[Math.floor(Math.random() * rndHeights.length)] * 20; // Lunghezza striscia 10..30
+			const h = 4 + rndHeights[Math.floor(Math.random() * rndHeights.length)] * 2; // Spessore striscia 4..6
 			ctx.fillRect(x, y, w, h);
 		}
 
@@ -4532,7 +4534,8 @@
 		texture.wrapT = THREE.ClampToEdgeWrapping;
 
 		return texture;
-	}
+	}	
+	
 	const riverTextureLeft = createAnimatedRiverTexture();
 	const riverTextureRight = createAnimatedRiverTexture();
 
@@ -6729,7 +6732,9 @@
 				continue;
 			}
 
-			if (!log.isBridge) log.mesh.position.x += log.speed;
+			if (!log.isBridge) {
+				log.mesh.position.x += log.speed;
+			}
 
 			// rimozione tronchi fuori schermo
 			if (Math.abs(log.mesh.position.x) > BOARD_WIDTH / 2 + 4) {
@@ -6766,6 +6771,7 @@
 
 						if (log.mesh.position.y !== -0.075 && !log.isBridge && !isPlayerOnBridge) playSound(log.isCroco ? 'crocoSound' : 'splashSound');
 						log.mesh.position.y = -0.075;
+						//const tWind = performance.now() * 0.0012; log.mesh.position.y = -0.075 + Math.sin(tWind) / 10;
 					}
 
 					if (Math.abs(player.position.x) > X_LIMIT) {
