@@ -205,7 +205,7 @@
 	  height: 50px;
 	  background: rgba(255,255,255,0.18);
 	  border: 2px solid rgba(255,255,255,0.4);
-	  border-radius: 12.5%;
+	  border-radius: 8px;
 	  color: #ffffff;
 	  font-size: 22px;
 	  display: flex;
@@ -251,7 +251,7 @@
 	  white-space: pre;
 	  background: rgba(0,0,0,0.55);
 	  padding: 4px 8px;
-	  border-radius: 6px;
+	  border-radius: 8px;
 	  pointer-events: none;
 	}
 	#thought-bubble {
@@ -277,7 +277,7 @@
 	  background: #fff;
 	  color: #111;
 	  border: 3px solid #111;
-	  border-radius: 28px / 22px;
+	  border-radius: 24px;
 	  padding: 10px 16px;
 	  font: italic 900 15px/1.15 'Comic Sans MS', 'Comic Neue', 'Chalkboard SE', 'Marker Felt', sans-serif;
 	  text-align: center;
@@ -318,6 +318,8 @@
     <button class="action-btn" id="btn-zoom-in"  aria-label="Zoom in">+</button>
     <button class="action-btn" id="btn-rot-left"  aria-label="Rotate view">↻</button>
     <button class="action-btn" id="btn-rot-right" aria-label="Rotate view">↺</button>
+	<button class="action-btn" id="btn-cam-up"      aria-label="Raise view">↑</button>
+    <button class="action-btn" id="btn-cam-down"    aria-label="Lower view">↓</button>
     <button class="action-btn" id="btn-perspective" aria-label="Perspective toggle">👁️</button>
 	<button class="action-btn" id="btn-wireframe" aria-label="Wireframe toggle">📐</button>
 	<button class="action-btn toggled-on" id="btn-shadows" aria-label="Shadows toggle">🌗</button>
@@ -432,9 +434,9 @@
     scene.background = new THREE.Color(0x87ceeb);
     
     const aspect = window.innerWidth / window.innerHeight;
-    const ZOOM_MIN = 2;
+    const ZOOM_MIN = 1.5;
 	const ZOOM_MAX = 7;
-	const ZOOM_STEP = 0.4;
+	const ZOOM_STEP = 0.25;
 	let d = 5; // zoom iniziale (modificabile con i pulsanti +/-)
     let camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 500);
 	/*camera = new THREE.PerspectiveCamera( 
@@ -447,6 +449,14 @@
 
     // Offset base della camera rispetto al player, con stato di rotazione "a caldo"
     const baseCameraOffset = new THREE.Vector3(6, 8, 6);
+	const ZOOM_DEFAULT = d;          // zoom iniziale (5)
+	const CAM_Y_PER_ZOOM = 1.75;      // di quanto cambia la y per ogni unità di zoom (d)
+	let CAM_Y = 8;
+	// d piccolo (zoom vicino) -> camera più bassa, d grande (zoom lontano) -> camera più alta
+	function getCameraHeight() {
+		return baseCameraOffset.y + Math.min(0, (d - ZOOM_DEFAULT) * CAM_Y_PER_ZOOM);
+	}
+	
     let cameraAngle = 0;
     let targetCameraAngle = 0;
 
@@ -1741,7 +1751,7 @@
 	  group.add(body);
 
 	  // --- "GUANCE" LATERALI: rompono la forma a cubo simulando un minimo di rotondità ---
-	  const cheekGeo = !useCache ? new THREE.BoxGeometry(0.08, 0.36, 0.40) : getCachedGeometry('box', 0.08, 0.36, 0.40);
+	  const cheekGeo = !useCache ? new THREE.BoxGeometry(0.08, 0.36, 0.72) : getCachedGeometry('box', 0.08, 0.36, 0.72);
 	  const leftCheek = new THREE.Mesh(cheekGeo, bodyMat);
 	  leftCheek.position.set(-0.40, 0.33, 0);
 	  leftCheek.castShadow = true;
@@ -1784,13 +1794,13 @@
 	  const eyeGeo = !useCache ? new THREE.BoxGeometry(0.13, 0.13, 0.04) : getCachedGeometry('box', 0.13, 0.13, 0.04);
 	  [-0.16, 0.16].forEach(x => {
 		const eye = new THREE.Mesh(eyeGeo, eyeGlowMat);
-		eye.position.set(x, 0.40, -0.365);
+		eye.position.set(x, 0.45, -0.365);
 		group.add(eye);
 	  });
 
 	  // --- BOCCA: sezione orizzontale con 3 tagli verticali (--|--|--|--) ---
 	  const mouth = new THREE.Mesh(
-		!useCache ? new THREE.BoxGeometry(0.44, 0.14, 0.04) : getCachedGeometry('box', 0.44, 0.14, 0.04),
+		!useCache ? new THREE.BoxGeometry(0.44, 0.14, 0.04) : getCachedGeometry('box', 0.6, 0.14, 0.04),
 		mouthMat
 	  );
 	  mouth.position.set(0, 0.18, -0.365);
@@ -1805,7 +1815,7 @@
 
 	  // --- LUCE VERA: emana dagli occhi e illumina davvero l'ambiente circostante ---
 	  const glow = new THREE.PointLight(0xffaa33, 1.5, 3.5);
-	  glow.position.set(0, 0.40, -0.30);
+	  glow.position.set(0, 0.45, -0.30);
 	  group.add(glow);
 
 	  group.position.set(0, 0, 0);
@@ -2054,9 +2064,9 @@
 		const branchGroup = addBranch(group, b.y, b.len, b.thick, b.ry, b.rz, mat);
 
 		// 1-2 rametti secondari in punta, per l'effetto "artiglio"
-		const VALUES = [0.35, 0.38, 0.41, 0.44, 0.47, 0.50, 0.53, 0.56, 0.59];
+		const VALUES = [0.25, 0.28, 0.31, 0.34, 0.37, 0.40, 0.43, 0.46, 0.49];
 		
-		const twigCount = 1 + Math.floor(Math.random() * 2);
+		const twigCount = 1 + (Math.random() < 0.25 ? 1 : 0);
 		for (let i = 0; i < twigCount; i++) {
 		  const twigLen = b.len * VALUES[Math.floor(Math.random() * VALUES.length)];
 		  const twig = addBranch(
@@ -3036,32 +3046,36 @@
 	}
 	// --- VASO DI FIORI (decorazione pavement, al posto degli alberi) ---
 	function createFlowerPotMesh() {
-	  const group = new THREE.Group();
+		const group = new THREE.Group();
 
-	  const potMat = getFlowerMaterial(0xc1673f);  // terracotta
-	  const soilMat = getFlowerMaterial(0x4a3423); // terra scura
+		const potMat = getFlowerMaterial(0xc1673f);  // terracotta
+		const soilMat = getFlowerMaterial(0x4a3423); // terra scura
 
-	  const pot = new THREE.Mesh(
-		!useCache ? new THREE.CylinderGeometry(0.28, 0.22, 0.32, 4) : getCachedGeometry('cylinder', 0.28, 0.22, 0.32, 4),
-		potMat
-	  );
-	  pot.position.y = 0.11;
-	  pot.castShadow = true;
-	  group.add(pot);
+		const POT_TOP  = 0.27;             // 0.11 + 0.32 / 2
+		const SOIL_H   = 0.01;
+		const SOIL_TOP = POT_TOP + SOIL_H; // 0.28: superficie su cui poggiano gli steli
 
-	  const soilTop = new THREE.Mesh(
-		!useCache ? new THREE.CylinderGeometry(0.26, 0.26, 0.01, 4) : getCachedGeometry('cylinder', 0.26, 0.26, 0.01, 4),
-		soilMat
-	  );
-	  soilTop.position.y = 0.29;
-	  soilTop.castShadow = false;
-	  group.add(soilTop);
+		const pot = new THREE.Mesh(
+			!useCache ? new THREE.CylinderGeometry(0.28, 0.22, 0.32, 4) : getCachedGeometry('cylinder', 0.28, 0.22, 0.32, 4),
+			potMat
+		);
+		pot.position.y = 0.11;
+		pot.castShadow = true;
+		group.add(pot);
 
-	  addFlowerProps(group, 5, 0.18, 0.18, 0.34);
+		const soilTop = new THREE.Mesh(
+			!useCache ? new THREE.CylinderGeometry(0.26, 0.26, SOIL_H, 4) : getCachedGeometry('cylinder', 0.26, 0.26, SOIL_H, 4),
+			soilMat
+		);
+		soilTop.position.y = POT_TOP + SOIL_H / 2; // appoggiata sul bordo del vaso
+		soilTop.castShadow = false;
+		group.add(soilTop);
 
-	  group.position.set(0, 0, 0);
-	  applyCurrentVisualMode(group);
-	  return group;
+		addFlowerProps(group, 5, 0.15, 0.15, SOIL_TOP); // baseY = superficie della terra
+
+		group.position.set(0, 0, 0);
+		applyCurrentVisualMode(group);
+		return group;
 	}
 	
 	// --- MODELLO TRENO (Motrice + Vagoni) ---
@@ -5265,6 +5279,20 @@ if (isGrass) {
       if (!gameStarted) return;
       targetCameraAngle += Math.PI / 12;
     });
+	bindTouchButton('btn-cam-down', () => {
+		if (!gameStarted) return;
+		CAM_Y -= 0.5;
+		if (CAM_Y < 0) CAM_Y = 0;
+		document.getElementById('btn-cam-down').classList.toggle('at-limit', CAM_Y === 0);
+		document.getElementById('btn-cam-up').classList.toggle('at-limit', CAM_Y === 20);
+	});
+	bindTouchButton('btn-cam-up', () => {
+		if (!gameStarted) return;
+		CAM_Y += 0.5;
+		if (CAM_Y > 20) CAM_Y = 20;
+		document.getElementById('btn-cam-down').classList.toggle('at-limit', CAM_Y === 0);
+		document.getElementById('btn-cam-up').classList.toggle('at-limit', CAM_Y === 20);
+	});
 
 	bindTouchButton('btn-wireframe', () => {
 		isWireframe = !isWireframe;
@@ -5477,14 +5505,16 @@ if (isGrass) {
       }, 1500);
     }
 
-	function setCameraAndLights() {
+	function setCameraAndLightsOLD() {
 	  cameraAngle = THREE.MathUtils.lerp(cameraAngle, targetCameraAngle, 0.1);
-	  if(Math.abs(cameraAngle - targetCameraAngle)<0.001) cameraAngle = targetCameraAngle;//fix zompetti
+	  if(Math.abs(cameraAngle - targetCameraAngle)<0.0001) cameraAngle = targetCameraAngle;//fix zompetti
 	  
       const rotatedOffset = getRotatedCameraOffset();
 
       camera.position.z = THREE.MathUtils.lerp(camera.position.z, player.position.z + rotatedOffset.z, 0.08);
       camera.position.x = THREE.MathUtils.lerp(camera.position.x, player.position.x + rotatedOffset.x, 0.08);
+	  
+	  //console.log(rotatedOffset, camera.position.x, camera.position.z);
 	  
 	  //fix zompetti
       if (cameraAngle !== targetCameraAngle) {
@@ -5498,6 +5528,51 @@ if (isGrass) {
 	  
       dirLightTarget.position.set(player.position.x, 0, player.position.z);
       dirLight.position.set(player.position.x + 15, sunHeight, player.position.z + 10);//era 25, quasi a mezzogiorno
+	}
+	
+	function setCameraAndLights() {
+		cameraAngle = THREE.MathUtils.lerp(cameraAngle, targetCameraAngle, 0.1);
+		if (Math.abs(cameraAngle - targetCameraAngle) < 0.0001) {
+			cameraAngle = targetCameraAngle;
+		}
+
+		const rotatedOffset = getRotatedCameraOffset();
+		const targetX = player.position.x + rotatedOffset.x;
+		const targetZ = player.position.z + rotatedOffset.z;
+
+		// Lerp posizione X
+		camera.position.x = THREE.MathUtils.lerp(camera.position.x, targetX, 0.1);
+		if (Math.abs(camera.position.x - targetX) < 0.001) {
+			camera.position.x = targetX; // Snap finale X
+		}
+
+		// Lerp posizione Z
+		camera.position.z = THREE.MathUtils.lerp(camera.position.z, targetZ, 0.1);
+		if (Math.abs(camera.position.z - targetZ) < 0.001) {
+			camera.position.z = targetZ; // Snap finale Z
+		}
+		
+		// Lerp posizione Y (NUOVO)
+		const targetY = CAM_Y;//getCameraHeight();
+		camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetY, 0.1);
+		const yMoving = Math.abs(camera.position.y - targetY) >= 0.001;
+		if (!yMoving) {
+			camera.position.y = targetY; // Snap finale Y
+		}
+
+		// riorienta la camera verso il player finché ruota o cambia altezza
+		if (cameraAngle !== targetCameraAngle || yMoving) {
+			camera.lookAt(player.position.x, player.position.y, player.position.z);
+		}
+		
+		//console.log(camera.position.x, camera.position.z);
+
+		let sunHeight = new Date().getHours();//4..5..6......24..23..22.....4
+		if (sunHeight <= 12) sunHeight = 4 + (sunHeight * 20 / 12);
+		else sunHeight = 24 - ((sunHeight - 12) * 20 / 12);
+	  
+		dirLightTarget.position.set(player.position.x, 0, player.position.z);
+		dirLight.position.set(player.position.x + 15, sunHeight, player.position.z + 10);//era 25, quasi a mezzogiorno
 	}
 	
 	
@@ -5705,6 +5780,9 @@ if (isGrass) {
 		"Sweet to the rind, spooky to the core!"
 	];
 	
+	let heartEmojis = ["❤️","💖","💘","😉","🎁"];
+	let heartEmojisHalloween = ["👻","💀","🕷️","⚰️","🎃"];
+	
 	let rockyThinksIndex = ((Math.random() * 100)|0)%rockyThinksArray.length;
 	
 	function resetIdle() {
@@ -5755,7 +5833,7 @@ if (isGrass) {
 		thoughtBubble.classList.add('visible');
 		
 		document.getElementById('rocky-thinks').innerHTML = 
-			isNearBonusCat() ? "❤️" :
+			isNearBonusCat() ? isPumpkin ? heartEmojisHalloween[Math.floor(Math.random() * heartEmojisHalloween.length)] : heartEmojis[Math.floor(Math.random() * heartEmojis.length)] :
 			isNearConcaHouse() ? "Home sweet home..." :
 			isCat ? rockyThinksArray[rockyThinksIndex] :
 			isBender ? benderThinksArray[rockyThinksIndex] : 
@@ -5799,8 +5877,8 @@ if (isGrass) {
         player.position.x = THREE.MathUtils.lerp(playerPos.x, targetPos.x, jumpProgress);
         player.position.z = THREE.MathUtils.lerp(playerPos.z, targetPos.z, jumpProgress);
         player.position.y = Math.abs(Math.sin(jumpProgress * Math.PI) * 0.4);
-
-        if (jumpProgress >= 1) {
+		
+		if (jumpProgress >= 1) {
           isJumping = false;
           jumpProgress = 0;
           playerPos.x = targetPos.x;
