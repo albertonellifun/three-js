@@ -314,10 +314,10 @@
   </div>
   
   <div id="action-controls">
-    <button class="action-btn" id="btn-zoom-out" aria-label="Zoom out">−</button>
-    <button class="action-btn" id="btn-zoom-in"  aria-label="Zoom in">+</button>
-    <button class="action-btn" id="btn-rot-left"  aria-label="Rotate view">↻</button>
-    <button class="action-btn" id="btn-rot-right" aria-label="Rotate view">↺</button>
+    <button class="action-btn" id="btn-zoom-out"    aria-label="Zoom out">−</button>
+    <button class="action-btn" id="btn-zoom-in"     aria-label="Zoom in">+</button>
+    <button class="action-btn" id="btn-rot-right"   aria-label="Rotate view">↻</button>
+    <button class="action-btn" id="btn-rot-left"    aria-label="Rotate view">↺</button>
 	<button class="action-btn" id="btn-cam-up"      aria-label="Raise view">↑</button>
     <button class="action-btn" id="btn-cam-down"    aria-label="Lower view">↓</button>
     <button class="action-btn" id="btn-perspective" aria-label="Perspective toggle">👁️</button>
@@ -2833,18 +2833,11 @@
 		const group = new THREE.Group();
 
 		// Materiali
-		const bodyMat = new THREE.MeshLambertMaterial({
-			color: bodyCol
-		}); // Crema/Beige (Corpo)
-		const pointMat = new THREE.MeshLambertMaterial({
-			color: pointCol
-		}); // Marrone scuro (Muso, Orecchie, Zampe, Coda)
-		const eyeMat = new THREE.MeshLambertMaterial({
-			color: eyeCol
-		}); // Azzurro intenso (Occhi Siamesi)
-		const eyeBackMat = new THREE.MeshLambertMaterial({
-			color: eyeBackCol
-		}); // Nero (Sfondo Occhi)
+		const bodyMat = new THREE.MeshLambertMaterial({ color: bodyCol }); // Crema/Beige (Corpo)
+		const pointMat = new THREE.MeshLambertMaterial({ color: pointCol }); // Marrone scuro (Muso, Orecchie, Zampe, Coda)
+		const eyeMat = new THREE.MeshLambertMaterial({ color: eyeCol }); // Azzurro intenso (Occhi Siamesi)
+		const eyeBackMat = new THREE.MeshLambertMaterial({ color: eyeBackCol }); // Nero (Sfondo Occhi)
+		const whiskersMat = new THREE.MeshLambertMaterial({ color: 0xeeeeee }); // baffazzo bianco
 
 		// 1. Corpo base
 		const body = new THREE.Mesh(
@@ -2931,6 +2924,32 @@
 		rightEar.position.set(-0.16, 0.75, -0.38);
 		rightEar.rotation.z = 0.15;
 		group.add(rightEar);
+		
+		
+		// 5. Baffi (3 per lato)
+		const whiskerGeo = new THREE.BoxGeometry(0.08, 0.008, 0.008);
+
+		const whiskerAngles = [-0.15, 0, 0.15];
+		const whiskerYOffsets = [0.03, 0, -0.03];
+
+		whiskerAngles.forEach((angle, i) => {
+			// Baffo Sinistro
+			const leftWhisker = new THREE.Mesh(whiskerGeo, whiskersMat);
+			leftWhisker.position.set(-0.16, 0.45 + whiskerYOffsets[i], -0.61);
+			leftWhisker.rotation.z = angle;
+			leftWhisker.rotation.y = -0.15;
+			group.add(leftWhisker);
+
+			// Baffo Destro
+			const rightWhisker = new THREE.Mesh(whiskerGeo, whiskersMat);
+			rightWhisker.position.set(0.16, 0.45 + whiskerYOffsets[i], -0.61);
+			rightWhisker.rotation.z = -angle;
+			rightWhisker.rotation.y = 0.15;
+			group.add(rightWhisker);
+		});
+		
+		
+		
 
 		// 6. Zampe
 		const legPositions = [
@@ -3971,14 +3990,13 @@
 
 
 		// --- VENATURE ---
-		const veinMat = new THREE.MeshLambertMaterial({
-			color: col2
-		});
+		const veinMat = new THREE.MeshLambertMaterial({ color: col2 });
 
 		// 3 righe di venature
 		// Lunghezze venature quantizzate: pool fisso così la cache resta piccola
 		// indipendentemente da quanti tronchi vengono generati in partita.
-		const VEIN_LENGTHS = [0.20, 0.24, 0.28, 0.32, 0.36, 0.40, 0.44, 0.48, 0.52, 0.56, 0.60, 0.64, 0.68];
+		const VEIN_LENGTHS = [0.16, 0.20, 0.24, 0.28, 0.32, 0.36, 0.40, 0.44, 0.48, 0.52, 0.56, 0.60];
+		const VEIN_DISTANCE = [0.02, 0.04, 0.06, 0.08, 0.10];
 
 		// 3 righe di venature
 		const rows = [-0.20, 0, 0.20];
@@ -3990,7 +4008,7 @@
 			while (x < length / 2) {
 
 				// Spazio casuale prima della prossima venatura
-				x += 0.1 + Math.random() * 0.2;
+				x += 0.1 + VEIN_DISTANCE[Math.floor(Math.random() * VEIN_DISTANCE.length)];
 
 				// Evita di uscire dal tronco
 				const remaining = length / 2 - x * 1.1;
@@ -4004,6 +4022,7 @@
 				const veinGeo = !useCache ? new THREE.BoxGeometry(actualLength, 0.015, z === 0 ? 0.180 : 0.125) : getCachedGeometry('box', actualLength, 0.015, z === 0 ? 0.180 : 0.125);
 
 				const vein = new THREE.Mesh(veinGeo, veinMat);
+				vein.castShadow = false;
 				vein.position.set(x + actualLength / 2, 0.14, z);
 				group.add(vein);
 
@@ -4609,93 +4628,23 @@
 	// --- GATTINO BONUS (sostituisce la zampetta, modello Siamese in scala ridotta) ---
 	function createBonusCatMesh() {
 		let randomCatColors = [
-			// Siamese (corpo chiaro, punte scure, occhi azzurri)
-			{
-				bodyCol: 0xe5d6c3,
-				pointCol: 0x3d2b1f,
-				eyeCol: 0x00a8ff,
-				eyeBackCol: 0x443322
-			},
+			{ bodyCol: 0xe5d6c3, pointCol: 0x3d2b1f, eyeCol: 0x00a8ff, eyeBackCol: 0x443322 },// Siamese (corpo chiaro, punte scure, occhi azzurri)
+			{ bodyCol: 0x1f1f1f, pointCol: 0x1f1f1f, eyeCol: 0x2ecc71, eyeBackCol: 0x111111 },// Nero (occhi verdi vivaci)
+			{ bodyCol: 0x1f1f1f, pointCol: 0x1f1f1f, eyeCol: 0xd4ac0d, eyeBackCol: 0x111111 },// Nero (occhi gialli)
+			{ bodyCol: 0x111111, pointCol: 0x111111, eyeCol: 0xf39c12, eyeBackCol: 0x111111 },// Nero (occhi arancioni)
+			{ bodyCol: 0x7f8c8d, pointCol: 0x7f8c8d, eyeCol: 0xf39c12, eyeBackCol: 0x6f7c7d },// Grigio / Certosino (occhi ambra/oro)
+			{ bodyCol: 0xbdc3c7, pointCol: 0x7f8c8d, eyeCol: 0xa9cce3, eyeBackCol: 0x7f8c8d },// Grigio Chiaro / Argento (occhi azzurro ghiaccio)
+			{ bodyCol: 0xf5f5f5, pointCol: 0xf5f5f5, eyeCol: 0x3498db, eyeBackCol: 0xe5e5e5 },// Bianco (occhi azzurri)
+			{ bodyCol: 0xe67e22, pointCol: 0xd35400, eyeCol: 0xf1c40f, eyeBackCol: 0xd35400 },// Arancione (dettagli arancio scuro, occhi oro)
+			{ bodyCol: 0xf8c471, pointCol: 0xe59866, eyeCol: 0xd4ac0d, eyeBackCol: 0xe59866 },// Crema / Arancio chiaro (occhi miele)
+			
+			{ bodyCol: 0x4a2c11, pointCol: 0x331d0a, eyeCol: 0xf39c12, eyeBackCol: 0x331d0a },// Marrone / Cioccolato (occhi nocciola)
+			{ bodyCol: 0xe5d6c3, pointCol: 0x331d0a, eyeCol: 0x00a8ff, eyeBackCol: 0x331d0a },// Siamese Choco
+			{ bodyCol: 0xe5d6c3, pointCol: 0x7f8c8d, eyeCol: 0x00a8ff, eyeBackCol: 0x6f7c7d },// Siamese Blue
+			{ bodyCol: 0xe5d6c3, pointCol: 0xe59866, eyeCol: 0x00a8ff, eyeBackCol: 0xe59866 },// Siamese Red
 
-			// Nero (occhi verdi vivaci)
-			{
-				bodyCol: 0x1f1f1f,
-				pointCol: 0x1f1f1f,
-				eyeCol: 0x2ecc71,
-				eyeBackCol: 0x111111
-			},
-
-			// Nero (occhi gialli)
-			{
-				bodyCol: 0x1f1f1f,
-				pointCol: 0x1f1f1f,
-				eyeCol: 0xd4ac0d,
-				eyeBackCol: 0x111111
-			},
-
-			// Grigio / Certosino (occhi ambra/oro)
-			{
-				bodyCol: 0x7f8c8d,
-				pointCol: 0x7f8c8d,
-				eyeCol: 0xf39c12,
-				eyeBackCol: 0x6f7c7d
-			},
-
-			// Grigio Chiaro / Argento (occhi azzurro ghiaccio)
-			{
-				bodyCol: 0xbdc3c7,
-				pointCol: 0x7f8c8d,
-				eyeCol: 0xa9cce3,
-				eyeBackCol: 0x7f8c8d
-			},
-
-			// Bianco (occhi azzurri)
-			{
-				bodyCol: 0xf5f5f5,
-				pointCol: 0xf5f5f5,
-				eyeCol: 0x3498db,
-				eyeBackCol: 0xe5e5e5
-			},
-
-			// Arancione (dettagli arancio scuro, occhi oro)
-			{
-				bodyCol: 0xe67e22,
-				pointCol: 0xd35400,
-				eyeCol: 0xf1c40f,
-				eyeBackCol: 0xd35400
-			},
-
-			// Crema / Arancio chiaro (occhi miele)
-			{
-				bodyCol: 0xf8c471,
-				pointCol: 0xe59866,
-				eyeCol: 0xd4ac0d,
-				eyeBackCol: 0xe59866
-			},
-
-			// Marrone / Cioccolato (occhi nocciola)
-			{
-				bodyCol: 0x4a2c11,
-				pointCol: 0x331d0a,
-				eyeCol: 0xf39c12,
-				eyeBackCol: 0x331d0a
-			},
-
-			// Tuxedo (Nero con dettagli bianchi, occhi verdi)
-			{
-				bodyCol: 0x1c1c1c,
-				pointCol: 0xffffff,
-				eyeCol: 0x2ecc71,
-				eyeBackCol: 0x111111
-			},
-
-			// Tartarugato (base scura con macchie rosse/arancio, occhi rame)
-			{
-				bodyCol: 0x2c2c2c,
-				pointCol: 0xd35400,
-				eyeCol: 0xe67e22,
-				eyeBackCol: 0xd35400
-			}
+			{ bodyCol: 0x1c1c1c, pointCol: 0xffffff, eyeCol: 0x2ecc71, eyeBackCol: 0x111111 },// TUX
+			{ bodyCol: 0x2c2c2c, pointCol: 0xd35400, eyeCol: 0xe67e22, eyeBackCol: 0xd35400 }// Tartarugato (base scura con macchie rosse/arancio, occhi rame)
 		];
 		let randomColor = randomCatColors[Math.floor(Math.random() * randomCatColors.length)];
 
@@ -4706,6 +4655,73 @@
 		cat.rotation.y = Math.random() * Math.PI * 2; // orientamento casuale alla nascita
 		return cat;
 	}
+	
+	// --- GATTINI BONUS A SPASSO ---
+	const CAT_HOP_INTERVAL = 2000; // 1 salto ogni 2 secondi
+	const CAT_HOP_DURATION = 200;  // durata dell'animazione del salto (ms)
+	const CAT_HOP_HEIGHT = 0.35;
+	const CAT_BASE_Y = 0.05;
+	const CAT_DIRS = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+
+	function canCatMoveTo(paw, nx, nz) {
+		if (Math.abs(nx) > X_LIMIT) return false;
+		const lane = lanes.find(l => l.z === nz);
+		if (!lane || lane.type !== 'grass') return false;    // solo erba
+		if (lane.obstacles.includes(nx)) return false;       // alberi, rocce, casa...
+		if (lane.paw && lane.paw !== paw) return false;      // un solo bonus per corsia
+		// non saltare addosso al player (né dove sta atterrando)
+		if (nx === Math.round(playerPos.x) && nz === Math.round(playerPos.z)) return false;
+		if (nx === Math.round(targetPos.x) && nz === Math.round(targetPos.z)) return false;
+		return true;
+	}
+
+	function startCatHop(paw, now) {
+		const dirs = CAT_DIRS.slice().sort(() => Math.random() - 0.5);
+		for (const [dx, dz] of dirs) {
+			const nx = paw.x + dx;
+			const nz = paw.z + dz;
+			if (!canCatMoveTo(paw, nx, nz)) continue;
+
+			// riserva subito la casella di destinazione (aggiorna anche lane.paw)
+			const fromLane = lanes.find(l => l.z === paw.z);
+			const toLane = lanes.find(l => l.z === nz);
+			if (fromLane !== toLane) {
+				if (fromLane) fromLane.paw = null;
+				toLane.paw = paw;
+			}
+
+			paw.hop = { fromX: paw.x, fromZ: paw.z, toX: nx, toZ: nz, start: now };
+			paw.x = nx;
+			paw.z = nz;
+			paw.targetRotY = Math.atan2(-dx, -dz); // il modello guarda verso -z
+			return;
+		}
+	}
+
+	function updateCatWalk(p, now) {
+		if (!p.nextHopAt) p.nextHopAt = now + Math.random() * CAT_HOP_INTERVAL; // sfasa i gatti
+		if (p.targetRotY === undefined) p.targetRotY = p.mesh.rotation.y;
+
+		if (!p.hop && now >= p.nextHopAt) {
+			startCatHop(p, now);
+			p.nextHopAt = now + CAT_HOP_INTERVAL;
+		}
+
+		let y = CAT_BASE_Y;
+		if (p.hop) {
+			const t = Math.min((now - p.hop.start) / CAT_HOP_DURATION, 1);
+			p.mesh.position.x = THREE.MathUtils.lerp(p.hop.fromX, p.hop.toX, t);
+			p.mesh.position.z = THREE.MathUtils.lerp(p.hop.fromZ, p.hop.toZ, t);
+			y += Math.sin(t * Math.PI) * CAT_HOP_HEIGHT;
+			if (t >= 1) p.hop = null;
+		}
+		p.mesh.position.y = y;
+
+		// si gira nella direzione del salto
+		p.mesh.rotation.y += shortestAngleDiff(p.mesh.rotation.y, p.targetRotY) * 0.3;
+	}
+	
+	
 
 
 	//ciuffetti d'erba non da fumare ma da vomitare tipo esorcista
@@ -4997,10 +5013,6 @@
 
 
 
-
-
-
-
 	// Griglia di bordi 1x1 condivisa: una riga = tanti quadrati affiancati, un solo draw call per corsia
 	function buildGrassGridGeometry() {
 		const points = [];
@@ -5030,17 +5042,6 @@
 		mesh.visible = isWireframe;
 		return mesh;
 	}
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -5360,14 +5361,14 @@
 
 		//ZAMPETTE BONUS
 		// Zampetta bonus: solo su erba, su una casella libera
-		if (isGrass && z < -2 && Math.random() < PAW_CHANCE) {
+		if (isGrass && Math.random() < PAW_CHANCE) {
 			const free = [];
 			for (let x = -X_LIMIT; x <= X_LIMIT; x++) {
 				if (!laneData.obstacles.includes(x)) free.push(x);
 			}
 			if (free.length) {
 				const px = free[Math.floor(Math.random() * free.length)];
-				const isCat = Math.random() < 0.25;
+				const isCat = Math.random() < 0.25 || z > -5;
 				const mesh = isCat ? createBonusCatMesh() : createPawPrintMesh();
 				mesh.position.set(px, 0.3, z);
 				if (!isCat) scene.add(mesh); //cat siamese gia' fa scene.add!!!
@@ -5727,9 +5728,9 @@
 	window.addEventListener('keydown', (e) => {
 		if (!gameStarted) return;
 		if (e.key === 'q' || e.key === 'Q') {
-			targetCameraAngle -= Math.PI / 9;
-		} else if (e.key === 'e' || e.key === 'E') {
 			targetCameraAngle += Math.PI / 9;
+		} else if (e.key === 'e' || e.key === 'E') {
+			targetCameraAngle -= Math.PI / 9;
 		} else if (e.key === 'p' || e.key === 'P') {
 			togglePlayerModel();
 		} else if (e.key === 'm' || e.key === 'M') {
@@ -6375,7 +6376,7 @@
 
 			document.getElementById('rocky-thinks').innerHTML =
 				isNearBonusCat() ? isPumpkin ? heartEmojisHalloween[Math.floor(Math.random() * heartEmojisHalloween.length)] : heartEmojis[Math.floor(Math.random() * heartEmojis.length)] :
-				isNearConcaHouse() ? "Home sweet home..." :
+				isNearHouse() ? "Home sweet home..." :
 				isCat ? rockyThinksArray[rockyThinksIndex] :
 				isBender ? benderThinksArray[rockyThinksIndex] :
 				isMinion ? minionThinksArray[rockyThinksIndex] :
@@ -6387,7 +6388,7 @@
 		thoughtBubble.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, -100%)`;
 	}
 
-	function isNearConcaHouse() {
+	function isNearHouse() {
 		return Math.abs(player.position.x - HOUSE_POSITION.x) < 5 && Math.abs(player.position.z - HOUSE_POSITION.z) < 5;
 	}
 
@@ -6398,20 +6399,22 @@
 		return false;
 	}
 
-	// zampette rotanti
+	// zampette rotanti, gatti zompettanti
 	function updatePawsRotation() {
-		const tPaw = performance.now() * 0.004;
+		const now = performance.now();
+		const tPaw = now * 0.004;
 		for (const p of pawPrints) {
 			if (Math.abs(p.z - player.position.z) > 20) continue;
 			if (p.isCat) {
-				p.mesh.rotation.y += 0.01;
-				p.mesh.position.y = 0.05 + Math.sin(tPaw + p.x) * 0.02;
+				updateCatWalk(p, now);
 			} else {
 				p.mesh.rotation.y += 0.03;
 				p.mesh.position.y = 0.3 + Math.sin(tPaw + p.x) * 0.06;
 			}
 		}
 	}
+	
+	
 	
 	// fili d'erba rotanti
 	function updateGrassTuftRotation() {
@@ -7352,6 +7355,7 @@
 				disposeObject3D(m);
 				return false;
 			});
+			
 			if (lane.grassRefs) {
 				lane.grassRefs = lane.grassRefs.filter(g => {
 					if (!inX(g.mesh.position.x)) return true;
@@ -7360,6 +7364,15 @@
 					if (i !== -1) grassTufts.splice(i, 1);
 					return false;
 				});
+			}
+			
+			// rimuove zampette / gattini bonus dentro l'area della casa
+			if (lane.paw && inX(lane.paw.x)) {
+				scene.remove(lane.paw.mesh);
+				disposeObject3D(lane.paw.mesh);
+				const i = pawPrints.indexOf(lane.paw);
+				if (i !== -1) pawPrints.splice(i, 1);
+				lane.paw = null;
 			}
 
 			// segna le caselle come ostacolo (il gatto non ci entra, salvo godmode)
