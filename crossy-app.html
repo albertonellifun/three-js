@@ -5169,9 +5169,9 @@
 
 
 			// --- STRISCE PEDONALI (ZEBRA CROSSING) ---
-			if (Math.random() < 0.5 && nextLane && nextLane.type !== 'road') {
+			if (Math.random() < 0.75 && nextLane && nextLane.type !== 'road') {
 
-				const stripeX = -BOARD_WIDTH * 0.5 + ((Math.random() * 10) | 0) * BOARD_WIDTH * 0.1;
+				const stripeX = (-(BOARD_WIDTH - 2) * 0.5) + ((Math.random() * 10) | 0) * (BOARD_WIDTH - 2) * 0.1 + 0.72;//così copro le dashed
 
 				// Crea un blocco di strisce parallele
 				for (let zOffset = -0.30; zOffset <= 0.4; zOffset += 0.2) {
