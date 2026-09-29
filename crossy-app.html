@@ -2829,7 +2829,7 @@
 	}
 
 	// GENERIC SIAMESE -> I GATTI PIU BELLI DEL MONDO!
-	function createPlayerSiamese(bodyCol = 0xe5d6c3, pointCol = 0x3d2b1f, eyeCol = 0x00a8ff, eyeBackCol = 0x443322) {
+	function createPlayerSiamese(bodyCol = 0xe5d6c3, pointCol = 0x3d2b1f, eyeCol = 0x00a8ff, eyeBackCol = 0x443322, bellyCol = 0xf5e6d3) {
 		const group = new THREE.Group();
 
 		// Materiali
@@ -2838,7 +2838,8 @@
 		const eyeMat = new THREE.MeshLambertMaterial({ color: eyeCol }); // Azzurro intenso (Occhi Siamesi)
 		const eyeBackMat = new THREE.MeshLambertMaterial({ color: eyeBackCol }); // Nero (Sfondo Occhi)
 		const whiskersMat = new THREE.MeshLambertMaterial({ color: 0xeeeeee }); // baffazzo bianco
-
+		const bellyMat = new THREE.MeshLambertMaterial({ color: bellyCol });
+		
 		// 1. Corpo base
 		const body = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.4, 0.4, 0.7) : getCachedGeometry('box', 0.4, 0.4, 0.7),
@@ -2846,6 +2847,20 @@
 		body.position.set(0, 0.35, 0);
 		body.castShadow = true;
 		group.add(body);
+		
+		// 1b. Pancia (sotto il corpo, leggermente sporgente)
+		/*const belly = new THREE.Mesh(
+			!useCache ? new THREE.BoxGeometry(0.41, 0.12, 0.5) : getCachedGeometry('box', 0.41, 0.12, 0.5),
+			bellyMat);
+		belly.position.set(0, 0.17, 0.05);
+		group.add(belly);*/
+
+		// 1c. Petto (parte anteriore del corpo, verso la testa, Z negativo)
+		const chest = new THREE.Mesh(
+			!useCache ? new THREE.BoxGeometry(0.25, 0.32, 0.04) : getCachedGeometry('box', 0.25, 0.32, 0.04),
+			bellyMat);
+		chest.position.set(0, 0.33, -0.34); // occupa z da -0.36 a -0.32
+		group.add(chest);
 
 		// 2. Testa
 		const head = new THREE.Mesh(
@@ -4628,27 +4643,27 @@
 	// --- GATTINO BONUS (sostituisce la zampetta, modello Siamese in scala ridotta) ---
 	function createBonusCatMesh() {
 		let randomCatColors = [
-			{ bodyCol: 0xe5d6c3, pointCol: 0x3d2b1f, eyeCol: 0x00a8ff, eyeBackCol: 0x443322 },// Siamese (corpo chiaro, punte scure, occhi azzurri)
-			{ bodyCol: 0x1f1f1f, pointCol: 0x1f1f1f, eyeCol: 0x2ecc71, eyeBackCol: 0x111111 },// Nero (occhi verdi vivaci)
-			{ bodyCol: 0x1f1f1f, pointCol: 0x1f1f1f, eyeCol: 0xd4ac0d, eyeBackCol: 0x111111 },// Nero (occhi gialli)
-			{ bodyCol: 0x111111, pointCol: 0x111111, eyeCol: 0xf39c12, eyeBackCol: 0x111111 },// Nero (occhi arancioni)
-			{ bodyCol: 0x7f8c8d, pointCol: 0x7f8c8d, eyeCol: 0xf39c12, eyeBackCol: 0x6f7c7d },// Grigio / Certosino (occhi ambra/oro)
-			{ bodyCol: 0xbdc3c7, pointCol: 0x7f8c8d, eyeCol: 0xa9cce3, eyeBackCol: 0x7f8c8d },// Grigio Chiaro / Argento (occhi azzurro ghiaccio)
-			{ bodyCol: 0xf5f5f5, pointCol: 0xf5f5f5, eyeCol: 0x3498db, eyeBackCol: 0xe5e5e5 },// Bianco (occhi azzurri)
-			{ bodyCol: 0xe67e22, pointCol: 0xd35400, eyeCol: 0xf1c40f, eyeBackCol: 0xd35400 },// Arancione (dettagli arancio scuro, occhi oro)
-			{ bodyCol: 0xf8c471, pointCol: 0xe59866, eyeCol: 0xd4ac0d, eyeBackCol: 0xe59866 },// Crema / Arancio chiaro (occhi miele)
+			{ bodyCol: 0xe5d6c3, pointCol: 0x3d2b1f, eyeCol: 0x00a8ff, eyeBackCol: 0x443322, bellyCol: 0xf5e6d3 },// Siamese (corpo chiaro, punte scure, occhi azzurri)
+			{ bodyCol: 0x1f1f1f, pointCol: 0x1f1f1f, eyeCol: 0x2ecc71, eyeBackCol: 0x111111, bellyCol: 0x333333 },// Nero (occhi verdi vivaci)
+			{ bodyCol: 0x1f1f1f, pointCol: 0x1f1f1f, eyeCol: 0xd4ac0d, eyeBackCol: 0x111111, bellyCol: 0x333333 },// Nero (occhi gialli)
+			{ bodyCol: 0x111111, pointCol: 0x111111, eyeCol: 0xf39c12, eyeBackCol: 0x111111, bellyCol: 0x222222 },// Nero (occhi arancioni)
+			{ bodyCol: 0x7f8c8d, pointCol: 0x7f8c8d, eyeCol: 0xf39c12, eyeBackCol: 0x6f7c7d, bellyCol: 0x8f9c9d },// Grigio / Certosino (occhi ambra/oro)
+			{ bodyCol: 0xbdc3c7, pointCol: 0x7f8c8d, eyeCol: 0xa9cce3, eyeBackCol: 0x7f8c8d, bellyCol: 0xcdd3d7 },// Grigio Chiaro / Argento (occhi azzurro ghiaccio)
+			{ bodyCol: 0xf5f5f5, pointCol: 0xf5f5f5, eyeCol: 0x3498db, eyeBackCol: 0xe5e5e5, bellyCol: 0xffffff },// Bianco (occhi azzurri)
+			{ bodyCol: 0xe67e22, pointCol: 0xd35400, eyeCol: 0xf1c40f, eyeBackCol: 0xd35400, bellyCol: 0xf68e32 },// Arancione (dettagli arancio scuro, occhi oro)
+			{ bodyCol: 0xf8c471, pointCol: 0xe59866, eyeCol: 0xd4ac0d, eyeBackCol: 0xe59866, bellyCol: 0xf8d481 },// Crema / Arancio chiaro (occhi miele)
 			
-			{ bodyCol: 0x4a2c11, pointCol: 0x331d0a, eyeCol: 0xf39c12, eyeBackCol: 0x331d0a },// Marrone / Cioccolato (occhi nocciola)
-			{ bodyCol: 0xe5d6c3, pointCol: 0x331d0a, eyeCol: 0x00a8ff, eyeBackCol: 0x331d0a },// Siamese Choco
-			{ bodyCol: 0xe5d6c3, pointCol: 0x7f8c8d, eyeCol: 0x00a8ff, eyeBackCol: 0x6f7c7d },// Siamese Blue
-			{ bodyCol: 0xe5d6c3, pointCol: 0xe59866, eyeCol: 0x00a8ff, eyeBackCol: 0xe59866 },// Siamese Red
+			{ bodyCol: 0x4a2c11, pointCol: 0x331d0a, eyeCol: 0xf39c12, eyeBackCol: 0x331d0a, bellyCol: 0x5a3c21 },// Marrone / Cioccolato (occhi nocciola)
+			{ bodyCol: 0xe5d6c3, pointCol: 0x331d0a, eyeCol: 0x00a8ff, eyeBackCol: 0x331d0a, bellyCol: 0xf5e6d3 },// Siamese Choco
+			{ bodyCol: 0xe5d6c3, pointCol: 0x7f8c8d, eyeCol: 0x00a8ff, eyeBackCol: 0x6f7c7d, bellyCol: 0xf5e6d3 },// Siamese Blue
+			{ bodyCol: 0xe5d6c3, pointCol: 0xe59866, eyeCol: 0x00a8ff, eyeBackCol: 0xe59866, bellyCol: 0xf5e6d3 },// Siamese Red
 
-			{ bodyCol: 0x1c1c1c, pointCol: 0xffffff, eyeCol: 0x2ecc71, eyeBackCol: 0x111111 },// TUX
-			{ bodyCol: 0x2c2c2c, pointCol: 0xd35400, eyeCol: 0xe67e22, eyeBackCol: 0xd35400 }// Tartarugato (base scura con macchie rosse/arancio, occhi rame)
+			{ bodyCol: 0x1c1c1c, pointCol: 0xffffff, eyeCol: 0x2ecc71, eyeBackCol: 0x111111, bellyCol: 0xffffff },// TUX
+			{ bodyCol: 0x2c2c2c, pointCol: 0xd35400, eyeCol: 0xe67e22, eyeBackCol: 0xd35400, bellyCol: 0x3c3c3c }// Tartarugato (base scura con macchie rosse/arancio, occhi rame)
 		];
 		let randomColor = randomCatColors[Math.floor(Math.random() * randomCatColors.length)];
 
-		const cat = createPlayerSiamese(randomColor.bodyCol, randomColor.pointCol, randomColor.eyeCol, randomColor.eyeBackCol); // fa già scene.add() al suo interno
+		const cat = createPlayerSiamese(randomColor.bodyCol, randomColor.pointCol, randomColor.eyeCol, randomColor.eyeBackCol, randomColor.bellyCol); // fa già scene.add() al suo interno
 
 		const scale = 0.85;
 		cat.scale.set(scale, scale, scale);
