@@ -7401,10 +7401,10 @@
 	} else {
 		const house = createMonteHouse(); //8x6x6.4 + 10x6x6.4 -> 10x12 -> 5x6
 		house.rotation.y = Math.PI / 2; // facciata verso +x, visibile dalla camera
-		house.scale.set(4 / 10, 0.5, 4 / 10); //scalata 2:1 circa
-		house.position.set(HOUSE_POSITION.x, 0, HOUSE_POSITION.z); //centrata in base al size
+		house.scale.set(8 / 20, 0.5, 9 / 20); //scalata 2:1 circa
+		house.position.set(HOUSE_POSITION.x + 0.75, 0, HOUSE_POSITION.z); //centrata in base al size
 		scene.add(house);
-
+		
 		placeHouse(HOUSE_POSITION.x, HOUSE_POSITION.z, MONTE_SIZE.x, MONTE_SIZE.z, house); // centro (-12, 0), 6 caselle in x, 5 in z
 	}
 
