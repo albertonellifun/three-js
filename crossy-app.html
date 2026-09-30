@@ -16,16 +16,34 @@
 	  -webkit-text-size-adjust: 100%;
 	  text-size-adjust: 100%;
     }
-    #score-board {
-      position: absolute;
-      top: 25px;
-      left: 25px;
-      color: #ffffff;
-      font-size: 42px;
-      font-weight: 900;
-      text-shadow: 3px 3px 0px rgba(0,0,0,0.4);
-      z-index: 10;
-    }
+    #score-panel {
+	  position: absolute;
+	  top: 25px;
+	  left: 10px;
+	  z-index: 10;
+	  padding: 6px;
+	  background: rgba(255,255,255,0.18);
+	  border: 2px solid rgba(255,255,255,0.4);
+	  border-radius: 8px;
+	  display: flex;
+	  flex-direction: column;
+	  align-items: center;
+	  user-select: none;
+	}
+	#score-board {
+	  color: #ffffff;
+	  line-height: 0.9;
+	  font-size: 38px;
+	  font-weight: 900;
+	  text-shadow: 3px 3px 0px rgba(0,0,0,0.4);
+	}
+	#top-score {
+	  color: rgba(255,255,255,0.8);
+	  font-size: 16px;
+	  font-weight: 800;
+	  text-shadow: 2px 2px 0 rgba(0,0,0,0.4);
+	  pointer-events: none;
+	}
     #instructions {
       position: absolute;
       bottom: 10px;
@@ -301,7 +319,10 @@
 </head>
 <body>
 
-  <div id="score-board">0</div>
+  <div id="score-panel">
+	<div id="score-board">0</div>
+	<div id="top-score">👑 0</div>
+  </div>
   <div id="instructions">Urban Blox Crossing - 🥊😼Rocky Graffietto Edition</div>
   <div id="fps-counter"></div>
   
@@ -4956,11 +4977,25 @@
 
 
 
+	//salvataggio punteggio TOP highscore
+	const TOP_KEY = 'urbanBloxCrossingTop';
+	let topScore = 0;
+	try { topScore = parseInt(localStorage.getItem(TOP_KEY), 10) || 0; } catch (e) {}
 
+	function updateTopScoreLabel() {
+		document.getElementById('top-score').innerText = '👑 ' + topScore;
+	}
+	updateTopScoreLabel();
 
 	//punteggi che esplodono
 	function updateScoreBoard() {
-		document.getElementById('score-board').innerText = score + bonusScore;
+		const total = score + bonusScore;
+		document.getElementById('score-board').innerText = total;
+		if (total > topScore) {
+			topScore = total;
+			try { localStorage.setItem(TOP_KEY, topScore); } catch (e) {}
+			updateTopScoreLabel();
+		}
 	}
 
 	function showScorePop(x, y, text) {
