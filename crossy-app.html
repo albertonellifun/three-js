@@ -346,6 +346,7 @@
 	<button class="action-btn toggled-on" id="btn-shadows" aria-label="Shadows toggle">🌗</button>
 	<button class="action-btn toggled-on" id="btn-grass"     aria-label="Grass toggle">🍀</button>
 	<button class="action-btn" id="btn-clock" aria-label="Advance time">🕐</button>
+	<button class="action-btn" id="btn-bw"        aria-label="Black & White toggle">☯</button>
 	<button class="action-btn" id="btn-godmode"   aria-label="GodMode toggle">🛡️</button>
 	<button class="action-btn" id="btn-fps"		  aria-label="FPS toggle">🕵️</button>
 	<button class="action-btn" id="btn-mute"      aria-label="Mute toggle">🎵</button>
@@ -454,7 +455,7 @@
 	// --- SCENA, CAMERA, RENDERER ---
 	const scene = new THREE.Scene();
 	scene.background = new THREE.Color(0x87ceeb);
-
+	
 	const aspect = window.innerWidth / window.innerHeight;
 	const ZOOM_MIN = 1.5;
 	const ZOOM_MAX = 7;
@@ -623,6 +624,7 @@
 
 	let isMute = false; //il silenzio e' d'oro
 	let isWireframe = false; //wireframe disabilitato
+	let isBW = false;
 	let isShadows = true; //ombre abilitate
 	let immediateRotation = true; //se false, doppia clickata per spostarsi
 	let isGod = false; //godmode 
@@ -6002,6 +6004,20 @@
 		isWireframe = !isWireframe;
 		toggleWorldWireframeOverlay(scene, isWireframe);
 		document.getElementById('btn-wireframe').classList.toggle('toggled-on', isWireframe);
+	});
+	
+	bindTouchButton('btn-bw', () => {
+		isBW = !isBW;
+		if (isBW) { 
+			scene.overrideMaterial = new THREE.MeshLambertMaterial({ color: 0xF8F8FF }); // Bianco candido
+			isWireframe = true;
+		} else {
+			scene.overrideMaterial = null;
+			isWireframe = false;
+		}
+		toggleWorldWireframeOverlay(scene, isWireframe);
+		document.getElementById('btn-wireframe').classList.toggle('toggled-on', isWireframe);
+		document.getElementById('btn-bw').classList.toggle('toggled-on', isBW);
 	});
 
 	bindTouchButton('btn-shadows', () => {
