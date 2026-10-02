@@ -1283,31 +1283,23 @@ function createPlayerRoblox() {
 	function createPlayerPenguin() {
 		const group = new THREE.Group();
 
+		const penguinPalette = [				
+			[0x0b3c85, 0xa5d0f5, 0x111111],// 1) Come l'attuale blu su blu
+			[0x111111, 0xffffff, 0x666666],// 2) sul nero
+		];
+		
+		const penguinColor = penguinPalette[Math.floor(Math.random() * penguinPalette.length)];
+
+
 		// Materiali
-		const navyMat = new THREE.MeshLambertMaterial({
-			color: 0x0b3c85
-		}); // Blu scuro (testa/schiena/pinne)
-		const bellyMat = new THREE.MeshLambertMaterial({
-			color: 0xa5d0f5
-		}); // Azzurro chiaro (pancia)
-		const beakMat = new THREE.MeshLambertMaterial({
-			color: 0xff7a00
-		}); // Arancione (becco)
-		const beakLowMat = new THREE.MeshLambertMaterial({
-			color: 0xf05f00
-		}); // Arancione scuro (becco inferiore)
-		const feetMat = new THREE.MeshLambertMaterial({
-			color: 0xffa726
-		}); // Arancione chiaro (piedi)
-		const eyeMat = new THREE.MeshLambertMaterial({
-			color: 0x0d0d0d
-		}); // Nero (occhi)
-		const whiteMat = new THREE.MeshLambertMaterial({
-			color: 0xffffff
-		}); // Bianco (riflesso)
-		const yellowMat = new THREE.MeshLambertMaterial({
-			color: 0xc8c000
-		}); // Giallo (striscia sul viso)
+		const navyMat = new THREE.MeshLambertMaterial({ color: penguinColor[0] }); // Blu scuro (testa/schiena/pinne)
+		const bellyMat = new THREE.MeshLambertMaterial({ color: penguinColor[1] }); // Azzurro chiaro (pancia)
+		const beakMat = new THREE.MeshLambertMaterial({ color: 0xff7a00 }); // Arancione (becco)
+		const beakLowMat = new THREE.MeshLambertMaterial({ color: 0xf05f00 }); // Arancione scuro (becco inferiore)
+		const feetMat = new THREE.MeshLambertMaterial({ color: 0xffa726 }); // Arancione chiaro (piedi)
+		const eyeMat = new THREE.MeshLambertMaterial({ color: penguinColor[2] }); // Nero (occhi)
+		const whiteMat = new THREE.MeshLambertMaterial({ color: 0xffffff }); // Bianco (riflesso)
+		const yellowMat = new THREE.MeshLambertMaterial({ color: 0xc8c000 }); // Giallo (striscia sul viso)
 
 		// 1. Piedi arancioni piatti che sporgono davanti
 		const footGeo = !useCache ? new THREE.BoxGeometry(0.16, 0.06, 0.28) : getCachedGeometry('box', 0.16, 0.06, 0.28);
@@ -1819,16 +1811,21 @@ function createPlayerRoblox() {
 	function createPlayerFrog() {
 		const group = new THREE.Group();
 
-		// Materiali
-		const greenMat = new THREE.MeshLambertMaterial({
-			color: 0x2ecc71
-		}); // Verde rana
-		const lightGreenMat = new THREE.MeshLambertMaterial({
-			color: 0xabebc6
-		}); // Pancia/dettagli
-		const eyeMat = new THREE.MeshLambertMaterial({
-			color: 0x111111
-		}); // Pupille nere
+		// Materiali scuro + chiaro
+		const frogPalette = [
+			[0x2ecc71, 0xabebc6, 0x111111], // Verde
+			[0x3498db, 0xaed6f1, 0xffff11], // Blu
+			[0xc0392b, 0xf9e79f, 0xffff11], // Rosso
+			[0xe67e22, 0xf9e79f, 0xffff11], // Arancione
+			[0xe84393, 0xf8a5c2, 0x441111], // Rosa
+			[0xbdc3c7, 0xecf0f1, 0x111111], // Grigio
+			[0x9b7653, 0xf5e3a9, 0xffff11]  // Marrone Ipnorospo (base: terra dorata, luce: pancia crema/giallina)
+		];
+		const frogColor = frogPalette[Math.floor(Math.random() * frogPalette.length)];
+		
+		const greenMat = new THREE.MeshLambertMaterial({ color: frogColor[0] }); // Verde rana
+		const lightGreenMat = new THREE.MeshLambertMaterial({ color: frogColor[1] }); // Pancia/dettagli
+		const eyeMat = new THREE.MeshLambertMaterial({ color: frogColor[2] }); // Pupille nere
 
 		// Corpo principale
 		const body = new THREE.Mesh(
@@ -1902,11 +1899,18 @@ function createPlayerRoblox() {
 	// ANATRA SELVATICA
 	function createPlayerDuck() {
 		const group = new THREE.Group();
+		
+		const duckPalette = [				
+			[0x55aa55, 0x664422],// 1) Come l'attuale verde su marrone
+			[0x885533, 0x664422],// 1) marrone chiaro su marrone scuro
+		];
+		
+		const duckColor = duckPalette[Math.floor(Math.random() * duckPalette.length)];
 
 		const body = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.6, 0.4, 0.6) : getCachedGeometry('box', 0.6, 0.4, 0.6),
 			new THREE.MeshLambertMaterial({
-				color: 0x55aa55
+				color: duckColor[0]
 			})
 		);
 		body.position.y = 0.45;
@@ -1926,7 +1930,7 @@ function createPlayerRoblox() {
 		const bodyBrown = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.6, 0.2, 0.6) : getCachedGeometry('box', 0.6, 0.2, 0.6),
 			new THREE.MeshLambertMaterial({
-				color: 0x664422
+				color: duckColor[1]
 			})
 		);
 		bodyBrown.position.y = 0.0;
@@ -3263,18 +3267,17 @@ function createPlayerRoblox() {
 		const group = new THREE.Group();
 
 		// Materiali
-		const skinMat = new THREE.MeshLambertMaterial({
-			color: 0x27ae60
-		}); // Verde (Pelle)
-		const shellMat = new THREE.MeshLambertMaterial({
-			color: 0x7e5109
-		}); // Marrone scuro (Guscio base)
-		const plateMat = new THREE.MeshLambertMaterial({
-			color: 0xd35400
-		}); // Arancione/Marrone (Piastre carapace)
-		const eyeMat = new THREE.MeshLambertMaterial({
-			color: 0x111111
-		}); // Nero (Occhi)
+		const turtlePalette = [					
+			[0x27ae60, 0x7e5109, 0xd35400, 0x111111],// 1) Come l'attuale (Pelle verde, guscio marrone scuro, piastre arancioni, occhi neri)
+			[0x2ecc71, 0x1e8449, 0x117a65, 0xf4d03f],// 2) Verde con corazza verde scura ed occhi giallastri
+			[0x8d6e63, 0x4a2c11, 0x3e2723, 0x111111] // 3) Marrone con corazza più scura
+		];
+		const turtleColor = turtlePalette[Math.floor(Math.random() * turtlePalette.length)];
+		
+		const skinMat = new THREE.MeshLambertMaterial({ color: turtleColor[0] }); // Verde (Pelle)
+		const shellMat = new THREE.MeshLambertMaterial({ color: turtleColor[1] }); // Marrone scuro (Guscio base)
+		const plateMat = new THREE.MeshLambertMaterial({ color: turtleColor[2] }); // Arancione/Marrone (Piastre carapace)
+		const eyeMat = new THREE.MeshLambertMaterial({ color: turtleColor[3] }); // Nero (Occhi)
 
 		// 1. Piastra di base inferiore del guscio (Piastrone)
 		const plastron = new THREE.Mesh(
