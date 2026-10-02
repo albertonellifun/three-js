@@ -352,6 +352,7 @@
 	<button class="action-btn" id="btn-mute"      aria-label="Mute toggle">🎵</button>
     <button class="action-btn" id="btn-info"      aria-label="Game info">?</button>
     <button class="action-btn" id="btn-player"    aria-label="Change player">🥊</button>
+	<button class="action-btn" id="btn-refresh"   aria-label="Refresh player">🎨</button>
   </div>
 
   <div id="start-overlay">
@@ -663,7 +664,41 @@
 	let currentPlayerDeadSound = isHalloweenWeek() ? 'deadSoundPumpkin' : 'deadSoundCat';
 
 
+	function refreshPlayerModel() {
+		const pos = player.position.clone();
+		const rotY = player.rotation.y;
+		const wasVisible = player.visible;
+		resetIdle(); //pensa
 
+		scene.remove(player);
+		disposeObject3D(player);
+		
+		switch (currentPlayerType) {
+			case 'frog': player = createPlayerFrog(); break;
+			case 'duck': player = createPlayerDuck(); break;
+			case 'snail': player = createPlayerSnail(); break;
+			case 'turtle': player = createPlayerTurtle(); break;
+			case 'pig': player = createPlayerPig();	break;
+			case 'horse': player = createPlayerHorse();	break;
+			case 'bender': player = createPlayerBender(); break;
+			case 'minion': player = createPlayerMinion(); break;
+			case 'roblox': player = createPlayerRoblox(); break;
+			case 'owl': player = createPlayerOwl(); break;
+			case 'fox': player = createPlayerFox(); break;
+			case 'penguin': player = createPlayerPenguin(); break;
+			case 'chick': player = createPlayerChick(); break;
+			case 'pumpkin': player = createPlayerPumpkin(); break;
+			case 'unicorn': player = createPlayerUnicorn();	break;
+			case 'rockygraffietto': player = createPlayerRockyGraffietto(); break;
+			case 'siamese': player = createPlayerSiamese(); break;
+			case 'chicken': player = createPlayerChicken();	break;
+		}
+
+		player.position.copy(pos);
+		player.rotation.y = rotY;
+		player.visible = wasVisible;
+		
+	}
 	function togglePlayerModel() {
 		const pos = player.position.clone();
 		const rotY = player.rotation.y;
@@ -1286,10 +1321,10 @@ function createPlayerRoblox() {
 		const penguinPalette = [				
 			[0x0b3c85, 0xa5d0f5, 0x111111],// 1) Come l'attuale blu su blu
 			[0x111111, 0xffffff, 0x666666],// 2) sul nero
+			[0x554433, 0xbbaa99, 0x111111],// 3) sul marrò
 		];
 		
 		const penguinColor = penguinPalette[Math.floor(Math.random() * penguinPalette.length)];
-
 
 		// Materiali
 		const navyMat = new THREE.MeshLambertMaterial({ color: penguinColor[0] }); // Blu scuro (testa/schiena/pinne)
@@ -6391,6 +6426,11 @@ function createPlayerRoblox() {
 	bindTouchButton('btn-player', () => {
 		if (!gameStarted) return;
 		togglePlayerModel();
+	});
+	
+	bindTouchButton('btn-refresh', () => {
+		if (!gameStarted) return;
+		refreshPlayerModel();
 	});
 
 	// --- POPUP INIZIALE: AVVIO PARTITA ---
