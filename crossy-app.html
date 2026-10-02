@@ -427,6 +427,9 @@
   <audio id="deadSoundPumpkin" preload="auto">
     <source src="./crossy-dead-pumpkin.mp3" type="audio/mpeg">
   </audio>
+  <audio id="deadSoundRoblox" preload="auto">
+    <source src="./crossy-dead-roblox.mp3" type="audio/mpeg">
+  </audio>
   
   <audio id="trainSound" preload="auto">
     <source src="./crossy-train.mp3" type="audio/mpeg">
@@ -454,7 +457,7 @@
 
 	// --- SCENA, CAMERA, RENDERER ---
 	const scene = new THREE.Scene();
-	scene.background = new THREE.Color(0x87ceeb);
+	//scene.background = new THREE.Color(0x87ceeb);
 	
 	const aspect = window.innerWidth / window.innerHeight;
 	const ZOOM_MIN = 1.5;
@@ -726,8 +729,15 @@
 				document.getElementById('btn-player').innerText = '🤓';
 				currentPlayerDeadSound = 'deadSoundMinion';
 				break;
-
+				
 			case 'minion':
+				currentPlayerType = 'roblox';
+				player = createPlayerRoblox();
+				document.getElementById('btn-player').innerText = '🧱';
+				currentPlayerDeadSound = 'deadSoundRoblox';
+				break;
+
+			case 'roblox':
 				currentPlayerType = 'owl';
 				player = createPlayerOwl();
 				document.getElementById('btn-player').innerText = '🦉';
@@ -1080,7 +1090,195 @@
 
 		return group;
 	}
+	
+	//ROBLOX - LEGO GUY
+function createPlayerRoblox() {
+	const group = new THREE.Group();
 
+	// 1) Colori casuali per maglietta e gambe (sempre diversi tra loro)
+	const robloxPalette = [
+		0x1670bb, // blu
+		0xc0392b, // rosso
+		0x27ae60, // verde
+		0x8e44ad, // viola
+		0xe67e22, // arancione
+		0x16a085, // turchese
+		0xe84393, // rosa
+		0x2c3e50, // blu notte
+		0xa0b030, // verde oliva
+		0x7f8c8d, // grigio
+		0x4a2c11  // marrone
+	];
+	const shirtCol = robloxPalette[Math.floor(Math.random() * robloxPalette.length)];
+	let legsCol = robloxPalette[Math.floor(Math.random() * robloxPalette.length)];
+	while (legsCol === shirtCol) {
+		legsCol = robloxPalette[Math.floor(Math.random() * robloxPalette.length)];
+	}
+
+	// Colori classici del noob? naaaah!
+	const yellowMat = new THREE.MeshLambertMaterial({ color: 0xf5cd30 }); // testa e braccia
+	const blueMat   = new THREE.MeshLambertMaterial({ color: shirtCol }); // torso
+	const greenMat  = new THREE.MeshLambertMaterial({ color: legsCol });  // gambe
+	const blackMat  = new THREE.MeshLambertMaterial({ color: 0x111111 }); // occhi e sorriso
+
+	const box = (w, h, d) => !useCache ? new THREE.BoxGeometry(w, h, d) : getCachedGeometry('box', w, h, d);
+	const add = (w, h, d, mat, x, y, z, shadow = false) => {
+		const m = new THREE.Mesh(box(w, h, d), mat);
+		m.position.set(x, y, z);
+		m.castShadow = shadow;
+		group.add(m);
+		return m;
+	};
+
+	// Proporzioni (il fronte guarda verso -z)
+	const TORSO_H = 0.40;
+	const TORSO_W = 0.50;
+	const DEPTH = 0.28;
+	const HEAD_H = 0.28;
+	const LEG_H = 0.50;
+	const LEG_W = 0.25;
+	const LEG_GAP = 0.005;//distanza gambe
+	const ARM_W = 0.25;
+	const ARM_GAP = 0.002;//distanza braccio dal tronco (spalla)
+	const ARM_ANGLE = 0.1; //5 gradi circa
+
+	// 1. Gambe (due blocchi verdi con una sottile fessura al centro)
+	[-1, 1].forEach(s => {
+		add(LEG_W, LEG_H, DEPTH, greenMat, s * (LEG_W / 2 + LEG_GAP), LEG_H / 2, 0, true);
+	});
+
+	// 2. Torso blu
+	add(TORSO_W, TORSO_H, DEPTH, blueMat, 0, LEG_H + TORSO_H / 2, 0, true);
+
+	// 3. Braccia gialle, appena staccate dal torso
+	[-1, 1].forEach(s => {
+		//add(ARM_W, TORSO_H, DEPTH, yellowMat, s * (TORSO_W / 2 + ARM_W / 2 + ARM_GAP), LEG_H + TORSO_H / 2, 0, true);
+		
+		const pivot = new THREE.Group();
+		// il perno sta sull'angolo alto interno del braccio, a contatto con il torso
+		pivot.position.set(s * (TORSO_W / 2 + ARM_GAP), LEG_H + TORSO_H, 0);
+		pivot.rotation.z = s * ARM_ANGLE;
+
+		const arm = new THREE.Mesh(box(ARM_W, TORSO_H, DEPTH), yellowMat);
+		arm.position.set(s * ARM_W / 2, -TORSO_H / 2, 0); // il braccio pende sotto il perno
+		arm.castShadow = true;
+		pivot.add(arm);
+
+		group.add(pivot);
+	});
+	
+/*
+	// 4. Testa gialla
+	const headY = LEG_H + TORSO_H + HEAD_H / 2;
+	const headW = 0.34, headD = 0.30;
+	add(headW, HEAD_H, headD, yellowMat, 0, headY, 0, true);
+
+	// 5. Occhi ellittici (cilindri sottili ruotati verso il fronte e schiacciati in larghezza)
+	const faceZ = -headD / 2 - 0.005;
+	const eyeGeo = !useCache
+		? new THREE.CylinderGeometry(0.035, 0.035, 0.01, 16)
+		: getCachedGeometry('cylinder', 0.035, 0.035, 0.01, 16);
+	[-1, 1].forEach(s => {
+		const eye = new THREE.Mesh(eyeGeo, blackMat);
+		eye.rotation.x = Math.PI / 2;        // asse del cilindro lungo z (verso il fronte)
+		eye.scale.set(0.55, 1, 1);           // x = larghezza, z locale = altezza -> ellisse alta
+		eye.position.set(s * 0.065, headY + 0.055, faceZ);
+		group.add(eye);
+	});
+
+	// 6. Sorriso arcuato: parabola approssimata con 7 segmenti
+	const SMILE_HALF_W = 0.09;   // semilarghezza del sorriso
+	const SMILE_DEPTH  = 0.055;  // quanto salgono le estremità rispetto al centro
+	const SMILE_SEGS   = 7;
+	const smileCenterY = headY - 0.08;
+	const step = (SMILE_HALF_W * 2) / SMILE_SEGS;
+
+	for (let i = 0; i < SMILE_SEGS; i++) {
+		const x  = -SMILE_HALF_W + step * (i + 0.5);
+		const t  = x / SMILE_HALF_W;                              // -1..1
+		const y  = smileCenterY + SMILE_DEPTH * t * t;
+		const slope = 2 * SMILE_DEPTH * x / (SMILE_HALF_W * SMILE_HALF_W);
+		const ang = Math.atan(slope);
+		const len = step / Math.cos(ang) + 0.012;                 // leggera sovrapposizione tra segmenti
+
+		const seg = add(len, 0.022, 0.01, blackMat, x, y, faceZ);
+		seg.rotation.z = ang;
+	}
+*/
+	// 2) Testa cilindrica con micro-cupola
+	const headY = LEG_H + TORSO_H + HEAD_H / 2;
+	const HEAD_R = 0.17;
+	const DOME_H = 0.05; // altezza della cupola: più alto = più tonda
+
+	// Corpo della testa (accorciato della cupola, resta ancorato in basso)
+	const head = new THREE.Mesh(
+		!useCache ? new THREE.CylinderGeometry(HEAD_R, HEAD_R, HEAD_H - DOME_H, 24) : getCachedGeometry('cylinder', HEAD_R, HEAD_R, HEAD_H - DOME_H, 24),
+		yellowMat
+	);
+	head.position.set(0, headY - DOME_H / 2, 0);
+	head.castShadow = true;
+	group.add(head);
+
+	// Cupola: emisfero schiacciato in altezza
+	const dome = new THREE.Mesh(
+		!useCache ? new THREE.SphereGeometry(HEAD_R, 24, 8, 0, Math.PI * 2, 0, Math.PI / 2) : getCachedGeometry('sphere', HEAD_R, 24, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+		yellowMat
+	);
+	dome.scale.y = DOME_H / HEAD_R;
+	dome.position.set(0, headY + HEAD_H / 2 - DOME_H, 0);
+	dome.castShadow = true;
+	group.add(dome);
+
+	// Sulla superficie curva: z dipende da x, e l'elemento ruota per seguire la curvatura
+	const surfaceZ = x => -Math.sqrt(HEAD_R * HEAD_R - x * x) - 0.004;
+	const surfaceRotY = x => -Math.asin(x / HEAD_R);
+
+	// Occhi ellittici
+	const eyeGeo = !useCache
+		? new THREE.CylinderGeometry(0.035, 0.035, 0.01, 16)
+		: getCachedGeometry('cylinder', 0.035, 0.035, 0.01, 16);
+	[-1, 1].forEach(s => {
+		const ex = s * 0.035;
+		const eye = new THREE.Mesh(eyeGeo, blackMat);
+		eye.rotation.order = 'YXZ';
+		eye.rotation.x = Math.PI / 2;
+		eye.rotation.y = surfaceRotY(ex);
+		eye.scale.set(0.55, 1, 1);
+		eye.position.set(ex, headY + 0.055, surfaceZ(ex));
+		group.add(eye);
+	});
+
+	// Sorriso arcuato (parabola con 7 segmenti, adattati alla curvatura della testa)
+	const SMILE_HALF_W = 0.06;//larghezza ghigno
+	const SMILE_DEPTH  = 0.065;//arco della V
+	const SMILE_SEGS   = 7;
+	const smileCenterY = headY - 0.10;
+	const step = (SMILE_HALF_W * 2) / SMILE_SEGS;
+
+	for (let i = 0; i < SMILE_SEGS; i++) {
+		const x  = -SMILE_HALF_W + step * (i + 0.5);
+		const t  = x / SMILE_HALF_W;
+		const y  = smileCenterY + SMILE_DEPTH * t * t;
+		const slope = 2 * SMILE_DEPTH * x / (SMILE_HALF_W * SMILE_HALF_W);
+		const ang = Math.atan(slope);
+		const len = step / Math.cos(ang) + 0.012;
+
+		const seg = new THREE.Mesh(box(len, 0.022, 0.01), blackMat);
+		seg.rotation.order = 'YXZ';
+		seg.rotation.z = ang;
+		seg.rotation.y = surfaceRotY(x);
+		seg.position.set(x, y, surfaceZ(x));
+		group.add(seg);
+	}
+	group.position.set(0, 0, 0);
+
+	applyCurrentVisualMode(group);
+
+	scene.add(group);
+	return group;
+}
+	
+	
 	//PINGU
 	function createPlayerPenguin() {
 		const group = new THREE.Group();
@@ -5058,6 +5256,9 @@
 				break;
 			case 'plane':
 				geo = new THREE.PlaneGeometry(...params);
+				break;
+			case 'sphere':
+				geo = new THREE.SphereGeometry(...params);
 				break;
 			default:
 				throw new Error('getCachedGeometry: tipo non supportato "' + type + '"');
