@@ -240,6 +240,11 @@
       border-color: #2ecc71;
     }
 	
+	.action-btn.toggled-red {
+      background: rgba(204, 0, 0, 0.55);
+      border-color: #cc0000;
+    }
+	
     @media (max-width: 1024px) {
       #instructions { display: none; }
     }
@@ -345,6 +350,7 @@
 	<button class="action-btn" id="btn-wireframe" aria-label="Wireframe toggle">📐</button>
 	<button class="action-btn toggled-on" id="btn-shadows" aria-label="Shadows toggle">🌗</button>
 	<button class="action-btn toggled-on" id="btn-grass"     aria-label="Grass toggle">🍀</button>
+	<button class="action-btn toggled-on" id="btn-limbs" aria-label="Limbs animation toggle">🎬</button>
 	<button class="action-btn" id="btn-clock" aria-label="Advance time">🕐</button>
 	<button class="action-btn" id="btn-bw"        aria-label="Black & White toggle">☯</button>
 	<button class="action-btn" id="btn-godmode"   aria-label="GodMode toggle">🛡️</button>
@@ -353,6 +359,7 @@
     <button class="action-btn" id="btn-info"      aria-label="Game info">?</button>
     <button class="action-btn" id="btn-player"    aria-label="Change player">🥊</button>
 	<button class="action-btn" id="btn-refresh"   aria-label="Refresh player">🎨</button>
+	<button class="action-btn toggled-red" id="btn-restart"   aria-label="Restart game">💀</button>
   </div>
 
   <div id="start-overlay">
@@ -635,6 +642,7 @@
 	let isGod = false; //godmode 
 	let isPerspective = false; //prospettiva figherrima++
 	let isGrass = true; //grass on/off
+	let isLimbsAnim = true; // animazione arti/coda on/off
 
 	const MAX_LANE_BACK = 15; //posso tornare indietro di 15
 	const LANE_CLEANUP_MARGIN = 25; //cancello le lane oltre 25
@@ -1134,6 +1142,8 @@
 	function applyLimbs(mesh, swing, active) {
 		const limbs = mesh.userData && mesh.userData.limbs;
 		if (!limbs) return;
+		
+		if (!isLimbsAnim) { swing = 0; active = false; }
 
 		const K = 0.35;
 		const set = (pivot, target) => {
@@ -1159,7 +1169,7 @@
 		if (limbs.tail) {
 			const rest = limbs.tail.userData.restX || 0;
 			const amp = active ? 0.45 : 0.2;
-			const wag = Math.sin(performance.now() * 0.006) * amp;
+			const wag = isLimbsAnim ? Math.sin(performance.now() * 0.006) * amp : 0;
 			set(limbs.tail, rest + Math.abs(swing) * 0.35);
 			limbs.tail.rotation.z = THREE.MathUtils.lerp(limbs.tail.rotation.z, wag, 0.3);
 		}
@@ -6578,6 +6588,12 @@ walkSideLimbs = -walkSideLimbs;
 		if (!gameStarted) return;
 		targetCameraAngle += Math.PI / 12;
 	});
+	
+	bindTouchButton('btn-restart', () => {
+		if (!gameStarted) return;
+		restartGame();
+	});
+	
 	bindTouchButton('btn-cam-down', () => {
 		if (!gameStarted) return;
 		CAM_Y -= 0.5;
@@ -6597,6 +6613,11 @@ walkSideLimbs = -walkSideLimbs;
 		isWireframe = !isWireframe;
 		toggleWorldWireframeOverlay(scene, isWireframe);
 		document.getElementById('btn-wireframe').classList.toggle('toggled-on', isWireframe);
+	});
+	
+	bindTouchButton('btn-limbs', () => {
+		isLimbsAnim = !isLimbsAnim;
+		document.getElementById('btn-limbs').classList.toggle('toggled-on', isLimbsAnim);
 	});
 	
 	bindTouchButton('btn-bw', () => {
@@ -8166,27 +8187,67 @@ updatePlayerLimbs();
 	const CONCA_SIZE = { x: 3, z: 5 };
 	const MONTE_SIZE = { x: 6, z: 5 };
 
-	let isConca = new Date().getSeconds() % 2;
-	if (isConca) {
-		const house = createConcaHouse(); //8x6x6.4 + scale -> 10x6 -> 5x3
-		house.rotation.y = Math.PI / 2; // facciata verso +x, visibile dalla camera
-		house.scale.set(5 / 8, 0.5, 3 / 8); //scalata storta	    
-		house.position.set(HOUSE_POSITION.x, 0, HOUSE_POSITION.z); //centrata in base al size
-		scene.add(house);
+	function placeRandomHouse() {
+		const isConca = new Date().getSeconds() % 2;
+		if (isConca) {
+			const house = createConcaHouse(); //8x6x6.4 + scale -> 10x6 -> 5x3
+			house.rotation.y = Math.PI / 2; // facciata verso +x, visibile dalla camera
+			house.scale.set(5 / 8, 0.5, 3 / 8); //scalata storta	    
+			house.position.set(HOUSE_POSITION.x, 0, HOUSE_POSITION.z); //centrata in base al size
+			scene.add(house);
 
-		placeHouse(HOUSE_POSITION.x, HOUSE_POSITION.z, CONCA_SIZE.x, CONCA_SIZE.z, house); // centro (-12, 0), 3 caselle in x, 5 in z
-	} else {
-		const house = createMonteHouse(); //8x6x6.4 + 10x6x6.4 -> 10x12 -> 5x6
-		house.rotation.y = Math.PI / 2; // facciata verso +x, visibile dalla camera
-		house.scale.set(8 / 20, 0.5, 9 / 20); //scalata 2:1 circa
-		house.position.set(HOUSE_POSITION.x + 0.75, 0, HOUSE_POSITION.z); //centrata in base al size
-		scene.add(house);
-		
-		placeHouse(HOUSE_POSITION.x, HOUSE_POSITION.z, MONTE_SIZE.x, MONTE_SIZE.z, house); // centro (-12, 0), 6 caselle in x, 5 in z
+			placeHouse(HOUSE_POSITION.x, HOUSE_POSITION.z, CONCA_SIZE.x, CONCA_SIZE.z, house); // centro (-12, 0), 3 caselle in x, 5 in z
+		} else {
+			const house = createMonteHouse(); //8x6x6.4 + 10x6x6.4 -> 10x12 -> 5x6
+			house.rotation.y = Math.PI / 2; // facciata verso +x, visibile dalla camera
+			house.scale.set(8 / 20, 0.5, 9 / 20); //scalata 2:1 circa
+			house.position.set(HOUSE_POSITION.x + 0.75, 0, HOUSE_POSITION.z); //centrata in base al size
+			scene.add(house);
+			
+			placeHouse(HOUSE_POSITION.x, HOUSE_POSITION.z, MONTE_SIZE.x, MONTE_SIZE.z, house); // centro (-12, 0), 6 caselle in x, 5 in z
+		}
 	}
+	placeRandomHouse();
 
+	
+	function restartGame() {
+		// 1. Rimuove tutte le corsie (removeLane pulisce anche auto, tronchi, zampette, erba, semafori e casa)
+		for (const lane of lanes) removeLane(lane);
+		lanes.length = 0;
+		cars.length = 0;
+		logs.length = 0;
+		pawPrints.length = 0;
 
+		// 2. Stato di gioco
+		score = 0;
+		bonusScore = 0;
+		maxZReached = 0;
+		moveHistory = [{ x: 0, z: 0 }];
+		playerPos = { x: 0, z: 0 };
+		targetPos = { x: 0, z: 0 };
+		isJumping = false;
+		jumpProgress = 0;
+		isDying = false;
+		forcedThoughtUntil = 0;
 
+		// 3. Player
+		player.position.set(0, 0, 0);
+		player.rotation.y = 0;
+		targetPlayerRotationY = 0;
+		player.visible = true;
+
+		// 4. Mondo nuovo
+		for (let z = MIN_LANE; z > MAX_LANE; z--) createLane(z);
+		placeRandomHouse();
+
+		// 5. UI ed effetti
+		updateScoreBoard();
+		playSpawnEffect(player.position);
+		resetIdle();
+	}
+	
+	
+	
 
 	animate();
   </script>
