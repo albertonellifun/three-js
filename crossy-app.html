@@ -455,6 +455,7 @@
 	const X_LIMIT = Math.floor(BOARD_WIDTH / 2) - 1; // Limiti laterali
 	const MIN_LANE = 5;
 	const MAX_LANE = -30;
+	const JUMP_SPEED = 0.08;
 
 	// --- SCENA, CAMERA, RENDERER ---
 	const scene = new THREE.Scene();
@@ -1127,7 +1128,251 @@
 	}
 	
 	//ROBLOX - LEGO GUY
+	let walkSideLimbs = 1; // alterna il piede che parte a ogni passo
+
+	// Anima gli arti di una qualunque mesh con userData.limbs
+	function applyLimbs(mesh, swing, active) {
+		const limbs = mesh.userData && mesh.userData.limbs;
+		if (!limbs) return;
+
+		const K = 0.35;
+		const set = (pivot, target) => {
+			pivot.rotation.x = THREE.MathUtils.lerp(pivot.rotation.x, target, K);
+		};
+
+		if (limbs.legL) {
+			// Roblox (bipede)
+			set(limbs.legL,  swing * 0.9);
+			set(limbs.legR, -swing * 0.9);
+			set(limbs.armL, -swing * 0.7);
+			set(limbs.armR,  swing * 0.7);
+		} else if (limbs.legFL) {
+			// Siamese (quadrupede, andatura diagonale)
+			const A = 0.6;
+			set(limbs.legFL,  swing * A);
+			set(limbs.legBR,  swing * A);
+			set(limbs.legFR, -swing * A);
+			set(limbs.legBL, -swing * A);
+		}
+
+		// Coda (Siamese e Rocky)
+		if (limbs.tail) {
+			const rest = limbs.tail.userData.restX || 0;
+			const amp = active ? 0.45 : 0.2;
+			const wag = Math.sin(performance.now() * 0.006) * amp;
+			set(limbs.tail, rest + Math.abs(swing) * 0.35);
+			limbs.tail.rotation.z = THREE.MathUtils.lerp(limbs.tail.rotation.z, wag, 0.3);
+		}
+	}
+
+	// Il player
+	function updatePlayerLimbs() {
+		let swing = 0;
+		if (isJumping && !isDying) {
+			swing = Math.sin(jumpProgress * Math.PI) * walkSideLimbs;
+		}
+		applyLimbs(player, swing, isJumping);
+	}
+	
+	
 function createPlayerRoblox() {
+	const group = new THREE.Group();
+
+	// 1) Colori casuali per maglietta e gambe (sempre diversi tra loro)
+	const robloxPalette = [
+		0x1670bb, // blu
+		0xc0392b, // rosso
+		0x27ae60, // verde
+		0x8e44ad, // viola
+		0xe67e22, // arancione
+		0x16a085, // turchese
+		0xe84393, // rosa
+		0x2c3e50, // blu notte
+		0xa0b030, // verde oliva
+		0x7f8c8d, // grigio
+		0x4a2c11  // marrone
+	];
+	const shirtCol = robloxPalette[Math.floor(Math.random() * robloxPalette.length)];
+	let legsCol = robloxPalette[Math.floor(Math.random() * robloxPalette.length)];
+	while (legsCol === shirtCol) {
+		legsCol = robloxPalette[Math.floor(Math.random() * robloxPalette.length)];
+	}
+
+	// Colori classici del noob? naaaah!
+	const yellowMat = new THREE.MeshLambertMaterial({ color: 0xf5cd30 }); // testa e braccia
+	const blueMat   = new THREE.MeshLambertMaterial({ color: shirtCol }); // torso
+	const greenMat  = new THREE.MeshLambertMaterial({ color: legsCol });  // gambe
+	const blackMat  = new THREE.MeshLambertMaterial({ color: 0x111111 }); // occhi e sorriso
+
+	const box = (w, h, d) => !useCache ? new THREE.BoxGeometry(w, h, d) : getCachedGeometry('box', w, h, d);
+	const add = (w, h, d, mat, x, y, z, shadow = false) => {
+		const m = new THREE.Mesh(box(w, h, d), mat);
+		m.position.set(x, y, z);
+		m.castShadow = shadow;
+		group.add(m);
+		return m;
+	};
+
+	// Proporzioni (il fronte guarda verso -z)
+	const TORSO_H = 0.40;
+	const TORSO_W = 0.50;
+	const DEPTH = 0.28;
+	const HEAD_H = 0.28;
+	const LEG_H = 0.50;
+	const LEG_W = 0.25;
+	const LEG_GAP = 0.005;//distanza gambe
+	const ARM_W = 0.25;
+	const ARM_GAP = 0.002;//distanza braccio dal tronco (spalla)
+	const ARM_ANGLE = 0.1; //5 gradi circa
+
+	// 1. Gambe (due blocchi verdi con una sottile fessura al centro)
+	const limbs = {};
+
+	// 1. Gambe: pivot all'anca (in alto), la gamba pende sotto
+	[-1, 1].forEach(s => {
+		const pivot = new THREE.Group();
+		pivot.position.set(s * (LEG_W / 2 + LEG_GAP), LEG_H, 0);
+		const leg = new THREE.Mesh(box(LEG_W, LEG_H, DEPTH), greenMat);
+		leg.position.set(0, -LEG_H / 2, 0);
+		leg.castShadow = true;
+		pivot.add(leg);
+		group.add(pivot);
+		limbs[s < 0 ? 'legL' : 'legR'] = pivot;
+	});
+
+	// 2. Torso blu (invariato)
+	add(TORSO_W, TORSO_H, DEPTH, blueMat, 0, LEG_H + TORSO_H / 2, 0, true);
+
+	// 3. Braccia: pivot alla spalla (come prima) + salvataggio
+	[-1, 1].forEach(s => {
+		const pivot = new THREE.Group();
+		pivot.position.set(s * (TORSO_W / 2 + ARM_GAP), LEG_H + TORSO_H, 0);
+		pivot.rotation.z = s * ARM_ANGLE;
+		pivot.userData.restZ = s * ARM_ANGLE;
+
+		const arm = new THREE.Mesh(box(ARM_W, TORSO_H, DEPTH), yellowMat);
+		arm.position.set(s * ARM_W / 2, -TORSO_H / 2, 0);
+		arm.castShadow = true;
+		pivot.add(arm);
+		group.add(pivot);
+		limbs[s < 0 ? 'armL' : 'armR'] = pivot;
+	});
+
+	group.userData.limbs = limbs;
+	
+/*
+	// 4. Testa gialla
+	const headY = LEG_H + TORSO_H + HEAD_H / 2;
+	const headW = 0.34, headD = 0.30;
+	add(headW, HEAD_H, headD, yellowMat, 0, headY, 0, true);
+
+	// 5. Occhi ellittici (cilindri sottili ruotati verso il fronte e schiacciati in larghezza)
+	const faceZ = -headD / 2 - 0.005;
+	const eyeGeo = !useCache
+		? new THREE.CylinderGeometry(0.035, 0.035, 0.01, 16)
+		: getCachedGeometry('cylinder', 0.035, 0.035, 0.01, 16);
+	[-1, 1].forEach(s => {
+		const eye = new THREE.Mesh(eyeGeo, blackMat);
+		eye.rotation.x = Math.PI / 2;        // asse del cilindro lungo z (verso il fronte)
+		eye.scale.set(0.55, 1, 1);           // x = larghezza, z locale = altezza -> ellisse alta
+		eye.position.set(s * 0.065, headY + 0.055, faceZ);
+		group.add(eye);
+	});
+
+	// 6. Sorriso arcuato: parabola approssimata con 7 segmenti
+	const SMILE_HALF_W = 0.09;   // semilarghezza del sorriso
+	const SMILE_DEPTH  = 0.055;  // quanto salgono le estremità rispetto al centro
+	const SMILE_SEGS   = 7;
+	const smileCenterY = headY - 0.08;
+	const step = (SMILE_HALF_W * 2) / SMILE_SEGS;
+
+	for (let i = 0; i < SMILE_SEGS; i++) {
+		const x  = -SMILE_HALF_W + step * (i + 0.5);
+		const t  = x / SMILE_HALF_W;                              // -1..1
+		const y  = smileCenterY + SMILE_DEPTH * t * t;
+		const slope = 2 * SMILE_DEPTH * x / (SMILE_HALF_W * SMILE_HALF_W);
+		const ang = Math.atan(slope);
+		const len = step / Math.cos(ang) + 0.012;                 // leggera sovrapposizione tra segmenti
+
+		const seg = add(len, 0.022, 0.01, blackMat, x, y, faceZ);
+		seg.rotation.z = ang;
+	}
+*/
+	// 2) Testa cilindrica con micro-cupola
+	const headY = LEG_H + TORSO_H + HEAD_H / 2;
+	const HEAD_R = 0.17;
+	const DOME_H = 0.05; // altezza della cupola: più alto = più tonda
+
+	// Corpo della testa (accorciato della cupola, resta ancorato in basso)
+	const head = new THREE.Mesh(
+		!useCache ? new THREE.CylinderGeometry(HEAD_R, HEAD_R, HEAD_H - DOME_H, 24) : getCachedGeometry('cylinder', HEAD_R, HEAD_R, HEAD_H - DOME_H, 24),
+		yellowMat
+	);
+	head.position.set(0, headY - DOME_H / 2, 0);
+	head.castShadow = true;
+	group.add(head);
+
+	// Cupola: emisfero schiacciato in altezza
+	const dome = new THREE.Mesh(
+		!useCache ? new THREE.SphereGeometry(HEAD_R, 24, 8, 0, Math.PI * 2, 0, Math.PI / 2) : getCachedGeometry('sphere', HEAD_R, 24, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+		yellowMat
+	);
+	dome.scale.y = DOME_H / HEAD_R;
+	dome.position.set(0, headY + HEAD_H / 2 - DOME_H, 0);
+	dome.castShadow = true;
+	group.add(dome);
+
+	// Sulla superficie curva: z dipende da x, e l'elemento ruota per seguire la curvatura
+	const surfaceZ = x => -Math.sqrt(HEAD_R * HEAD_R - x * x) - 0.004;
+	const surfaceRotY = x => -Math.asin(x / HEAD_R);
+
+	// Occhi ellittici
+	const eyeGeo = !useCache
+		? new THREE.CylinderGeometry(0.035, 0.035, 0.01, 16)
+		: getCachedGeometry('cylinder', 0.035, 0.035, 0.01, 16);
+	[-1, 1].forEach(s => {
+		const ex = s * 0.035;
+		const eye = new THREE.Mesh(eyeGeo, blackMat);
+		eye.rotation.order = 'YXZ';
+		eye.rotation.x = Math.PI / 2;
+		eye.rotation.y = surfaceRotY(ex);
+		eye.scale.set(0.55, 1, 1);
+		eye.position.set(ex, headY + 0.055, surfaceZ(ex));
+		group.add(eye);
+	});
+
+	// Sorriso arcuato (parabola con 7 segmenti, adattati alla curvatura della testa)
+	const SMILE_HALF_W = 0.06;//larghezza ghigno
+	const SMILE_DEPTH  = 0.065;//arco della V
+	const SMILE_SEGS   = 7;
+	const smileCenterY = headY - 0.10;
+	const step = (SMILE_HALF_W * 2) / SMILE_SEGS;
+
+	for (let i = 0; i < SMILE_SEGS; i++) {
+		const x  = -SMILE_HALF_W + step * (i + 0.5);
+		const t  = x / SMILE_HALF_W;
+		const y  = smileCenterY + SMILE_DEPTH * t * t;
+		const slope = 2 * SMILE_DEPTH * x / (SMILE_HALF_W * SMILE_HALF_W);
+		const ang = Math.atan(slope);
+		const len = step / Math.cos(ang) + 0.012;
+
+		const seg = new THREE.Mesh(box(len, 0.022, 0.01), blackMat);
+		seg.rotation.order = 'YXZ';
+		seg.rotation.z = ang;
+		seg.rotation.y = surfaceRotY(x);
+		seg.position.set(x, y, surfaceZ(x));
+		group.add(seg);
+	}
+	group.position.set(0, 0, 0);
+
+	applyCurrentVisualMode(group);
+
+	scene.add(group);
+	return group;
+}
+
+
+function createPlayerRobloxOLD() {
 	const group = new THREE.Group();
 
 	// 1) Colori casuali per maglietta e gambe (sempre diversi tra loro)
@@ -1312,6 +1557,9 @@ function createPlayerRoblox() {
 	scene.add(group);
 	return group;
 }
+
+
+
 	
 	
 	//PINGU
@@ -2776,27 +3024,13 @@ function createPlayerRoblox() {
 		const group = new THREE.Group();
 
 		// Palette Colori Siamese Seal Point
-		const creamMat = new THREE.MeshLambertMaterial({
-			color: 0xe5d6c3
-		}); // Crema/Avorio base
-		const sealMat = new THREE.MeshLambertMaterial({
-			color: 0x3d2b1f
-		}); // Seal scuro intenso
-		const eyeMat = new THREE.MeshLambertMaterial({
-			color: 0x00a8ff
-		}); // Azzurro ciano brillante
-		const innerEarMat = new THREE.MeshLambertMaterial({
-			color: 0xE8A7B8
-		}); // Rosa interno orecchie
-		const whiskerMat = new THREE.MeshLambertMaterial({
-			color: 0xFFFFFF
-		}); // Baffi bianchi
-		const noseMat = new THREE.MeshLambertMaterial({
-			color: 0x150A05
-		}); // Tartufo scuro
-		const pupilMat = new THREE.MeshLambertMaterial({
-			color: 0x111111
-		});
+		const creamMat = new THREE.MeshLambertMaterial({ color: 0xe5d6c3	}); // Crema/Avorio base
+		const sealMat = new THREE.MeshLambertMaterial({ color: 0x3d2b1f	}); // Seal scuro intenso
+		const eyeMat = new THREE.MeshLambertMaterial({ color: 0x00a8ff	}); // Azzurro ciano brillante
+		const innerEarMat = new THREE.MeshLambertMaterial({ color: 0xE8A7B8	}); // Rosa interno orecchie
+		const whiskerMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF	}); // Baffi bianchi
+		const noseMat = new THREE.MeshLambertMaterial({	color: 0x150A05	}); // Tartufo scuro
+		const pupilMat = new THREE.MeshLambertMaterial({ color: 0x111111	});
 
 		// 1. Testa principale (Dimensioni: 0.6 x 0.5 x 0.5)
 		const head = new THREE.Mesh(
@@ -2932,12 +3166,26 @@ function createPlayerRoblox() {
 		const rightCheek = new THREE.Mesh(cheekGeo, sealMat);
 		rightCheek.position.set(0.28, 0.44, -0.12);
 		group.add(rightCheek);
-
+		/*
 		const tail = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.08, 0.35, 0.08) : getCachedGeometry('box', 0.08, 0.35, 0.08),
 			sealMat);
 		tail.position.set(0, 0.35, 0.30);
 		group.add(tail);
+		*/
+		// Coda: pivot alla base, la coda sale da lì
+		const tailPivot = new THREE.Group();
+		tailPivot.position.set(0, 0.175, 0.30); // base della vecchia coda
+
+		const tail = new THREE.Mesh(
+			!useCache ? new THREE.BoxGeometry(0.08, 0.35, 0.08) : getCachedGeometry('box', 0.08, 0.35, 0.08),
+			sealMat);
+		tail.position.set(0, 0.175, 0); // metà altezza sopra il pivot
+		tailPivot.add(tail);
+		tailPivot.userData.restX = 0;
+
+		group.add(tailPivot);
+		group.userData.limbs = { tail: tailPivot };
 
 		group.position.set(0, 0, 0);
 
@@ -2952,27 +3200,13 @@ function createPlayerRoblox() {
 		const group = new THREE.Group();
 
 		// Materiali
-		const yellowMat = new THREE.MeshLambertMaterial({
-			color: 0xFFD500
-		}); // Giallo Minion
-		const blueMat = new THREE.MeshLambertMaterial({
-			color: 0x0055B8
-		}); // Blu Salopette
-		const blackMat = new THREE.MeshLambertMaterial({
-			color: 0x111111
-		}); // Nero (Fascia, guanti, scarpe)
-		const silverMat = new THREE.MeshLambertMaterial({
-			color: 0x888888
-		}); // Grigio (Montatura occhiale)
-		const whiteMat = new THREE.MeshLambertMaterial({
-			color: 0xFFFFFF
-		}); // Bianco (Sclera occhio)
-		const eyeMat = new THREE.MeshLambertMaterial({
-			color: 0x5D4037
-		}); // Marrone (Iride/Occhio)
-		const buttonMat = new THREE.MeshLambertMaterial({
-			color: 0x222222
-		}); // Nero/Nocciola (Bottoni)
+		const yellowMat = new THREE.MeshLambertMaterial({ color: 0xFFD500 }); // Giallo Minion
+		const blueMat = new THREE.MeshLambertMaterial({ color: 0x0055B8 }); // Blu Salopette
+		const blackMat = new THREE.MeshLambertMaterial({ color: 0x111111 }); // Nero (Fascia, guanti, scarpe)
+		const silverMat = new THREE.MeshLambertMaterial({ color: 0x888888 }); // Grigio (Montatura occhiale)
+		const whiteMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF }); // Bianco (Sclera occhio)
+		const eyeMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 }); // Marrone (Iride/Occhio)
+		const buttonMat = new THREE.MeshLambertMaterial({ color: 0x222222 }); // Nero/Nocciola (Bottoni)
 
 		// 1. Corpo principale (Giallo)
 		const body = new THREE.Mesh(
@@ -3068,6 +3302,7 @@ function createPlayerRoblox() {
 		mouth.position.set(0, 0.59, -0.26);
 		group.add(mouth);
 
+		/*
 		// 6. Braccia e Mani (Guanti neri)
 		const armGeo = !useCache ? new THREE.BoxGeometry(0.08, 0.22, 0.08) : getCachedGeometry('box', 0.08, 0.22, 0.08);
 		const gloveGeo = !useCache ? new THREE.BoxGeometry(0.10, 0.10, 0.10) : getCachedGeometry('box', 0.10, 0.10, 0.10);
@@ -3111,6 +3346,56 @@ function createPlayerRoblox() {
 		const rightShoe = new THREE.Mesh(shoeGeo, blackMat);
 		rightShoe.position.set(0.12, 0.04, -0.02);
 		group.add(rightShoe);
+		*/
+		
+		// 6. Braccia e Mani: pivot alla spalla (in alto), braccio e guanto pendono sotto
+		const limbs = {};
+		const armGeo = !useCache ? new THREE.BoxGeometry(0.08, 0.22, 0.08) : getCachedGeometry('box', 0.08, 0.22, 0.08);
+		const gloveGeo = !useCache ? new THREE.BoxGeometry(0.10, 0.10, 0.10) : getCachedGeometry('box', 0.10, 0.10, 0.10);
+		const SHOULDER_Y = 0.59; // cima del braccio (0.48 + 0.22/2)
+
+		[-1, 1].forEach(s => {
+			const pivot = new THREE.Group();
+			pivot.position.set(s * 0.29, SHOULDER_Y, 0);
+
+			const arm = new THREE.Mesh(armGeo, yellowMat);
+			arm.position.set(0, 0.48 - SHOULDER_Y, 0);   // -0.11
+			pivot.add(arm);
+
+			const glove = new THREE.Mesh(gloveGeo, blackMat);
+			glove.position.set(0, 0.33 - SHOULDER_Y, 0); // -0.26
+			pivot.add(glove);
+
+			group.add(pivot);
+			limbs[s < 0 ? 'armL' : 'armR'] = pivot;
+		});
+
+		// 7. Gambe e Scarpe: pivot all'anca (sotto la salopette), gamba e scarpa pendono sotto
+		const legGeo = !useCache ? new THREE.BoxGeometry(0.12, 0.12, 0.12) : getCachedGeometry('box', 0.12, 0.12, 0.12);
+		const shoeGeo = !useCache ? new THREE.BoxGeometry(0.14, 0.08, 0.18) : getCachedGeometry('box', 0.14, 0.08, 0.18);
+		const HIP_Y = 0.20; // cima della gamba (0.14 + 0.12/2)
+
+		[-1, 1].forEach(s => {
+			const pivot = new THREE.Group();
+			pivot.position.set(s * 0.12, HIP_Y, 0);
+
+			const leg = new THREE.Mesh(legGeo, blueMat);
+			leg.position.set(0, 0.14 - HIP_Y, 0);          // -0.06
+			pivot.add(leg);
+
+			const shoe = new THREE.Mesh(shoeGeo, blackMat);
+			shoe.position.set(0, 0.04 - HIP_Y, -0.02);     // -0.16
+			pivot.add(shoe);
+
+			group.add(pivot);
+			limbs[s < 0 ? 'legL' : 'legR'] = pivot;
+		});
+
+		group.userData.limbs = limbs;
+		
+		
+		
+		
 
 		group.position.set(0, 0, 0);
 
@@ -3119,6 +3404,11 @@ function createPlayerRoblox() {
 		scene.add(group);
 		return group;
 	}
+	
+	
+	
+	
+	
 
 	// GENERIC SIAMESE -> I GATTI PIU BELLI DEL MONDO!
 	function createPlayerSiamese(bodyCol = 0xe5d6c3, pointCol = 0x3d2b1f, eyeCol = 0x00a8ff, eyeBackCol = 0x443322, bellyCol = 0xf5e6d3) {
@@ -3259,6 +3549,7 @@ function createPlayerRoblox() {
 		
 
 		// 6. Zampe
+		/*
 		const legPositions = [
 			[-0.15, -0.22],
 			[0.15, -0.22],
@@ -3280,14 +3571,66 @@ function createPlayerRoblox() {
 			lowerLeg.castShadow = true;
 			group.add(lowerLeg);
 		});
+		*/
+		// 6. Zampe: pivot all'anca (in cima alla zampa), parte alta + parte bassa pendono sotto
+		const HIP_Y = 0.295;
+		const limbs = {};
+		const legDefs = [
+			['legFL', -0.15, -0.22],
+			['legFR',  0.15, -0.22],
+			['legBL', -0.15,  0.22],
+			['legBR',  0.15,  0.22]
+		];
+
+		legDefs.forEach(([name, x, z]) => {
+			const pivot = new THREE.Group();
+			pivot.position.set(x, HIP_Y, z);
+
+			const upperLeg = new THREE.Mesh(
+				!useCache ? new THREE.BoxGeometry(0.12, 0.15, 0.12) : getCachedGeometry('box', 0.12, 0.15, 0.12),
+				bodyMat);
+			upperLeg.position.set(0, 0.22 - HIP_Y, 0);   // -0.075
+			pivot.add(upperLeg);
+
+			const lowerLeg = new THREE.Mesh(
+				!useCache ? new THREE.BoxGeometry(0.12, 0.15, 0.12) : getCachedGeometry('box', 0.12, 0.15, 0.12),
+				pointMat);
+			lowerLeg.position.set(0, 0.075 - HIP_Y, 0);  // -0.22
+			lowerLeg.castShadow = true;
+			pivot.add(lowerLeg);
+
+			group.add(pivot);
+			limbs[name] = pivot;
+		});
+
+		group.userData.limbs = limbs;
+
 
 		// 7. Coda
+		/*
 		const tail = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.08, 0.35, 0.08) : getCachedGeometry('box', 0.08, 0.35, 0.08),
 			pointMat);
 		tail.position.set(0, 0.5, 0.42);
 		tail.rotation.x = -0.5;
 		group.add(tail);
+		*/
+		// 7. Coda verso l'alto: pivot in BASSO, sul bordo posteriore del corpo
+		const tailPivot = new THREE.Group();
+		tailPivot.position.set(0, 0.38, 0.33);   // leggermente dentro il corpo, così non si stacca
+		tailPivot.rotation.x = 0.5;              // positivo = la punta va all'indietro (+z)
+		tailPivot.userData.restX = 0.5;
+
+		const tail = new THREE.Mesh(
+			!useCache ? new THREE.BoxGeometry(0.08, 0.35, 0.08) : getCachedGeometry('box', 0.08, 0.35, 0.08),
+			pointMat);
+		tail.position.set(0, 0.175, 0);          // metà altezza SOPRA il pivot
+		tailPivot.add(tail);
+
+		group.add(tailPivot);
+		group.userData.limbs.tail = tailPivot;
+		
+		
 
 		group.position.set(0, 0, 0);
 
@@ -5056,6 +5399,7 @@ function createPlayerRoblox() {
 			paw.x = nx;
 			paw.z = nz;
 			paw.targetRotY = Math.atan2(-dx, -dz); // il modello guarda verso -z
+			paw.walkSide = -(paw.walkSide || 1);
 			return;
 		}
 	}
@@ -5070,18 +5414,27 @@ function createPlayerRoblox() {
 		}
 
 		let y = CAT_BASE_Y;
+		let swing = 0;
 		if (p.hop) {
 			const t = Math.min((now - p.hop.start) / CAT_HOP_DURATION, 1);
 			p.mesh.position.x = THREE.MathUtils.lerp(p.hop.fromX, p.hop.toX, t);
 			p.mesh.position.z = THREE.MathUtils.lerp(p.hop.fromZ, p.hop.toZ, t);
 			y += Math.sin(t * Math.PI) * CAT_HOP_HEIGHT;
+			swing = Math.sin(t * Math.PI) * (p.walkSide || 1);
 			if (t >= 1) p.hop = null;
 		}
 		p.mesh.position.y = y;
 
 		// si gira nella direzione del salto
 		p.mesh.rotation.y += shortestAngleDiff(p.mesh.rotation.y, p.targetRotY) * 0.3;
+
+		applyLimbs(p.mesh, swing, !!p.hop);
 	}
+	
+	
+	
+	
+	
 	
 	
 
@@ -6097,6 +6450,7 @@ function createPlayerRoblox() {
 		targetPos.z = nextZ;
 		jumpProgress = 0;
 		isJumping = true;
+walkSideLimbs = -walkSideLimbs;
 
 		if (-targetPos.z > score) {
 			score = -targetPos.z;
@@ -6873,7 +7227,7 @@ function createPlayerRoblox() {
 
 		// 1. ANIMAZIONE SALTO
 		if (isJumping && !isDying) {
-			jumpProgress += 0.12;
+			jumpProgress = Math.min(1, jumpProgress + JUMP_SPEED);
 			player.position.x = THREE.MathUtils.lerp(playerPos.x, targetPos.x, jumpProgress);
 			player.position.z = THREE.MathUtils.lerp(playerPos.z, targetPos.z, jumpProgress);
 			player.position.y = Math.abs(Math.sin(jumpProgress * Math.PI) * 0.4);
@@ -6904,6 +7258,7 @@ function createPlayerRoblox() {
 		}
 
 		updatePlayerRotation();
+updatePlayerLimbs();
 
 		updatePawsRotation();
 		updateGrassTuftRotation();
