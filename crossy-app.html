@@ -853,33 +853,26 @@
 	// UNICORNO PER AURORA
 	function createPlayerUnicorn() {
 		const group = new THREE.Group();
+		
+		const unicornPalette = [
+			// [corpo, criniera, corno, base]
+			[0xF8F8FF, 0xDAA4BA, 0x00BFFF, 0xDAA4BA], // classico (originale)
+			[0xe8dcff, 0x9b59b6, 0xffd700, 0x9b59b6], // lilla / criniera viola / corno oro
+			[0xd9fff3, 0x1abc9c, 0xff7ad9, 0x1abc9c], // menta / criniera turchese / corno rosa
+			[0xfff0c9, 0x4a90e2, 0xff6f91, 0x4a90e2]  // crema / criniera blu / corno corallo
+		];
+		const uc = unicornPalette[Math.floor(Math.random() * unicornPalette.length)];
 
 		// --- MATERIALI UNICORNO ---
-		const whiteBodyMat = new THREE.MeshLambertMaterial({
-			color: 0xF8F8FF
-		}); // Bianco candido
-		const pinkManeMat = new THREE.MeshLambertMaterial({
-			color: 0xDAA4BA
-		}); // Rosa chiaro
-		const blueHornMat = new THREE.MeshLambertMaterial({
-			color: 0x00BFFF
-		}); // Azzurro brillante
-		const muzzleMat = new THREE.MeshLambertMaterial({
-			color: 0xEAEAEA
-		}); // Grigio chiarissimo/panna per il musetto
-		const darkGreyMat = new THREE.MeshLambertMaterial({
-			color: 0x555555
-		}); // Narici
-		const eyeWhiteMat = new THREE.MeshLambertMaterial({
-			color: 0xFFFFFF
-		});
-		const pupilMat = new THREE.MeshLambertMaterial({
-			color: 0x111111
-		});
-		const baseMat = new THREE.MeshLambertMaterial({
-			color: 0xDAA4BA
-		});
-
+		const whiteBodyMat = new THREE.MeshLambertMaterial({ color: uc[0] });
+		const pinkManeMat = new THREE.MeshLambertMaterial({ color: uc[1] });
+		const blueHornMat = new THREE.MeshLambertMaterial({ color: uc[2] });
+		const baseMat = new THREE.MeshLambertMaterial({ color: uc[3] });
+		const muzzleMat = new THREE.MeshLambertMaterial({ color: 0xEAEAEA }); // Grigio chiarissimo/panna per il musetto
+		const darkGreyMat = new THREE.MeshLambertMaterial({ color: 0x555555 }); // Narici
+		const eyeWhiteMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF });
+		const pupilMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+		
 		// --- BASE ---
 		const base = new THREE.Mesh(
 			new THREE.CylinderGeometry(0.34, 0.38, 0.16, 6),
@@ -1003,29 +996,25 @@
 	function createPlayerHorse() {
 		const group = new THREE.Group();
 
-		// --- MATERIALI ---
-		const brownMainMat = new THREE.MeshLambertMaterial({
-			color: 0x814E30
-		});
-		const darkBrownMat = new THREE.MeshLambertMaterial({
-			color: 0x613A1F
-		});
-		const greyMuzzleMat = new THREE.MeshLambertMaterial({
-			color: 0x666666
-		});
-		const darkGreyMat = new THREE.MeshLambertMaterial({
-			color: 0x333333
-		});
-		const eyeWhiteMat = new THREE.MeshLambertMaterial({
-			color: 0xFFFFFF
-		});
-		const pupilMat = new THREE.MeshLambertMaterial({
-			color: 0x111111
-		});
-		const baseMat = new THREE.MeshLambertMaterial({
-			color: 0x4A2E1A
-		});
+		const horsePalette = [
+			// [corpo, criniera, muso, narici, base]
+			[0x814E30, 0x613A1F, 0x666666, 0x333333, 0x4A2E1A], // baio (originale)
+			[0xf2f2f2, 0xcfcfcf, 0xd9c2bc, 0x888888, 0x9a9a9a], // bianco
+			[0xe3c07a, 0xf0e0b0, 0xc9a56a, 0x7a5a30, 0x9c7a3c], // isabella
+			[0xb5522a, 0x8a3a1c, 0x8a5a40, 0x4a2a1a, 0x6e341a], // sauro
+			[0x1e1e1e, 0x0b0b0b, 0x3a3a3a, 0x0d0d0d, 0x111111]  // nero
+		];
+		const hc = horsePalette[Math.floor(Math.random() * horsePalette.length)];
 
+		// --- MATERIALI ---
+		const brownMainMat = new THREE.MeshLambertMaterial({ color: hc[0] });
+		const darkBrownMat = new THREE.MeshLambertMaterial({ color: hc[1] });
+		const greyMuzzleMat = new THREE.MeshLambertMaterial({ color: hc[2] });
+		const darkGreyMat = new THREE.MeshLambertMaterial({ color: hc[3] });
+		const baseMat = new THREE.MeshLambertMaterial({ color: hc[4] });
+		const eyeWhiteMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+		const pupilMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+		
 		// --- BASE ---
 		const base = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.64, 0.16, 0.64) : getCachedGeometry('box', 0.64, 0.16, 0.64),
@@ -1682,17 +1671,20 @@ function createPlayerRobloxOLD() {
 	//VOLPETTA
 	function createPlayerFox() {
 		const group = new THREE.Group();
-
+		
+		const foxPalette = [
+			0xf08c3c, // arancione (originale)
+			0xd2491a, // rossa
+			0x8a5a3a  // marrone
+		];
+		
 		// Materiali
 		const orangeMat = new THREE.MeshLambertMaterial({
-			color: 0xf08c3c
+			color: foxPalette[Math.floor(Math.random() * foxPalette.length)]
 		});
-		const whiteMat = new THREE.MeshLambertMaterial({
-			color: 0xf4f4f8
-		});
-		const darkMat = new THREE.MeshLambertMaterial({
-			color: 0x2b2b33
-		});
+		
+		const whiteMat = new THREE.MeshLambertMaterial({ color: 0xf4f4f8 });
+		const darkMat = new THREE.MeshLambertMaterial({ color: 0x2b2b33 });
 
 		// 1. Zampe nere agli angoli
 		const footGeo = !useCache ? new THREE.BoxGeometry(0.2, 0.06, 0.2) : getCachedGeometry('box', 0.2, 0.06, 0.2);
@@ -1807,29 +1799,24 @@ function createPlayerRobloxOLD() {
 	function createPlayerOwl() {
 		const group = new THREE.Group();
 
-		// --- MATERIALI ---
-		const brownMat = new THREE.MeshLambertMaterial({
-			color: 0x814E30
-		}); // Marrone principale (Testa/Ali)
-		const tanMat = new THREE.MeshLambertMaterial({
-			color: 0xD2B48C
-		}); // Beige/crema (Faccia/Petto)
-		const eyeScleraMat = new THREE.MeshLambertMaterial({
-			color: 0xFFD700
-		}); // Giallo acceso (Occhi grandi)
-		const pupilMat = new THREE.MeshLambertMaterial({
-			color: 0x111111
-		}); // Nero (Pupille)
-		const beakMat = new THREE.MeshLambertMaterial({
-			color: 0xFFA500
-		}); // Arancione (Becco)
-		const clawMat = new THREE.MeshLambertMaterial({
-			color: 0x555555
-		}); // Grigio scuro (Zampa/Artigli)
-		const spotMat = new THREE.MeshLambertMaterial({
-			color: 0x613A1F
-		}); // Marrone scuro (Macchie petto)
+		const owlPalette = [
+			[0x814E30, 0xD2B48C, 0x613A1F], // originale
+			[0xa8754f, 0xe6d3b0, 0x7e5535], // marrone più chiaro
+			[0xc49a6c, 0xf0e2c8, 0x946a43], // marrone chiarissimo
+			[0x5e3720, 0xb89a74, 0x40250f], // marrone più scuro
+			[0x3e2616, 0x9c8160, 0x2a190d]  // marrone molto scuro
+		];
+		const owlColor = owlPalette[Math.floor(Math.random() * owlPalette.length)];
 
+		// --- MATERIALI ---
+		const brownMat = new THREE.MeshLambertMaterial({ color: owlColor[0] });
+		const tanMat = new THREE.MeshLambertMaterial({ color: owlColor[1] });
+		const spotMat = new THREE.MeshLambertMaterial({ color: owlColor[2] });
+		const eyeScleraMat = new THREE.MeshLambertMaterial({ color: 0xFFD700 }); // Giallo acceso (Occhi grandi)
+		const pupilMat = new THREE.MeshLambertMaterial({ color: 0x111111 }); // Nero (Pupille)
+		const beakMat = new THREE.MeshLambertMaterial({ color: 0xFFA500 }); // Arancione (Becco)
+		const clawMat = new THREE.MeshLambertMaterial({ color: 0x555555 }); // Grigio scuro (Zampa/Artigli)
+		
 		// --- CORPO E TESTA (Un unico blocco principale) ---
 		const body = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.55, 0.65, 0.5) : getCachedGeometry('box', 0.55, 0.65, 0.5),
@@ -1942,11 +1929,19 @@ function createPlayerRobloxOLD() {
 	// SONO BENDER CHE TI OFFENDER!
 	function createPlayerBender() {
 		const group = new THREE.Group();
+		
+		const benderPalette = [
+			[0x8a9ba8, 0x5a6975, 0x5a6975], // acciaio (originale)
+			[0xf1c232, 0xb8860b, 0xb8860b], // oro
+			[0xc2a37a, 0x8f7650, 0x8f7650], // marroncino chiaro
+			[0xa0522d, 0x6e3216, 0x6e3216]  // ruggine
+		];
+		const benderColor = benderPalette[Math.floor(Math.random() * benderPalette.length)];
 
 		// --- MATERIALI ---
-		const metalMat = new THREE.MeshLambertMaterial({ color: 0x8a9ba8 }); // Grigio metallico Bender
-		const darkMetalMat = new THREE.MeshLambertMaterial({ color: 0x5a6975 }); // Dettagli metallo scuro
-		const visorMat = new THREE.MeshLambertMaterial({ color: 0x5a6975 }); // Visore grigio
+		const metalMat = new THREE.MeshLambertMaterial({ color: benderColor[0] });
+		const darkMetalMat = new THREE.MeshLambertMaterial({ color: benderColor[1] });
+		const visorMat = new THREE.MeshLambertMaterial({ color: benderColor[2] });
 		const eyeBgMat = new THREE.MeshLambertMaterial({ color: 0x050505 }); // Sfondo nero rettangolare per gli occhi
 		const eyeMat = new THREE.MeshLambertMaterial({ color: 0xffffff }); // Occhi BIANCHI
 		const pupilMat = new THREE.MeshLambertMaterial({ color: 0x000000 }); // Pupille NERE
@@ -2286,11 +2281,18 @@ function createPlayerRobloxOLD() {
 	function createPlayerChicken() {
 		const group = new THREE.Group();
 
+		const chickenPalette = [
+			{ body: 0xffffff, wing: 0xe0e0e0, crest: 0xe74c3c, eye: 0x111111 }, // bianco (originale)
+			{ body: 0xe67e22, wing: 0xc86a14, crest: 0xe74c3c, eye: 0x111111 }, // arancione
+			{ body: 0xa93226, wing: 0x8a281e, crest: 0xff4d3d, eye: 0x111111 }, // rosso
+			{ body: 0x222222, wing: 0x111111, crest: 0xe74c3c, eye: 0xffffff }  // nero (occhi chiari)
+		];
+		const cc = chickenPalette[Math.floor(Math.random() * chickenPalette.length)];
+		const crestMat = new THREE.MeshLambertMaterial({ color: cc.crest });
+
 		const body = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.6, 0.6, 0.6) : getCachedGeometry('box', 0.6, 0.6, 0.6),
-			new THREE.MeshLambertMaterial({
-				color: 0xffffff
-			})
+			new THREE.MeshLambertMaterial({ color: cc.body })
 		);
 		body.position.y = 0.3;
 		body.castShadow = true;
@@ -2298,35 +2300,27 @@ function createPlayerRobloxOLD() {
 
 		const crest = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.15, 0.2, 0.3) : getCachedGeometry('box', 0.15, 0.2, 0.3),
-			new THREE.MeshLambertMaterial({
-				color: 0xe74c3c
-			})
+			crestMat
 		);
 		crest.position.set(0, 0.7, 0);
 		group.add(crest);
 
 		const beak = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.2, 0.15, 0.25) : getCachedGeometry('box', 0.2, 0.15, 0.25),
-			new THREE.MeshLambertMaterial({
-				color: 0xf39c12
-			})
+			new THREE.MeshLambertMaterial({ color: 0xf39c12 })
 		);
 		beak.position.set(0, 0.38, -0.4);
 		group.add(beak);
 
 		const wattle = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.12, 0.15, 0.12) : getCachedGeometry('box', 0.12, 0.15, 0.12),
-			new THREE.MeshLambertMaterial({
-				color: 0xe74c3c
-			})
+			crestMat
 		);
 		wattle.position.set(0, 0.22, -0.36);
 		group.add(wattle);
 
 		const eyeGeo = !useCache ? new THREE.BoxGeometry(0.08, 0.12, 0.08) : getCachedGeometry('box', 0.08, 0.12, 0.08);
-		const eyeMat = new THREE.MeshLambertMaterial({
-			color: 0x111111
-		});
+		const eyeMat = new THREE.MeshLambertMaterial({ color: cc.eye });
 
 		const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
 		leftEye.position.set(-0.31, 0.42, -0.20);
@@ -2336,11 +2330,8 @@ function createPlayerRobloxOLD() {
 		rightEye.position.set(0.31, 0.42, -0.20);
 		group.add(rightEye);
 
-		// ALI (due box ai lati, attaccate al cubo del corpo)
 		const wingGeo = !useCache ? new THREE.BoxGeometry(0.08, 0.32, 0.30) : getCachedGeometry('box', 0.08, 0.32, 0.30);
-		const wingMat = new THREE.MeshLambertMaterial({
-			color: 0xe0e0e0
-		}); // un filo più scuro del corpo, così si staccano
+		const wingMat = new THREE.MeshLambertMaterial({ color: cc.wing });
 
 		const leftWing = new THREE.Mesh(wingGeo, wingMat);
 		leftWing.position.set(-0.34, 0.28, 0.1);
@@ -2353,9 +2344,7 @@ function createPlayerRobloxOLD() {
 		group.add(rightWing);
 
 		group.position.set(0, 0, 0);
-
 		applyCurrentVisualMode(group);
-
 		scene.add(group);
 		return group;
 	}
@@ -2363,26 +2352,21 @@ function createPlayerRobloxOLD() {
 	//IL PULCINO PIO!
 	function createPlayerChick() {
 		const group = new THREE.Group();
-
+		
+		const chickPalette = [
+			[0xffd93b, 0xffc41f], // giallo (originale)
+			[0xffffff, 0xe6e6e6], // bianco
+			[0xdff5c8, 0xc2e6a0]  // verde chiarissimo
+		];
+		const chickColor = chickPalette[Math.floor(Math.random() * chickPalette.length)];
+		
 		// Materiali
-		const yellowMat = new THREE.MeshLambertMaterial({
-			color: 0xffd93b
-		}); // Giallo pulcino (corpo)
-		const wingMat = new THREE.MeshLambertMaterial({
-			color: 0xffc41f
-		}); // Giallo più scuro (alette/ciuffo)
-		const orangeMat = new THREE.MeshLambertMaterial({
-			color: 0xff8f1f
-		}); // Arancione (becco/zampette)
-		const cheekMat = new THREE.MeshLambertMaterial({
-			color: 0xff9e7a
-		}); // Rosa (guance)
-		const eyeMat = new THREE.MeshLambertMaterial({
-			color: 0x111111
-		}); // Nero (occhi)
-		const whiteMat = new THREE.MeshLambertMaterial({
-			color: 0xffffff
-		}); // Bianco (riflesso)
+		const yellowMat = new THREE.MeshLambertMaterial({ color: chickColor[0] }); // Corpo
+		const wingMat = new THREE.MeshLambertMaterial({ color: chickColor[1] });   // Alette/ciuffo
+		const orangeMat = new THREE.MeshLambertMaterial({ color: 0xff8f1f }); // Arancione (becco/zampette)
+		const cheekMat = new THREE.MeshLambertMaterial({ color: 0xff9e7a }); // Rosa (guance)
+		const eyeMat = new THREE.MeshLambertMaterial({ color: 0x111111 }); // Nero (occhi)
+		const whiteMat = new THREE.MeshLambertMaterial({ color: 0xffffff }); // Bianco (riflesso)
 
 		// 1. Zampette arancioni piatte che sporgono davanti
 		const footGeo = !useCache ? new THREE.BoxGeometry(0.14, 0.04, 0.22) : getCachedGeometry('box', 0.14, 0.04, 0.22);
@@ -2578,20 +2562,22 @@ function createPlayerRobloxOLD() {
 	// LUMACA!!!
 	function createPlayerSnail() {
 		const group = new THREE.Group();
+		
+		const snailPalette = [
+			[0x7e5109, 0xb9770e], // marrone (originale)
+			[0xe0b800, 0xf7dc4a], // giallo
+			[0x2e8b3a, 0x62b86a], // verde
+			[0xb08a5a, 0xd9bf94], // marrone chiaro
+			[0x4a2c11, 0x7a4a22]  // marrone scuro
+		];
+		const snailColor = snailPalette[Math.floor(Math.random() * snailPalette.length)];
 
+		
 		// Materiali
-		const bodyMat = new THREE.MeshLambertMaterial({
-			color: 0xd4ac0d
-		}); // Corpo (Beige)
-		const shellMat = new THREE.MeshLambertMaterial({
-			color: 0x7e5109
-		}); // Guscio base (Marrone scuro)
-		const spiralMat = new THREE.MeshLambertMaterial({
-			color: 0xb9770e
-		}); // Spirale (Marrone chiaro)
-		const eyeMat = new THREE.MeshLambertMaterial({
-			color: 0x111111
-		}); // Occhi (Nero)
+		const bodyMat = new THREE.MeshLambertMaterial({ color: 0xd4ac0d }); // Corpo (Beige)
+		const shellMat = new THREE.MeshLambertMaterial({ color: snailColor[0] }); // Guscio base
+		const spiralMat = new THREE.MeshLambertMaterial({ color: snailColor[1] }); // Spirale
+		const eyeMat = new THREE.MeshLambertMaterial({ color: 0x111111 }); // Occhi (Nero)
 
 		// 1. Corpo base
 		const body = new THREE.Mesh(
@@ -2918,20 +2904,20 @@ function createPlayerRobloxOLD() {
 	// U PUORC
 	function createPlayerPig() {
 		const group = new THREE.Group();
+		
+		const pigPalette = [
+			[0xffb6c1, 0xff8da1, 0x8d5b4c], // rosa (originale)
+			[0xe8809a, 0xd0647f, 0x8d5b4c], // rosa scuro
+			[0xff4fb8, 0xd6339a, 0x7a2a5e], // fucsia
+			[0x8d6e53, 0x6b4f3a, 0x3b2a1f]  // cinghiale
+		];
+		const pigColor = pigPalette[Math.floor(Math.random() * pigPalette.length)];
 
 		// Materiali
-		const bodyMat = new THREE.MeshLambertMaterial({
-			color: 0xffb6c1
-		}); // Rosa chiaro (Corpo)
-		const snoutMat = new THREE.MeshLambertMaterial({
-			color: 0xff8da1
-		}); // Rosa scuro (Muso/Orecchie)
-		const hoofMat = new THREE.MeshLambertMaterial({
-			color: 0x8d5b4c
-		}); // Marrone (Zoccoli)
-		const eyeMat = new THREE.MeshLambertMaterial({
-			color: 0x111111
-		}); // Nero (Occhi)
+		const bodyMat = new THREE.MeshLambertMaterial({ color: pigColor[0] });
+		const snoutMat = new THREE.MeshLambertMaterial({ color: pigColor[1] });
+		const hoofMat = new THREE.MeshLambertMaterial({ color: pigColor[2] });
+		const eyeMat = new THREE.MeshLambertMaterial({ color: 0x111111 }); // Nero (Occhi)
 
 		// 1. Corpo base (rettangolare e cicciottello)
 		const body = new THREE.Mesh(
@@ -3208,16 +3194,30 @@ function createPlayerRobloxOLD() {
 	// minion!
 	function createPlayerMinion() {
 		const group = new THREE.Group();
+		
+		const minionSkinPalette = [
+			0xFFD500, // giallo (originale)
+			0xC3A6F0  // viola chiaro
+		];
+		const minionOverallPalette = [
+			[0x0055B8, 0x222222], // blu (originale)
+			[0x1c1c1c, 0x777777], // nera (bottoni più chiari per vederli)
+			[0x7f8c8d, 0x222222], // grigia
+			[0x5dade2, 0x222222]  // azzurra
+		];
 
 		// Materiali
-		const yellowMat = new THREE.MeshLambertMaterial({ color: 0xFFD500 }); // Giallo Minion
-		const blueMat = new THREE.MeshLambertMaterial({ color: 0x0055B8 }); // Blu Salopette
+		const minionSkin = minionSkinPalette[Math.floor(Math.random() * minionSkinPalette.length)];
+		const minionOverall = minionOverallPalette[Math.floor(Math.random() * minionOverallPalette.length)];
+
+		const yellowMat = new THREE.MeshLambertMaterial({ color: minionSkin });       // Pelle
+		const blueMat = new THREE.MeshLambertMaterial({ color: minionOverall[0] });   // Tuta
+		const buttonMat = new THREE.MeshLambertMaterial({ color: minionOverall[1] }); // Bottoni
 		const blackMat = new THREE.MeshLambertMaterial({ color: 0x111111 }); // Nero (Fascia, guanti, scarpe)
 		const silverMat = new THREE.MeshLambertMaterial({ color: 0x888888 }); // Grigio (Montatura occhiale)
 		const whiteMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF }); // Bianco (Sclera occhio)
 		const eyeMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 }); // Marrone (Iride/Occhio)
-		const buttonMat = new THREE.MeshLambertMaterial({ color: 0x222222 }); // Nero/Nocciola (Bottoni)
-
+		
 		// 1. Corpo principale (Giallo)
 		const body = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.5, 0.7, 0.5) : getCachedGeometry('box', 0.5, 0.7, 0.5),
@@ -6637,6 +6637,15 @@ walkSideLimbs = -walkSideLimbs;
 	bindTouchButton('btn-shadows', () => {
 		isShadows = !isShadows;
 		dirLight.castShadow = isShadows;
+
+		applyPointLightsMode(scene);
+
+		// Cambiando il numero di luci attive, i materiali Lambert vanno ricompilati
+		scene.traverse(o => {
+			if (!o.isMesh || !o.material) return;
+			(Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.needsUpdate = true);
+		});
+
 		document.getElementById('btn-shadows').classList.toggle('toggled-on', isShadows);
 	});
 
@@ -7646,8 +7655,15 @@ updatePlayerLimbs();
 			}
 		});
 	}
+	
+	function applyPointLightsMode(target = scene) {
+		target.traverse(child => {
+			if (child.isPointLight) child.visible = isShadows;
+		});
+	}
 
 	function applyCurrentVisualMode(target) {
+		applyPointLightsMode(target);
 		if (isWireframe) {
 			toggleWorldWireframeOverlay(target, true);
 		}
