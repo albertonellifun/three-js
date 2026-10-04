@@ -2447,23 +2447,25 @@ function createPlayerRobloxOLD() {
 	function createPlayerPumpkin() {
 		const group = new THREE.Group();
 
-		const bodyMat = new THREE.MeshLambertMaterial({
-			color: 0xff7f11
-		});
-		const topMat = new THREE.MeshLambertMaterial({
-			color: 0xe8690a
-		}); // gradino superiore, più scuro
-		const leafMat = new THREE.MeshLambertMaterial({
-			color: 0x4a9c3f
-		}); // ciuffo verde
-		const leafDarkMat = new THREE.MeshLambertMaterial({
-			color: 0x357a2c
-		});
+		const pumpkinPalette = [
+			// [corpo, gradino, ciuffo, ciuffo scuro, bagliore occhi/luce]
+			[0xff7f11, 0xe8690a, 0x4a9c3f, 0x357a2c, 0xffcc33], // arancione (originale)
+			[0xf2efe6, 0xd6d0bf, 0x4a9c3f, 0x357a2c, 0xfff2b0], // bianca
+			[0x6aa84f, 0x4f8a3a, 0x8a5a2b, 0x5e3d1c, 0xb6ff5a], // verde (picciolo marrone)
+			[0x7d3cb5, 0x5e2a8c, 0x4a9c3f, 0x357a2c, 0xd58aff], // viola
+			[0xc0392b, 0x962d22, 0x4a9c3f, 0x357a2c, 0xff6a3a]  // rossa
+		];
+		const pc = pumpkinPalette[Math.floor(Math.random() * pumpkinPalette.length)];
 
-		// Solo gli occhi sono emissivi (restano lucenti anche senza luce diretta)
+		const bodyMat = new THREE.MeshLambertMaterial({ color: pc[0] });
+		const topMat = new THREE.MeshLambertMaterial({ color: pc[1] });
+		const leafMat = new THREE.MeshLambertMaterial({ color: pc[2] });
+		const leafDarkMat = new THREE.MeshLambertMaterial({ color: pc[3] });
+
+		// Solo gli occhi sono emissivi
 		const eyeGlowMat = new THREE.MeshLambertMaterial({
 			color: 0x1a0d00,
-			emissive: 0xffcc33,
+			emissive: pc[4],
 			emissiveIntensity: 1.4
 		});
 
@@ -2548,7 +2550,7 @@ function createPlayerRobloxOLD() {
 		});
 
 		// --- LUCE VERA: emana dagli occhi e illumina davvero l'ambiente circostante ---
-		const glow = new THREE.PointLight(0xffaa33, 1.5, 3.5);
+		const glow = new THREE.PointLight(pc[4], 1.5, 3.5);
 		glow.position.set(0, 0.45, -0.30);
 		group.add(glow);
 
@@ -4712,8 +4714,13 @@ function createPlayerRobloxOLD() {
 	function createTreeMesh(col1 = 0x2e7d32, col2 = 0x388e3c) {
 		if (currentPlayerType === 'pumpkin') return createDeadTreeMesh();
 		const group = new THREE.Group();
-		const isTall = Math.random() > 0.5;
 
+		// 3 tipi: 'tall' (alto), 'short' (basso, originale), 'wide' (chioma bassa e larga)
+		const roll = Math.random();
+		const treeType = roll < 0.30 ? 'tall' : roll < 0.80 ? 'short' : 'wide';
+		const isTall = treeType === 'tall';
+
+		// Il fusto è identico per tutti: stessa sezione 0.3x0.3, altezza 0.8 per l'alto, 0.5 per gli altri
 		const trunkHeight = isTall ? 0.8 : 0.5;
 		const trunk = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.3, trunkHeight, 0.3) : getCachedGeometry('box', 0.3, trunkHeight, 0.3),
@@ -4725,26 +4732,50 @@ function createPlayerRobloxOLD() {
 		trunk.castShadow = true;
 		group.add(trunk);
 
-		const leavesBottom = new THREE.Mesh(
-			!useCache ? new THREE.BoxGeometry(0.70, 0.75, 0.70) : getCachedGeometry('box', 0.70, 0.75, 0.70),
-			new THREE.MeshLambertMaterial({
-				color: col1
-			})
-		);
-		leavesBottom.position.y = trunkHeight + 0.35;
-		leavesBottom.castShadow = true;
-		group.add(leavesBottom);
+		if (treeType === 'wide') {
+			// Chioma più bassa e appena più larga (0.85 x 0.5 x 0.85, entra comunque nella casella 1x1)
+			const leavesWide = new THREE.Mesh(
+				!useCache ? new THREE.BoxGeometry(0.85, 0.50, 0.85) : getCachedGeometry('box', 0.85, 0.50, 0.85),
+				new THREE.MeshLambertMaterial({
+					color: col1
+				})
+			);
+			leavesWide.position.y = trunkHeight + 0.25 - 0.02; // leggermente affondata nel fusto, niente buchi
+			leavesWide.castShadow = true;
+			group.add(leavesWide);
 
-		if (isTall) {
-			const leavesTop = new THREE.Mesh(
-				!useCache ? new THREE.BoxGeometry(0.60, 0.20, 0.60) : getCachedGeometry('box', 0.60, 0.20, 0.60),
+			// Gradino sopra, più stretto, in col2 per dare volume
+			const leavesCap = new THREE.Mesh(
+				!useCache ? new THREE.BoxGeometry(0.65, 0.12, 0.65) : getCachedGeometry('box', 0.65, 0.12, 0.65),
 				new THREE.MeshLambertMaterial({
 					color: col2
 				})
 			);
-			leavesTop.position.y = trunkHeight + 0.85;
-			leavesTop.castShadow = true;
-			group.add(leavesTop);
+			leavesCap.position.y = trunkHeight + 0.50 + 0.04;
+			leavesCap.castShadow = true;
+			group.add(leavesCap);
+		} else {
+			const leavesBottom = new THREE.Mesh(
+				!useCache ? new THREE.BoxGeometry(0.70, 0.75, 0.70) : getCachedGeometry('box', 0.70, 0.75, 0.70),
+				new THREE.MeshLambertMaterial({
+					color: col1
+				})
+			);
+			leavesBottom.position.y = trunkHeight + 0.35;
+			leavesBottom.castShadow = true;
+			group.add(leavesBottom);
+
+			if (isTall) {
+				const leavesTop = new THREE.Mesh(
+					!useCache ? new THREE.BoxGeometry(0.60, 0.20, 0.60) : getCachedGeometry('box', 0.60, 0.20, 0.60),
+					new THREE.MeshLambertMaterial({
+						color: col2
+					})
+				);
+				leavesTop.position.y = trunkHeight + 0.85;
+				leavesTop.castShadow = true;
+				group.add(leavesTop);
+			}
 		}
 
 		applyCurrentVisualMode(group);
