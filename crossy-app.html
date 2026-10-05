@@ -438,6 +438,12 @@
   <audio id="deadSoundRoblox" preload="auto">
     <source src="./crossy-dead-roblox.mp3" type="audio/mpeg">
   </audio>
+  <audio id="deadSoundPanda" preload="auto">
+    <source src="./crossy-dead-panda.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="deadSoundInvaders" preload="auto">
+    <source src="./crossy-dead-invader.mp3" type="audio/mpeg">
+  </audio>
   
   <audio id="trainSound" preload="auto">
     <source src="./crossy-train.mp3" type="audio/mpeg">
@@ -671,6 +677,8 @@
 	let currentPlayerType = isHalloweenWeek() ? 'pumpkin' : 'rockygraffietto'; // tiene traccia del modello attivo
 	if (currentPlayerType === 'pumpkin') document.getElementById('btn-player').innerText = '🎃';
 	let currentPlayerDeadSound = isHalloweenWeek() ? 'deadSoundPumpkin' : 'deadSoundCat';
+	
+	let currentPaletteIndex = (Math.random() * 10) | 0;
 
 
 	function refreshPlayerModel() {
@@ -701,6 +709,8 @@
 			case 'rockygraffietto': player = createPlayerRockyGraffietto(); break;
 			case 'siamese': player = createPlayerSiamese(); break;
 			case 'chicken': player = createPlayerChicken();	break;
+			case 'panda': player = createPlayerPanda(); break;
+			case 'invaders': player = createPlayerInvaders(); break;
 		}
 
 		player.position.copy(pos);
@@ -817,6 +827,20 @@
 				break;
 
 			case 'pumpkin':
+				currentPlayerType = 'panda';
+				player = createPlayerPanda();
+				document.getElementById('btn-player').innerText = '🐼​';
+				currentPlayerDeadSound = 'deadSoundPanda';
+				break;
+				
+			case 'panda':
+				currentPlayerType = 'invaders';
+				player = createPlayerInvaders();
+				document.getElementById('btn-player').innerText = '👾';
+				currentPlayerDeadSound = 'deadSoundInvaders';
+				break;
+				
+			case 'invaders':
 				currentPlayerType = 'unicorn';
 				player = createPlayerUnicorn();
 				document.getElementById('btn-player').innerText = '🦄';
@@ -849,6 +873,162 @@
 		player.rotation.y = rotY;
 		player.visible = wasVisible;
 	}
+	
+	//SPACE INVADERS: BENTORNATI NEGLI ANNI 80!
+	function createPlayerInvaders() {
+		const group = new THREE.Group();
+
+		const pattern = [
+			'..#.....#..',
+			'...#...#...',
+			'..#######..',
+		    '.##O###O##.',
+			'###########',
+			'#.#######.#',
+			'#.#.....#.#',
+			'..#.....#..',
+			'...##.##...'
+		];
+
+		const invPalette = [
+			0x9b59d0, // viola
+			0x39d353, // verde classico
+			0x2ec4d6, // ciano
+			0xff8800, // arancione
+			0xe0443a, // rosso
+			0xf0f0f0, // bianco
+			0xffff00  // giallo
+		];
+		const invColor = invPalette[(++currentPaletteIndex % invPalette.length)];
+		
+		const bodyMat = new THREE.MeshLambertMaterial({ color: invColor });
+		const eyeMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+
+		const CELL = 0.08, DEPTH = 0.3, BASE_Y = 0.04;
+		const EYE_T = 0.01, EYE_OUT = 0.01; // spessore piastra e sporgenza davanti al corpo
+		const cols = pattern[0].length;
+		const rows = pattern.length;
+		const box = (w, h, d) => !useCache ? new THREE.BoxGeometry(w, h, d) : getCachedGeometry('box', w, h, d);
+		const rowY = r => BASE_Y + (rows - 1 - r + 0.5) * CELL;
+		const isFilled = ch => ch === '#' || ch === 'O';
+
+		pattern.forEach((row, r) => {
+			// Un blocco per ogni tratto continuo di pixel pieni ('#' e 'o')
+			let c = 0;
+			while (c < cols) {
+				if (!isFilled(row[c])) { c++; continue; }
+				let end = c;
+				while (end + 1 < cols && isFilled(row[end + 1])) end++;
+				const len = end - c + 1;
+				const m = new THREE.Mesh(box(len * CELL, CELL, DEPTH), bodyMat);
+				m.position.set(((c + end + 1) / 2 - cols / 2) * CELL, rowY(r), 0);
+				m.castShadow = true;
+				group.add(m);
+				c = end + 1;
+			}
+
+			// Piastre nere degli occhi, solo davanti (-z)
+			for (let k = 0; k < cols; k++) {
+				if (row[k] !== 'O') continue;
+				const eye = new THREE.Mesh(box(CELL, CELL, EYE_T), eyeMat);
+				eye.position.set((k + 0.5 - cols / 2) * CELL, rowY(r), -DEPTH / 2 - EYE_OUT + EYE_T / 2);
+				group.add(eye);
+			}
+		});
+
+		group.position.set(0, 0, 0);
+		applyCurrentVisualMode(group);
+		scene.add(group);
+		return group;
+	}
+	
+	
+	// PANDA
+	function createPlayerPanda() {
+		const group = new THREE.Group();
+
+		const pandaPalette = [
+			// [chiaro (corpo/testa), scuro (zampe/orecchie/macchie), muso]
+			[0xf5f5f0, 0x1a1a1a, 0xe0ddd2], // bianco e nero (originale)
+			[0xf5f5f0, 0x2f5fa8, 0xdfe6f0], // bianco e blu
+			[0xe9d0c4, 0x4a2c11, 0xe0c9a6], // marrone chiaro / scuro
+			[0xf5f5f0, 0xe8809a, 0xf3dfe3]  // bianco e rosa
+		];
+		const pc = pandaPalette[(++currentPaletteIndex % pandaPalette.length)];
+
+		const whiteMat = new THREE.MeshLambertMaterial({ color: pc[0] });
+		const blackMat = new THREE.MeshLambertMaterial({ color: pc[1] });
+		const snoutMat = new THREE.MeshLambertMaterial({ color: pc[2] });
+		const eyeMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+		const pupilMat = new THREE.MeshLambertMaterial({ color: 0x111111 }); // pupille e naso sempre scuri
+
+		const box = (w, h, d) => !useCache ? new THREE.BoxGeometry(w, h, d) : getCachedGeometry('box', w, h, d);
+		const add = (w, h, d, mat, x, y, z, shadow = false) => {
+			const m = new THREE.Mesh(box(w, h, d), mat);
+			m.position.set(x, y, z);
+			m.castShadow = shadow;
+			group.add(m);
+			return m;
+		};
+
+		const limbs = {};
+
+		// Gambe scure: pivot all'anca
+		const HIP_Y = 0.2;
+		[-1, 1].forEach(s => {
+			const pivot = new THREE.Group();
+			pivot.position.set(s * 0.16, HIP_Y, 0);
+			const leg = new THREE.Mesh(box(0.2, 0.2, 0.24), blackMat);
+			leg.position.set(0, -0.1, 0);
+			leg.castShadow = true;
+			pivot.add(leg);
+			group.add(pivot);
+			limbs[s < 0 ? 'legL' : 'legR'] = pivot;
+		});
+
+		// Corpo chiaro + fascia scura sulle spalle
+		add(0.6, 0.4, 0.5, whiteMat, 0, 0.4, 0, true);
+		add(0.62, 0.12, 0.52, blackMat, 0, 0.52, 0);
+
+		// Braccia scure: pivot alla spalla
+		const SHOULDER_Y = 0.58;
+		[-1, 1].forEach(s => {
+			const pivot = new THREE.Group();
+			pivot.position.set(s * 0.38, SHOULDER_Y, 0);
+			const arm = new THREE.Mesh(box(0.14, 0.32, 0.2), blackMat);
+			arm.position.set(0, -0.16, 0);
+			arm.castShadow = true;
+			pivot.add(arm);
+			group.add(pivot);
+			limbs[s < 0 ? 'armL' : 'armR'] = pivot;
+		});
+		group.userData.limbs = limbs;
+
+		// Testa
+		add(0.56, 0.44, 0.46, whiteMat, 0, 0.82, -0.02, true);
+
+		// Orecchie scure
+		[-1, 1].forEach(s => add(0.14, 0.14, 0.1, blackMat, s * 0.22, 1.08, -0.02));
+
+		// Macchie scure attorno agli occhi + occhi con pupilla
+		[-1, 1].forEach(s => {
+			add(0.14, 0.17, 0.03, blackMat, s * 0.14, 0.84, -0.255);
+			add(0.05, 0.05, 0.03, eyeMat, s * 0.14, 0.85, -0.27);
+			add(0.025, 0.025, 0.03, pupilMat, s * 0.14, 0.85, -0.285);
+		});
+
+		// Muso e naso
+		add(0.2, 0.14, 0.08, snoutMat, 0, 0.74, -0.27);
+		add(0.08, 0.05, 0.04, pupilMat, 0, 0.78, -0.325);
+
+		// Codina
+		add(0.12, 0.12, 0.1, whiteMat, 0, 0.32, 0.29);
+
+		group.position.set(0, 0, 0);
+		applyCurrentVisualMode(group);
+		scene.add(group);
+		return group;
+	}
 
 	// UNICORNO PER AURORA
 	function createPlayerUnicorn() {
@@ -861,7 +1041,7 @@
 			[0xd9fff3, 0x1abc9c, 0xff7ad9, 0x1abc9c], // menta / criniera turchese / corno rosa
 			[0xfff0c9, 0x4a90e2, 0xff6f91, 0x4a90e2]  // crema / criniera blu / corno corallo
 		];
-		const uc = unicornPalette[Math.floor(Math.random() * unicornPalette.length)];
+		const uc = unicornPalette[(++currentPaletteIndex % unicornPalette.length)];
 
 		// --- MATERIALI UNICORNO ---
 		const whiteBodyMat = new THREE.MeshLambertMaterial({ color: uc[0] });
@@ -1004,7 +1184,7 @@
 			[0xb5522a, 0x8a3a1c, 0x8a5a40, 0x4a2a1a, 0x6e341a], // sauro
 			[0x1e1e1e, 0x0b0b0b, 0x3a3a3a, 0x0d0d0d, 0x111111]  // nero
 		];
-		const hc = horsePalette[Math.floor(Math.random() * horsePalette.length)];
+		const hc = horsePalette[(++currentPaletteIndex % horsePalette.length)];
 
 		// --- MATERIALI ---
 		const brownMainMat = new THREE.MeshLambertMaterial({ color: hc[0] });
@@ -1371,193 +1551,6 @@ function createPlayerRoblox() {
 }
 
 
-function createPlayerRobloxOLD() {
-	const group = new THREE.Group();
-
-	// 1) Colori casuali per maglietta e gambe (sempre diversi tra loro)
-	const robloxPalette = [
-		0x1670bb, // blu
-		0xc0392b, // rosso
-		0x27ae60, // verde
-		0x8e44ad, // viola
-		0xe67e22, // arancione
-		0x16a085, // turchese
-		0xe84393, // rosa
-		0x2c3e50, // blu notte
-		0xa0b030, // verde oliva
-		0x7f8c8d, // grigio
-		0x4a2c11  // marrone
-	];
-	const shirtCol = robloxPalette[Math.floor(Math.random() * robloxPalette.length)];
-	let legsCol = robloxPalette[Math.floor(Math.random() * robloxPalette.length)];
-	while (legsCol === shirtCol) {
-		legsCol = robloxPalette[Math.floor(Math.random() * robloxPalette.length)];
-	}
-
-	// Colori classici del noob? naaaah!
-	const yellowMat = new THREE.MeshLambertMaterial({ color: 0xf5cd30 }); // testa e braccia
-	const blueMat   = new THREE.MeshLambertMaterial({ color: shirtCol }); // torso
-	const greenMat  = new THREE.MeshLambertMaterial({ color: legsCol });  // gambe
-	const blackMat  = new THREE.MeshLambertMaterial({ color: 0x111111 }); // occhi e sorriso
-
-	const box = (w, h, d) => !useCache ? new THREE.BoxGeometry(w, h, d) : getCachedGeometry('box', w, h, d);
-	const add = (w, h, d, mat, x, y, z, shadow = false) => {
-		const m = new THREE.Mesh(box(w, h, d), mat);
-		m.position.set(x, y, z);
-		m.castShadow = shadow;
-		group.add(m);
-		return m;
-	};
-
-	// Proporzioni (il fronte guarda verso -z)
-	const TORSO_H = 0.40;
-	const TORSO_W = 0.50;
-	const DEPTH = 0.28;
-	const HEAD_H = 0.28;
-	const LEG_H = 0.50;
-	const LEG_W = 0.25;
-	const LEG_GAP = 0.005;//distanza gambe
-	const ARM_W = 0.25;
-	const ARM_GAP = 0.002;//distanza braccio dal tronco (spalla)
-	const ARM_ANGLE = 0.1; //5 gradi circa
-
-	// 1. Gambe (due blocchi verdi con una sottile fessura al centro)
-	[-1, 1].forEach(s => {
-		add(LEG_W, LEG_H, DEPTH, greenMat, s * (LEG_W / 2 + LEG_GAP), LEG_H / 2, 0, true);
-	});
-
-	// 2. Torso blu
-	add(TORSO_W, TORSO_H, DEPTH, blueMat, 0, LEG_H + TORSO_H / 2, 0, true);
-
-	// 3. Braccia gialle, appena staccate dal torso
-	[-1, 1].forEach(s => {
-		//add(ARM_W, TORSO_H, DEPTH, yellowMat, s * (TORSO_W / 2 + ARM_W / 2 + ARM_GAP), LEG_H + TORSO_H / 2, 0, true);
-		
-		const pivot = new THREE.Group();
-		// il perno sta sull'angolo alto interno del braccio, a contatto con il torso
-		pivot.position.set(s * (TORSO_W / 2 + ARM_GAP), LEG_H + TORSO_H, 0);
-		pivot.rotation.z = s * ARM_ANGLE;
-
-		const arm = new THREE.Mesh(box(ARM_W, TORSO_H, DEPTH), yellowMat);
-		arm.position.set(s * ARM_W / 2, -TORSO_H / 2, 0); // il braccio pende sotto il perno
-		arm.castShadow = true;
-		pivot.add(arm);
-
-		group.add(pivot);
-	});
-	
-/*
-	// 4. Testa gialla
-	const headY = LEG_H + TORSO_H + HEAD_H / 2;
-	const headW = 0.34, headD = 0.30;
-	add(headW, HEAD_H, headD, yellowMat, 0, headY, 0, true);
-
-	// 5. Occhi ellittici (cilindri sottili ruotati verso il fronte e schiacciati in larghezza)
-	const faceZ = -headD / 2 - 0.005;
-	const eyeGeo = !useCache
-		? new THREE.CylinderGeometry(0.035, 0.035, 0.01, 16)
-		: getCachedGeometry('cylinder', 0.035, 0.035, 0.01, 16);
-	[-1, 1].forEach(s => {
-		const eye = new THREE.Mesh(eyeGeo, blackMat);
-		eye.rotation.x = Math.PI / 2;        // asse del cilindro lungo z (verso il fronte)
-		eye.scale.set(0.55, 1, 1);           // x = larghezza, z locale = altezza -> ellisse alta
-		eye.position.set(s * 0.065, headY + 0.055, faceZ);
-		group.add(eye);
-	});
-
-	// 6. Sorriso arcuato: parabola approssimata con 7 segmenti
-	const SMILE_HALF_W = 0.09;   // semilarghezza del sorriso
-	const SMILE_DEPTH  = 0.055;  // quanto salgono le estremità rispetto al centro
-	const SMILE_SEGS   = 7;
-	const smileCenterY = headY - 0.08;
-	const step = (SMILE_HALF_W * 2) / SMILE_SEGS;
-
-	for (let i = 0; i < SMILE_SEGS; i++) {
-		const x  = -SMILE_HALF_W + step * (i + 0.5);
-		const t  = x / SMILE_HALF_W;                              // -1..1
-		const y  = smileCenterY + SMILE_DEPTH * t * t;
-		const slope = 2 * SMILE_DEPTH * x / (SMILE_HALF_W * SMILE_HALF_W);
-		const ang = Math.atan(slope);
-		const len = step / Math.cos(ang) + 0.012;                 // leggera sovrapposizione tra segmenti
-
-		const seg = add(len, 0.022, 0.01, blackMat, x, y, faceZ);
-		seg.rotation.z = ang;
-	}
-*/
-	// 2) Testa cilindrica con micro-cupola
-	const headY = LEG_H + TORSO_H + HEAD_H / 2;
-	const HEAD_R = 0.17;
-	const DOME_H = 0.05; // altezza della cupola: più alto = più tonda
-
-	// Corpo della testa (accorciato della cupola, resta ancorato in basso)
-	const head = new THREE.Mesh(
-		!useCache ? new THREE.CylinderGeometry(HEAD_R, HEAD_R, HEAD_H - DOME_H, 24) : getCachedGeometry('cylinder', HEAD_R, HEAD_R, HEAD_H - DOME_H, 24),
-		yellowMat
-	);
-	head.position.set(0, headY - DOME_H / 2, 0);
-	head.castShadow = true;
-	group.add(head);
-
-	// Cupola: emisfero schiacciato in altezza
-	const dome = new THREE.Mesh(
-		!useCache ? new THREE.SphereGeometry(HEAD_R, 24, 8, 0, Math.PI * 2, 0, Math.PI / 2) : getCachedGeometry('sphere', HEAD_R, 24, 8, 0, Math.PI * 2, 0, Math.PI / 2),
-		yellowMat
-	);
-	dome.scale.y = DOME_H / HEAD_R;
-	dome.position.set(0, headY + HEAD_H / 2 - DOME_H, 0);
-	dome.castShadow = true;
-	group.add(dome);
-
-	// Sulla superficie curva: z dipende da x, e l'elemento ruota per seguire la curvatura
-	const surfaceZ = x => -Math.sqrt(HEAD_R * HEAD_R - x * x) - 0.004;
-	const surfaceRotY = x => -Math.asin(x / HEAD_R);
-
-	// Occhi ellittici
-	const eyeGeo = !useCache
-		? new THREE.CylinderGeometry(0.035, 0.035, 0.01, 16)
-		: getCachedGeometry('cylinder', 0.035, 0.035, 0.01, 16);
-	[-1, 1].forEach(s => {
-		const ex = s * 0.035;
-		const eye = new THREE.Mesh(eyeGeo, blackMat);
-		eye.rotation.order = 'YXZ';
-		eye.rotation.x = Math.PI / 2;
-		eye.rotation.y = surfaceRotY(ex);
-		eye.scale.set(0.55, 1, 1);
-		eye.position.set(ex, headY + 0.055, surfaceZ(ex));
-		group.add(eye);
-	});
-
-	// Sorriso arcuato (parabola con 7 segmenti, adattati alla curvatura della testa)
-	const SMILE_HALF_W = 0.06;//larghezza ghigno
-	const SMILE_DEPTH  = 0.065;//arco della V
-	const SMILE_SEGS   = 7;
-	const smileCenterY = headY - 0.10;
-	const step = (SMILE_HALF_W * 2) / SMILE_SEGS;
-
-	for (let i = 0; i < SMILE_SEGS; i++) {
-		const x  = -SMILE_HALF_W + step * (i + 0.5);
-		const t  = x / SMILE_HALF_W;
-		const y  = smileCenterY + SMILE_DEPTH * t * t;
-		const slope = 2 * SMILE_DEPTH * x / (SMILE_HALF_W * SMILE_HALF_W);
-		const ang = Math.atan(slope);
-		const len = step / Math.cos(ang) + 0.012;
-
-		const seg = new THREE.Mesh(box(len, 0.022, 0.01), blackMat);
-		seg.rotation.order = 'YXZ';
-		seg.rotation.z = ang;
-		seg.rotation.y = surfaceRotY(x);
-		seg.position.set(x, y, surfaceZ(x));
-		group.add(seg);
-	}
-	group.position.set(0, 0, 0);
-
-	applyCurrentVisualMode(group);
-
-	scene.add(group);
-	return group;
-}
-
-
 
 	
 	
@@ -1571,7 +1564,7 @@ function createPlayerRobloxOLD() {
 			[0x554433, 0xbbaa99, 0x111111],// 3) sul marrò
 		];
 		
-		const penguinColor = penguinPalette[Math.floor(Math.random() * penguinPalette.length)];
+		const penguinColor = penguinPalette[(++currentPaletteIndex % penguinPalette.length)];
 
 		// Materiali
 		const navyMat = new THREE.MeshLambertMaterial({ color: penguinColor[0] }); // Blu scuro (testa/schiena/pinne)
@@ -1679,9 +1672,8 @@ function createPlayerRobloxOLD() {
 		];
 		
 		// Materiali
-		const orangeMat = new THREE.MeshLambertMaterial({
-			color: foxPalette[Math.floor(Math.random() * foxPalette.length)]
-		});
+		const foxColor = foxPalette[(++currentPaletteIndex % foxPalette.length)];
+		const orangeMat = new THREE.MeshLambertMaterial({ color: foxColor });
 		
 		const whiteMat = new THREE.MeshLambertMaterial({ color: 0xf4f4f8 });
 		const darkMat = new THREE.MeshLambertMaterial({ color: 0x2b2b33 });
@@ -1806,7 +1798,7 @@ function createPlayerRobloxOLD() {
 			[0x5e3720, 0xb89a74, 0x40250f], // marrone più scuro
 			[0x3e2616, 0x9c8160, 0x2a190d]  // marrone molto scuro
 		];
-		const owlColor = owlPalette[Math.floor(Math.random() * owlPalette.length)];
+		const owlColor = owlPalette[(++currentPaletteIndex % owlPalette.length)];
 
 		// --- MATERIALI ---
 		const brownMat = new THREE.MeshLambertMaterial({ color: owlColor[0] });
@@ -1936,7 +1928,7 @@ function createPlayerRobloxOLD() {
 			[0xc2a37a, 0x8f7650, 0x8f7650], // marroncino chiaro
 			[0xa0522d, 0x6e3216, 0x6e3216]  // ruggine
 		];
-		const benderColor = benderPalette[Math.floor(Math.random() * benderPalette.length)];
+		const benderColor = benderPalette[(++currentPaletteIndex % benderPalette.length)];
 
 		// --- MATERIALI ---
 		const metalMat = new THREE.MeshLambertMaterial({ color: benderColor[0] });
@@ -2109,7 +2101,7 @@ function createPlayerRobloxOLD() {
 			[0xbdc3c7, 0xecf0f1, 0x111111], // Grigio
 			[0x9b7653, 0xf5e3a9, 0xffff11]  // Marrone Ipnorospo (base: terra dorata, luce: pancia crema/giallina)
 		];
-		const frogColor = frogPalette[Math.floor(Math.random() * frogPalette.length)];
+		const frogColor = frogPalette[(++currentPaletteIndex % frogPalette.length)];
 		
 		const greenMat = new THREE.MeshLambertMaterial({ color: frogColor[0] }); // Verde rana
 		const lightGreenMat = new THREE.MeshLambertMaterial({ color: frogColor[1] }); // Pancia/dettagli
@@ -2193,7 +2185,7 @@ function createPlayerRobloxOLD() {
 			[0x885533, 0x664422],// 1) marrone chiaro su marrone scuro
 		];
 		
-		const duckColor = duckPalette[Math.floor(Math.random() * duckPalette.length)];
+		const duckColor = duckPalette[(++currentPaletteIndex % duckPalette.length)];
 
 		const body = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.6, 0.4, 0.6) : getCachedGeometry('box', 0.6, 0.4, 0.6),
@@ -2287,7 +2279,7 @@ function createPlayerRobloxOLD() {
 			{ body: 0xa93226, wing: 0x8a281e, crest: 0xff4d3d, eye: 0x111111 }, // rosso
 			{ body: 0x222222, wing: 0x111111, crest: 0xe74c3c, eye: 0xffffff }  // nero (occhi chiari)
 		];
-		const cc = chickenPalette[Math.floor(Math.random() * chickenPalette.length)];
+		const cc = chickenPalette[(++currentPaletteIndex % chickenPalette.length)];
 		const crestMat = new THREE.MeshLambertMaterial({ color: cc.crest });
 
 		const body = new THREE.Mesh(
@@ -2358,7 +2350,7 @@ function createPlayerRobloxOLD() {
 			[0xffffff, 0xe6e6e6], // bianco
 			[0xdff5c8, 0xc2e6a0]  // verde chiarissimo
 		];
-		const chickColor = chickPalette[Math.floor(Math.random() * chickPalette.length)];
+		const chickColor = chickPalette[(++currentPaletteIndex % chickPalette.length)];
 		
 		// Materiali
 		const yellowMat = new THREE.MeshLambertMaterial({ color: chickColor[0] }); // Corpo
@@ -2455,7 +2447,7 @@ function createPlayerRobloxOLD() {
 			[0x7d3cb5, 0x5e2a8c, 0x4a9c3f, 0x357a2c, 0xd58aff], // viola
 			[0xc0392b, 0x962d22, 0x4a9c3f, 0x357a2c, 0xff6a3a]  // rossa
 		];
-		const pc = pumpkinPalette[Math.floor(Math.random() * pumpkinPalette.length)];
+		const pc = pumpkinPalette[(++currentPaletteIndex % pumpkinPalette.length)];
 
 		const bodyMat = new THREE.MeshLambertMaterial({ color: pc[0] });
 		const topMat = new THREE.MeshLambertMaterial({ color: pc[1] });
@@ -2572,7 +2564,7 @@ function createPlayerRobloxOLD() {
 			[0xb08a5a, 0xd9bf94], // marrone chiaro
 			[0x4a2c11, 0x7a4a22]  // marrone scuro
 		];
-		const snailColor = snailPalette[Math.floor(Math.random() * snailPalette.length)];
+		const snailColor = snailPalette[(++currentPaletteIndex % snailPalette.length)];
 
 		
 		// Materiali
@@ -2909,11 +2901,13 @@ function createPlayerRobloxOLD() {
 		
 		const pigPalette = [
 			[0xffb6c1, 0xff8da1, 0x8d5b4c], // rosa (originale)
+			[0x7d5e43, 0x6b4f3a, 0x3b2a1f], // cinghiale
 			[0xe8809a, 0xd0647f, 0x8d5b4c], // rosa scuro
-			[0xff4fb8, 0xd6339a, 0x7a2a5e], // fucsia
-			[0x8d6e53, 0x6b4f3a, 0x3b2a1f]  // cinghiale
+			[0xf5f5f0, 0xe3cfc9, 0x8d7b73], // bianco
+			[0x4a2c1a, 0x3a2012, 0x1f120a], // cioccolato scuro
+			[0xff4fb8, 0xd6339a, 0x7a2a5e]  // fucsia
 		];
-		const pigColor = pigPalette[Math.floor(Math.random() * pigPalette.length)];
+		const pigColor = pigPalette[(++currentPaletteIndex % pigPalette.length)];
 
 		// Materiali
 		const bodyMat = new THREE.MeshLambertMaterial({ color: pigColor[0] });
@@ -3198,23 +3192,24 @@ function createPlayerRobloxOLD() {
 		const group = new THREE.Group();
 		
 		const minionSkinPalette = [
-			0xFFD500, // giallo (originale)
-			0xC3A6F0  // viola chiaro
-		];
-		const minionOverallPalette = [
-			[0x0055B8, 0x222222], // blu (originale)
-			[0x1c1c1c, 0x777777], // nera (bottoni più chiari per vederli)
-			[0x7f8c8d, 0x222222], // grigia
-			[0x5dade2, 0x222222]  // azzurra
+			[0x0055B8, 0x222222, 0xFFD500], // blu (originale) + giallo
+			[0x1c1c1c, 0x777777, 0xC3A6F0], // nera (bottoni più chiari per vederli) + viola
+			[0xaa2211, 0x222222, 0xFFD500], // rossa + giallo
+			[0x444444, 0x777777, 0xC3A6F0], // grigia + viola
+			[0xe25dad, 0x222222, 0xFFD500], // rosa + giallo
+			[0x00cc00, 0x222222, 0xFFD500], // verde + giallo
+			[0x0055B8, 0x222222, 0xC3A6F0], // blu (originale) + viola
+			[0x1c1c1c, 0x777777, 0xFFD500], // nera (bottoni più chiari per vederli) + giallo
+			[0x444444, 0x777777, 0xFFD500], // grigia + giallo
+			[0x00cc00, 0x222222, 0xC3A6F0]  // verde + viola
 		];
 
 		// Materiali
-		const minionSkin = minionSkinPalette[Math.floor(Math.random() * minionSkinPalette.length)];
-		const minionOverall = minionOverallPalette[Math.floor(Math.random() * minionOverallPalette.length)];
+		const minionSkin = minionSkinPalette[(++currentPaletteIndex % minionSkinPalette.length)];
 
-		const yellowMat = new THREE.MeshLambertMaterial({ color: minionSkin });       // Pelle
-		const blueMat = new THREE.MeshLambertMaterial({ color: minionOverall[0] });   // Tuta
-		const buttonMat = new THREE.MeshLambertMaterial({ color: minionOverall[1] }); // Bottoni
+		const yellowMat = new THREE.MeshLambertMaterial({ color: minionSkin[2] });       // Pelle
+		const blueMat = new THREE.MeshLambertMaterial({ color: minionSkin[0] });   // Tuta
+		const buttonMat = new THREE.MeshLambertMaterial({ color: minionSkin[1] }); // Bottoni
 		const blackMat = new THREE.MeshLambertMaterial({ color: 0x111111 }); // Nero (Fascia, guanti, scarpe)
 		const silverMat = new THREE.MeshLambertMaterial({ color: 0x888888 }); // Grigio (Montatura occhiale)
 		const whiteMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF }); // Bianco (Sclera occhio)
@@ -3662,7 +3657,7 @@ function createPlayerRobloxOLD() {
 			[0x2ecc71, 0x1e8449, 0x117a65, 0xf4d03f],// 2) Verde con corazza verde scura ed occhi giallastri
 			[0x8d6e63, 0x4a2c11, 0x3e2723, 0x111111] // 3) Marrone con corazza più scura
 		];
-		const turtleColor = turtlePalette[Math.floor(Math.random() * turtlePalette.length)];
+		const turtleColor = turtlePalette[(++currentPaletteIndex % turtlePalette.length)];
 		
 		const skinMat = new THREE.MeshLambertMaterial({ color: turtleColor[0] }); // Verde (Pelle)
 		const shellMat = new THREE.MeshLambertMaterial({ color: turtleColor[1] }); // Marrone scuro (Guscio base)
