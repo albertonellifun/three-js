@@ -678,7 +678,18 @@
 	if (currentPlayerType === 'pumpkin') document.getElementById('btn-player').innerText = '🎃';
 	let currentPlayerDeadSound = isHalloweenWeek() ? 'deadSoundPumpkin' : 'deadSoundCat';
 	
-	let currentPaletteIndex = (Math.random() * 10) | 0;
+	//palette variabile
+	let currentPaletteIndex = (Math.random() * 10) | 0;//colore casuale per tutti
+	let rockyGraffiettoIndex = 0;//tranne che per rocky che è sempre un seal point classico
+	
+	const SIAMESE_PALETTE = [
+		{ body: 0xe5d6c3, point: 0x3d2b1f, nose: 0x150A05, eye: 0x00a8ff, eyeBack: 0x443322, belly: 0xf5e6d3 }, // Seal point (classico)
+		{ body: 0xe5d6c3, point: 0x5a3a28, nose: 0x5a3a28, eye: 0x00a8ff, eyeBack: 0x4a2c1a, belly: 0xf5e6d3 }, // Chocolate point
+		{ body: 0xe9e4dc, point: 0x7f8c8d, nose: 0x7f8c8d, eye: 0x00a8ff, eyeBack: 0x6f7c7d, belly: 0xf3efe8 }, // Blue point
+		{ body: 0xf3ead9, point: 0xe59866, nose: 0xe59866, eye: 0x00a8ff, eyeBack: 0xc9885a, belly: 0xfaf3e6 }, // Red/Flame point
+		{ body: 0xf0ebe6, point: 0xa89cae, nose: 0xa89cae, eye: 0x00a8ff, eyeBack: 0x8f8396, belly: 0xf8f4f0 }, // Lilac point
+		{ body: 0xf3ead9, point: 0xc9a77c, nose: 0xc9a77c, eye: 0x00a8ff, eyeBack: 0xa88a60, belly: 0xfaf3e6 }  // Cream point
+	];
 
 
 	function refreshPlayerModel() {
@@ -706,11 +717,12 @@
 			case 'chick': player = createPlayerChick(); break;
 			case 'pumpkin': player = createPlayerPumpkin(); break;
 			case 'unicorn': player = createPlayerUnicorn();	break;
-			case 'rockygraffietto': player = createPlayerRockyGraffietto(); break;
-			case 'siamese': player = createPlayerSiamese(); break;
 			case 'chicken': player = createPlayerChicken();	break;
 			case 'panda': player = createPlayerPanda(); break;
 			case 'invaders': player = createPlayerInvaders(); break;
+			//gestione colori ad-hoc
+			case 'rockygraffietto': rockyGraffiettoIndex++; player = createPlayerRockyGraffietto(); break;
+			case 'siamese': rockyGraffiettoIndex++; player = createPlayerSiamese(undefined,undefined,undefined,undefined,undefined); break;
 		}
 
 		player.position.copy(pos);
@@ -3015,14 +3027,25 @@ function createPlayerRoblox() {
 	function createPlayerRockyGraffietto() {
 		const group = new THREE.Group();
 
+		const sc = SIAMESE_PALETTE[rockyGraffiettoIndex % SIAMESE_PALETTE.length];
+		const creamMat = new THREE.MeshLambertMaterial({ color: sc.body });
+		const sealMat = new THREE.MeshLambertMaterial({ color: sc.point });
+		const eyeMat = new THREE.MeshLambertMaterial({ color: sc.eye });
+		const innerEarMat = new THREE.MeshLambertMaterial({ color: 0xE8A7B8 });
+		const whiskerMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF });
+		const noseMat = new THREE.MeshLambertMaterial({ color: new THREE.Color(sc.point).multiplyScalar(0.4).getHex() });
+		const pupilMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+		//const group = new THREE.Group();
+
 		// Palette Colori Siamese Seal Point
-		const creamMat = new THREE.MeshLambertMaterial({ color: 0xe5d6c3	}); // Crema/Avorio base
+		/*const creamMat = new THREE.MeshLambertMaterial({ color: 0xe5d6c3	}); // Crema/Avorio base
 		const sealMat = new THREE.MeshLambertMaterial({ color: 0x3d2b1f	}); // Seal scuro intenso
 		const eyeMat = new THREE.MeshLambertMaterial({ color: 0x00a8ff	}); // Azzurro ciano brillante
 		const innerEarMat = new THREE.MeshLambertMaterial({ color: 0xE8A7B8	}); // Rosa interno orecchie
 		const whiskerMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF	}); // Baffi bianchi
 		const noseMat = new THREE.MeshLambertMaterial({	color: 0x150A05	}); // Tartufo scuro
 		const pupilMat = new THREE.MeshLambertMaterial({ color: 0x111111	});
+		*/
 
 		// 1. Testa principale (Dimensioni: 0.6 x 0.5 x 0.5)
 		const head = new THREE.Mesh(
@@ -3418,8 +3441,17 @@ function createPlayerRoblox() {
 	
 
 	// GENERIC SIAMESE -> I GATTI PIU BELLI DEL MONDO!
-	function createPlayerSiamese(bodyCol = 0xe5d6c3, pointCol = 0x3d2b1f, eyeCol = 0x00a8ff, eyeBackCol = 0x443322, bellyCol = 0xf5e6d3) {
+	function createPlayerSiamese(bodyCol, pointCol, eyeCol, eyeBackCol, bellyCol) {
 		const group = new THREE.Group();
+
+		if (bodyCol === undefined) {
+			const sc = SIAMESE_PALETTE[rockyGraffiettoIndex % SIAMESE_PALETTE.length];
+			bodyCol = sc.body;
+			pointCol = sc.point;
+			eyeCol = sc.eye;
+			eyeBackCol = sc.eyeBack;
+			bellyCol = sc.belly;
+		}
 
 		// Materiali
 		const bodyMat = new THREE.MeshLambertMaterial({ color: bodyCol }); // Crema/Beige (Corpo)
