@@ -468,7 +468,7 @@
 	const X_LIMIT = Math.floor(BOARD_WIDTH / 2) - 1; // Limiti laterali
 	const MIN_LANE = 5;
 	const MAX_LANE = -30;
-	const JUMP_SPEED = 0.08;
+	const JUMP_SPEED = 0.10;
 
 	// --- SCENA, CAMERA, RENDERER ---
 	const scene = new THREE.Scene();
@@ -3910,16 +3910,16 @@ function createPlayerRoblox() {
 
 	//colori ambiente
 	const colors = [
-		{ probTruck: 0.2, probPolice: 0.05, probCactus: 0.0, probCroco: 0.1, croco: { col1: 0x2e6b30, col2: 0x1f4d24 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x2e7d32, col2: 0x388e3c }, cactus: { col1: 0x276a2b, col2: 0x307933 }, grass: { col1: 0x66bb66, col2: 0x60b560 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
-		{ probTruck: 0.2, probPolice: 0.05, probCactus: 0.1, probCroco: 0.1, croco: { col1: 0x6b4e2e, col2: 0x422f1b }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x60b560, col2: 0x66bb66 }, cactus: { col1: 0x529a52, col2: 0x579f57 }, grass: { col1: 0x4daa4d, col2: 0x49a449 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
-		{ probTruck: 0.2, probPolice: 0.05, probCactus: 0.2, probCroco: 0.2, croco: { col1: 0x2e6b30, col2: 0x1f4d24 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x49a449, col2: 0x4daa4d }, cactus: { col1: 0x3e8b3e, col2: 0x419141 }, grass: { col1: 0x349934, col2: 0x309530 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
-		{ probTruck: 0.2, probPolice: 0.05, probCactus: 0.5, probCroco: 0.3, croco: { col1: 0x76c943, col2: 0x419120 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x309530, col2: 0x349934 }, cactus: { col1: 0x297f29, col2: 0x2c822c }, grass: { col1: 0x6fa156, col2: 0x699950 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
-		{ probTruck: 0.2, probPolice: 0.05, probCactus: 0.8, probCroco: 0.5, croco: { col1: 0x8c5226, col2: 0x542e13 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x699950, col2: 0x6fa156 }, cactus: { col1: 0x598244, col2: 0x5e8949 }, grass: { col1: 0xaaa979, col2: 0xa5a074 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
-		{ probTruck: 0.2, probPolice: 0.05, probCactus: 0.9, probCroco: 0.7, croco: { col1: 0x2e6b30, col2: 0x1f4d24 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0xa5a074, col2: 0xaaa979 }, cactus: { col1: 0x8c8863, col2: 0x919067 }, grass: { col1: 0x887f5e, col2: 0x827959 }, river: { col1: 0xd4b870, col2: 0xcfa860 }, track: { col1: 0x444444, col2: 0x3a3a3a }},// Terreno marrone chiaro / deserto -> Fiume con riflessi sabbia / oro sporco
-		{ probTruck: 0.2, probPolice: 0.05, probCactus: 0.9, probCroco: 0.9, croco: { col1: 0x6b4e2e, col2: 0x422f1b }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x827959, col2: 0x887f5e }, cactus: { col1: 0x6f674c, col2: 0x746c50 }, grass: { col1: 0x665544, col2: 0x605040 }, river: { col1: 0xc2a649, col2: 0xba9b3f }, track: { col1: 0x444444, col2: 0x3a3a3a }},// Terreno marrone scuro -> Fiume piú torbido / giallastro
-		{ probTruck: 0.2, probPolice: 0.05, probCactus: 0.4, probCroco: 0.4, croco: { col1: 0x76c943, col2: 0x419120 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0xa29989, col2: 0xa89f8e }, cactus: { col1: 0x8a8274, col2: 0x8f8779 }, grass: { col1: 0xa89f8e, col2: 0xa29989 }, river: { col1: 0xb3ecff, col2: 0x99e5ff }, track: { col1: 0x444444, col2: 0x3a3a3a }},// Terreno grigio/neve leggeri -> Fiume azzurro ghiaccio chiaro
-		{ probTruck: 0.2, probPolice: 0.05, probCactus: 0.0, probCroco: 0.2, croco: { col1: 0xd0d7de, col2: 0x8b949e }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0xe5e0d4, col2: 0xeae9d9 }, cactus: { col1: 0xc3beb4, col2: 0xc7c6b8 }, grass: { col1: 0xeae9d9, col2: 0xe5e0d4 }, river: { col1: 0xe0f7fa, col2: 0xd2f3f7 }, track: { col1: 0x444444, col2: 0x3a3a3a }},// Terreno completamente bianco / neve -> Fiume azzurro glaciale leggerissimo			
-		{ probTruck: 0.2, probPolice: 0.05, probCactus: 0.0, probCroco: 0.1, croco: { col1: 0x2e6b30, col2: 0x1f4d24 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x90c980, col2: 0x99cc88 }, cactus: { col1: 0x7aab6d, col2: 0x82ad74 }, grass: { col1: 0x99cc88, col2: 0x90c980 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
+		{ probTruck: 0.2, probBus: 0.1, probPolice: 0.05, probTaxi: 0.05, probCactus: 0.0, probCroco: 0.1, croco: { col1: 0x2e6b30, col2: 0x1f4d24 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x2e7d32, col2: 0x388e3c }, cactus: { col1: 0x276a2b, col2: 0x307933 }, grass: { col1: 0x66bb66, col2: 0x60b560 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
+		{ probTruck: 0.2, probBus: 0.1, probPolice: 0.05, probTaxi: 0.05, probCactus: 0.1, probCroco: 0.1, croco: { col1: 0x6b4e2e, col2: 0x422f1b }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x60b560, col2: 0x66bb66 }, cactus: { col1: 0x529a52, col2: 0x579f57 }, grass: { col1: 0x4daa4d, col2: 0x49a449 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
+		{ probTruck: 0.2, probBus: 0.1, probPolice: 0.05, probTaxi: 0.05, probCactus: 0.2, probCroco: 0.2, croco: { col1: 0x2e6b30, col2: 0x1f4d24 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x49a449, col2: 0x4daa4d }, cactus: { col1: 0x3e8b3e, col2: 0x419141 }, grass: { col1: 0x349934, col2: 0x309530 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
+		{ probTruck: 0.2, probBus: 0.1, probPolice: 0.05, probTaxi: 0.05, probCactus: 0.5, probCroco: 0.3, croco: { col1: 0x76c943, col2: 0x419120 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x309530, col2: 0x349934 }, cactus: { col1: 0x297f29, col2: 0x2c822c }, grass: { col1: 0x6fa156, col2: 0x699950 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
+		{ probTruck: 0.2, probBus: 0.1, probPolice: 0.05, probTaxi: 0.05, probCactus: 0.8, probCroco: 0.5, croco: { col1: 0x8c5226, col2: 0x542e13 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x699950, col2: 0x6fa156 }, cactus: { col1: 0x598244, col2: 0x5e8949 }, grass: { col1: 0xaaa979, col2: 0xa5a074 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
+		{ probTruck: 0.2, probBus: 0.1, probPolice: 0.05, probTaxi: 0.05, probCactus: 0.9, probCroco: 0.7, croco: { col1: 0x2e6b30, col2: 0x1f4d24 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0xa5a074, col2: 0xaaa979 }, cactus: { col1: 0x8c8863, col2: 0x919067 }, grass: { col1: 0x887f5e, col2: 0x827959 }, river: { col1: 0xd4b870, col2: 0xcfa860 }, track: { col1: 0x444444, col2: 0x3a3a3a }},// Terreno marrone chiaro / deserto -> Fiume con riflessi sabbia / oro sporco
+		{ probTruck: 0.2, probBus: 0.1, probPolice: 0.05, probTaxi: 0.05, probCactus: 0.9, probCroco: 0.9, croco: { col1: 0x6b4e2e, col2: 0x422f1b }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x827959, col2: 0x887f5e }, cactus: { col1: 0x6f674c, col2: 0x746c50 }, grass: { col1: 0x665544, col2: 0x605040 }, river: { col1: 0xc2a649, col2: 0xba9b3f }, track: { col1: 0x444444, col2: 0x3a3a3a }},// Terreno marrone scuro -> Fiume piú torbido / giallastro
+		{ probTruck: 0.2, probBus: 0.1, probPolice: 0.05, probTaxi: 0.05, probCactus: 0.4, probCroco: 0.4, croco: { col1: 0x76c943, col2: 0x419120 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0xa29989, col2: 0xa89f8e }, cactus: { col1: 0x8a8274, col2: 0x8f8779 }, grass: { col1: 0xa89f8e, col2: 0xa29989 }, river: { col1: 0xb3ecff, col2: 0x99e5ff }, track: { col1: 0x444444, col2: 0x3a3a3a }},// Terreno grigio/neve leggeri -> Fiume azzurro ghiaccio chiaro
+		{ probTruck: 0.2, probBus: 0.1, probPolice: 0.05, probTaxi: 0.05, probCactus: 0.0, probCroco: 0.2, croco: { col1: 0xd0d7de, col2: 0x8b949e }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0xe5e0d4, col2: 0xeae9d9 }, cactus: { col1: 0xc3beb4, col2: 0xc7c6b8 }, grass: { col1: 0xeae9d9, col2: 0xe5e0d4 }, river: { col1: 0xe0f7fa, col2: 0xd2f3f7 }, track: { col1: 0x444444, col2: 0x3a3a3a }},// Terreno completamente bianco / neve -> Fiume azzurro glaciale leggerissimo			
+		{ probTruck: 0.2, probBus: 0.1, probPolice: 0.05, probTaxi: 0.05, probCactus: 0.0, probCroco: 0.1, croco: { col1: 0x2e6b30, col2: 0x1f4d24 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x90c980, col2: 0x99cc88 }, cactus: { col1: 0x7aab6d, col2: 0x82ad74 }, grass: { col1: 0x99cc88, col2: 0x90c980 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
 	];
 	//colori treni
 	const trainColors = [
@@ -3977,8 +3977,27 @@ function createPlayerRoblox() {
 		  0xfd79a8, // Fenicottero
 		  0xeccc68 // Giallo Sabbia
 		];
-	//colori tir
+		
+	//colori tir e bus
 	const truckColors = [0xe67e22, 0x2980b9, 0x27ae60, 0xc0392b];
+	const busColors = [
+		// [carrozzeria, fascia, tetto è sempre bianco]
+		[0xf1c40f, 0xffffff], // giallo
+		[0xe74c3c, 0xffffff], // rosso
+		[0x3498db, 0xffffff], // blu
+		[0x2ecc71, 0xffffff], // verde
+		[0xffffff, 0x3498db], // bianco con fascia blu
+		[0xffffff, 0xe74c3c], // bianco con fascia rossa
+		[0xffffff, 0x27ae60], // bianco con fascia verde
+		[0xe67e22, 0x2c3e50], // arancione con fascia blu notte
+		[0x8e44ad, 0xf1c40f], // viola con fascia gialla
+		[0x1f2a44, 0xf1c40f], // blu notte con fascia gialla
+		[0xe84393, 0xffffff], // rosa
+		[0x16a085, 0xffffff], // turchese
+		[0xc0392b, 0xf1c40f], // rosso con fascia gialla
+		[0x95a5a6, 0x2980b9]  // grigio con fascia azzurra
+	];
+	
 
 	//colori rocce
 	const rockColors = [
@@ -4222,11 +4241,11 @@ function createPlayerRoblox() {
 	}
 
 	// --- MODELLI VEICOLI ---
-	function createCarMesh() {
+	function createCarMesh(forcedColor) {
 		const group = new THREE.Group();
 
-		const color = carColors[Math.floor(Math.random() * carColors.length)];
-
+		const color = forcedColor !== undefined ? forcedColor : carColors[Math.floor(Math.random() * carColors.length)];
+	
 		// Telaio inferiore (Larghezza ridotta a 0.6)
 		const body = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(1.5, 0.35, 0.6) : getCachedGeometry('box', 1.5, 0.35, 0.6), //new THREE.BoxGeometry(1.5, 0.35, 0.8),
@@ -4352,7 +4371,115 @@ function createPlayerRoblox() {
 
 		return group;
 	}
+	
+	// TAXI
+	function createCarTaxiMesh() {
+		const group = createCarMesh(0xf1c40f); // giallo taxi
+		const box = (w, h, d) => !useCache ? new THREE.BoxGeometry(w, h, d) : getCachedGeometry('box', w, h, d);
+		const part = (w, h, d, color, x, y, z) => {
+			const m = new THREE.Mesh(box(w, h, d), new THREE.MeshLambertMaterial({ color }));
+			m.position.set(x, y, z);
+			group.add(m);
+			return m;
+		};
 
+		const roofX = 0.10;
+
+		// Insegna TAXI sul tettuccio (Basic = resta chiara anche di notte)
+		const sign = new THREE.Mesh(
+			box(0.16, 0.1, 0.32),
+			new THREE.MeshBasicMaterial({ color: 0xfff6b0 })
+		);
+		sign.position.set(roofX, 0.73, 0);
+		group.add(sign);
+		part(0.18, 0.02, 0.34, 0x111111, roofX, 0.675, 0); // base nera: più larga dell'insegna, niente facce laterali coincidenti
+
+
+		// Fascia a scacchi sulle fiancate (alzata sopra le ruote)
+		const BAND_Y = 0.35;
+		const CHECKS = 10;
+		const CHECK_W = 1.44 / CHECKS; // 0.144
+
+		[-1, 1].forEach(s => {
+			part(1.44, 0.07, 0.01, 0x111111, 0, BAND_Y, s * 0.306); // banda nera
+			for (let i = 0; i < CHECKS; i += 2) { // bianchi alterni: 0, 2, 4, 6, 8
+				part(CHECK_W, 0.06, 0.01, 0xffffff, -0.72 + CHECK_W / 2 + i * CHECK_W, BAND_Y, s * 0.316);
+			}
+		});
+
+		applyCurrentVisualMode(group);
+		return group;
+	}
+	
+	// AUTOBUS TURISTICO (semplificato)
+	function createBusMesh() {
+		const group = new THREE.Group();
+		
+		const mesh = (w, h, d, color, x, y, z, shadow = false) => {
+			const m = new THREE.Mesh(
+				!useCache ? new THREE.BoxGeometry(w, h, d) : getCachedGeometry('box', w, h, d), 
+				new THREE.MeshLambertMaterial({ color }));
+			m.position.set(x, y, z);
+			m.castShadow = shadow;
+			group.add(m);
+			return m;
+		};
+
+		const color = busColors[Math.floor(Math.random() * busColors.length)];
+		const baseColor = color[0];
+		const stripeColor = color[1];
+		const L = 3.0;
+		const W = 0.8;
+
+		// Fiancata bassa colorata + fascia decorativa chiara
+		mesh(L, 0.45, W, baseColor, 0, 0.325, 0, true);
+		
+		if (Math.random() < 0.5) {
+			//vintage
+			
+			// Fascia decorativa: leggermente più lunga e più larga del corpo (niente facce coplanari)
+			mesh(L + 0.02, 0.06, W + 0.02, stripeColor, 0, 0.30, 0);
+
+			// Fascia vetri scura (leggermente più larga del corpo, come nel truck) + montanti
+			mesh(L - 0.1, 0.30, W - 0.01, 0x111111, 0, 0.70, 0);
+		
+			// Montanti: un filo più bassi della fascia vetri, così top/bottom non coincidono
+			for (let x = -1.2; x <= 1.21; x += 0.4) {
+				mesh(0.05, 0.28, W + 0.02, 0xffffff, x, 0.70, 0);
+			}
+			
+			// Fari anteriori
+			[-1, 1].forEach(s => mesh(0.05, 0.14, 0.14, 0xfff2a0, L / 2 + 0.005, 0.30, s * 0.26));
+			
+			// gradino per l'aria condizionata dietro
+			mesh(0.5, 0.07, 0.60, 0xdddddd, -1.0, 0.965, 0);
+
+		} else {
+			// Vetri: unico blocco nero che avvolge tutta la fascia (anche davanti e dietro)
+			mesh(L + 0.02, 0.30, W + 0.02, 0x111111, 0, 0.70, 0);
+			
+			// Fari anteriori
+			mesh(0.05, 0.06, W, 0xeeeeee, L / 2 + 0.005, 0.24, 0);
+			
+			// gradino per l'aria condizionata centrato
+			mesh(1.0, 0.07, 0.5, 0xdddddd, -0.3, 0.965, 0);
+		}
+
+		// Tetto bianco 
+		mesh(L, 0.08, W, 0xffffff, 0, 0.89, 0, true);
+		
+		// Ruote: anteriori + doppio asse posteriore
+		const wheelZ = 0.35;
+		[1.0, -0.75, -1.05].forEach(x => {
+			group.add(createWheel(x, 0.11, wheelZ));
+			group.add(createWheel(x, 0.11, -wheelZ));
+		});
+
+		applyCurrentVisualMode(group);
+		return group;
+	}
+	
+	//camion
 	function createTruckMesh() {
 		const group = new THREE.Group();
 
@@ -7426,10 +7553,16 @@ updatePlayerLimbs();
 						}
 
 						if (canSpawn) {
-							const isTruck = Math.random() < color.probTruck;
-							const isPolice = Math.random() < color.probPolice;
-							const vehicle = isTruck ? createTruckMesh() : isPolice ? createCarPoliceMesh() : createCarMesh();
-
+							const isBus = Math.random() < color.probBus;
+							const isTruck = !isBus && Math.random() < color.probTruck;
+							const isPolice = !isBus && !isTruck && Math.random() < color.probPolice;
+							const isTaxi = !isBus && !isTruck && !isPolice && Math.random() < color.probTaxi;
+							const vehicle = isBus ? createBusMesh() : 
+								isTruck ? createTruckMesh() : 
+								isPolice ? createCarPoliceMesh() : 
+								isTaxi ? createCarTaxiMesh() : 
+								createCarMesh();
+								
 							vehicle.position.set(startX, 0, lane.z);
 							if (lane.speed < 0) vehicle.rotation.y = Math.PI;
 							scene.add(vehicle);
@@ -8317,7 +8450,7 @@ updatePlayerLimbs();
 		resetIdle();
 	}
 	
-	
+	isMute=1;
 	
 
 	animate();
