@@ -444,6 +444,12 @@
   <audio id="deadSoundInvaders" preload="auto">
     <source src="./crossy-dead-invaders.mp3" type="audio/mpeg">
   </audio>
+  <audio id="deadSoundArmadillo" preload="auto">
+    <source src="./crossy-dead-armadillo.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="deadSoundZeroCalcare" preload="auto">
+    <source src="./crossy-dead-zerocalcare.mp3" type="audio/mpeg">
+  </audio>
   
   <audio id="trainSound" preload="auto">
     <source src="./crossy-train.mp3" type="audio/mpeg">
@@ -625,6 +631,12 @@
 		dirLight.intensity = slot.intensity;
 	}
 	
+	/*
+	//polizia blocca troppo il render -> creo luce globale
+	const globalPoliceLight = new THREE.PointLight(0xff0000, 0, 3);
+	globalPoliceLight.position.set(0, 0.82, 0);
+	scene.add(globalPoliceLight);
+	*/
 	
 	
 
@@ -691,6 +703,34 @@
 		{ body: 0xf3ead9, point: 0xc9a77c, nose: 0xc9a77c, eye: 0x00a8ff, eyeBack: 0xa88a60, belly: 0xfaf3e6 }  // Cream point
 	];
 
+	// Registro di tutti i personaggi in ordine di rotazione
+	const PLAYER_CONFIGS = [
+		//defaults
+		{ type: 'rockygraffietto', create: createPlayerRockyGraffietto,      icon: '🥊', sound: 'deadSoundCat' },
+		{ type: 'siamese',         create: createPlayerSiamese,              icon: '😸', sound: 'deadSoundCat' },
+		//altri animaletti
+		{ type: 'chicken',         create: createPlayerChicken,              icon: '🐔', sound: 'deadSoundChicken' },
+		{ type: 'frog',            create: createPlayerFrog,                 icon: '🐸', sound: 'deadSoundFrog' },
+		{ type: 'duck',            create: createPlayerDuck,                 icon: '🦆', sound: 'deadSoundDuck' },
+		{ type: 'snail',           create: createPlayerSnail,                icon: '🐌', sound: 'deadSoundSnail' },
+		{ type: 'turtle',          create: createPlayerTurtle,               icon: '🐢', sound: 'deadSoundTurtle' },
+		{ type: 'chick',           create: createPlayerChick,                icon: '🐤', sound: 'deadSoundChick' },
+		{ type: 'armadillo',       create: createPlayerArmadillo,            icon: '🦔', sound: 'deadSoundArmadillo' },
+		{ type: 'pig',             create: createPlayerPig,                  icon: '🐷', sound: 'deadSoundPig' },
+		{ type: 'horse',           create: createPlayerHorse,                icon: '🐴', sound: 'deadSoundHorse' },
+		{ type: 'panda',           create: createPlayerPanda,                icon: '🐼', sound: 'deadSoundPanda' },
+		{ type: 'owl',             create: createPlayerOwl,                  icon: '🦉', sound: 'deadSoundOwl' },
+		{ type: 'fox',             create: createPlayerFox,                  icon: '🦊', sound: 'deadSoundFox' },
+		{ type: 'penguin',         create: createPlayerPenguin,              icon: '🐧', sound: 'deadSoundPenguin' },
+		//saranno famosi
+		{ type: 'pumpkin',         create: createPlayerPumpkin,              icon: '🎃', sound: 'deadSoundPumpkin' },
+		{ type: 'bender',          create: createPlayerBender,               icon: '🤖', sound: 'deadSoundBender' },
+		{ type: 'minion',          create: createPlayerMinion,               icon: '🤓', sound: 'deadSoundMinion' },
+		{ type: 'roblox',          create: createPlayerRoblox,               icon: '🧱', sound: 'deadSoundRoblox' },
+		{ type: 'invaders',        create: createPlayerInvaders,             icon: '👾', sound: 'deadSoundInvaders' },
+		{ type: 'zerocalcare',     create: createPlayerArmadilloZeroCalcare, icon: '📙', sound: 'deadSoundZeroCalcare' },
+		{ type: 'unicorn',         create: createPlayerUnicorn,              icon: '🦄', sound: 'deadSoundZeroCalcare' }
+	];
 
 	function refreshPlayerModel() {
 		const pos = player.position.clone();
@@ -701,185 +741,42 @@
 		scene.remove(player);
 		disposeObject3D(player);
 		
-		switch (currentPlayerType) {
-			case 'frog': player = createPlayerFrog(); break;
-			case 'duck': player = createPlayerDuck(); break;
-			case 'snail': player = createPlayerSnail(); break;
-			case 'turtle': player = createPlayerTurtle(); break;
-			case 'pig': player = createPlayerPig();	break;
-			case 'horse': player = createPlayerHorse();	break;
-			case 'bender': player = createPlayerBender(); break;
-			case 'minion': player = createPlayerMinion(); break;
-			case 'roblox': player = createPlayerRoblox(); break;
-			case 'owl': player = createPlayerOwl(); break;
-			case 'fox': player = createPlayerFox(); break;
-			case 'penguin': player = createPlayerPenguin(); break;
-			case 'chick': player = createPlayerChick(); break;
-			case 'pumpkin': player = createPlayerPumpkin(); break;
-			case 'unicorn': player = createPlayerUnicorn();	break;
-			case 'chicken': player = createPlayerChicken();	break;
-			case 'panda': player = createPlayerPanda(); break;
-			case 'invaders': player = createPlayerInvaders(); break;
-			//gestione colori ad-hoc
-			case 'rockygraffietto': rockyGraffiettoIndex++; player = createPlayerRockyGraffietto(); break;
-			case 'siamese': rockyGraffiettoIndex++; player = createPlayerSiamese(undefined,undefined,undefined,undefined,undefined); break;
+		if (currentPlayerType === 'rockygraffietto') {
+			rockyGraffiettoIndex++;
+			player = createPlayerRockyGraffietto();
+		} else if (currentPlayerType === 'siamese') {
+			rockyGraffiettoIndex++; 
+			player = createPlayerSiamese(undefined,undefined,undefined,undefined,undefined);
+		} else {
+			const currentIndex = PLAYER_CONFIGS.findIndex(p => p.type === currentPlayerType);
+			const currentRowPlayer = PLAYER_CONFIGS[currentIndex];
+			player = currentRowPlayer.create();
 		}
-
+		
 		player.position.copy(pos);
 		player.rotation.y = rotY;
 		player.visible = wasVisible;
-		
 	}
+	
 	function togglePlayerModel() {
 		const pos = player.position.clone();
 		const rotY = player.rotation.y;
 		const wasVisible = player.visible;
-		resetIdle(); //pensa
+		resetIdle();
 
 		scene.remove(player);
 		disposeObject3D(player);
 
-		switch (currentPlayerType) {
-			case 'chicken':
-				currentPlayerType = 'frog';
-				player = createPlayerFrog();
-				document.getElementById('btn-player').innerText = '🐸';
-				currentPlayerDeadSound = 'deadSoundFrog';
-				break;
+		// Trova l'indice attuale e passa al successivo (con ciclo continuo)
+		const currentIndex = PLAYER_CONFIGS.findIndex(p => p.type === currentPlayerType);
+		const nextIndex = (currentIndex + 1) % PLAYER_CONFIGS.length;
+		const nextPlayer = PLAYER_CONFIGS[nextIndex];
 
-			case 'frog':
-				currentPlayerType = 'duck';
-				player = createPlayerDuck();
-				document.getElementById('btn-player').innerText = '🦆';
-				currentPlayerDeadSound = 'deadSoundDuck';
-				break;
-
-			case 'duck':
-				currentPlayerType = 'snail';
-				player = createPlayerSnail();
-				document.getElementById('btn-player').innerText = '🐌';
-				currentPlayerDeadSound = 'deadSoundSnail';
-				break;
-
-			case 'snail':
-				currentPlayerType = 'turtle';
-				player = createPlayerTurtle();
-				document.getElementById('btn-player').innerText = '🐢';
-				currentPlayerDeadSound = 'deadSoundTurtle';
-				break;
-
-			case 'turtle':
-				currentPlayerType = 'pig';
-				player = createPlayerPig();
-				document.getElementById('btn-player').innerText = '🐷';
-				currentPlayerDeadSound = 'deadSoundPig';
-				break;
-
-			case 'pig':
-				currentPlayerType = 'horse';
-				player = createPlayerHorse();
-				document.getElementById('btn-player').innerText = '🐴';
-				currentPlayerDeadSound = 'deadSoundHorse';
-				break;
-
-			case 'horse':
-				currentPlayerType = 'bender';
-				player = createPlayerBender();
-				document.getElementById('btn-player').innerText = '🤖';
-				currentPlayerDeadSound = 'deadSoundBender';
-				break;
-
-			case 'bender':
-				currentPlayerType = 'minion';
-				player = createPlayerMinion();
-				document.getElementById('btn-player').innerText = '🤓';
-				currentPlayerDeadSound = 'deadSoundMinion';
-				break;
-				
-			case 'minion':
-				currentPlayerType = 'roblox';
-				player = createPlayerRoblox();
-				document.getElementById('btn-player').innerText = '🧱';
-				currentPlayerDeadSound = 'deadSoundRoblox';
-				break;
-
-			case 'roblox':
-				currentPlayerType = 'owl';
-				player = createPlayerOwl();
-				document.getElementById('btn-player').innerText = '🦉';
-				currentPlayerDeadSound = 'deadSoundOwl';
-				break;
-
-			case 'owl':
-				currentPlayerType = 'fox';
-				player = createPlayerFox();
-				document.getElementById('btn-player').innerText = '🦊';
-				currentPlayerDeadSound = 'deadSoundFox';
-				break;
-
-			case 'fox':
-				currentPlayerType = 'penguin';
-				player = createPlayerPenguin();
-				document.getElementById('btn-player').innerText = '🐧';
-				currentPlayerDeadSound = 'deadSoundPenguin';
-				break;
-
-			case 'penguin':
-				currentPlayerType = 'chick';
-				player = createPlayerChick();
-				document.getElementById('btn-player').innerText = '🐤';
-				currentPlayerDeadSound = 'deadSoundChick';
-				break;
-
-			case 'chick':
-				currentPlayerType = 'pumpkin';
-				player = createPlayerPumpkin();
-				document.getElementById('btn-player').innerText = '🎃';
-				currentPlayerDeadSound = 'deadSoundPumpkin';
-				break;
-
-			case 'pumpkin':
-				currentPlayerType = 'panda';
-				player = createPlayerPanda();
-				document.getElementById('btn-player').innerText = '🐼​';
-				currentPlayerDeadSound = 'deadSoundPanda';
-				break;
-				
-			case 'panda':
-				currentPlayerType = 'invaders';
-				player = createPlayerInvaders();
-				document.getElementById('btn-player').innerText = '👾';
-				currentPlayerDeadSound = 'deadSoundInvaders';
-				break;
-				
-			case 'invaders':
-				currentPlayerType = 'unicorn';
-				player = createPlayerUnicorn();
-				document.getElementById('btn-player').innerText = '🦄';
-				currentPlayerDeadSound = 'deadSoundHorse';
-				break;
-
-			case 'unicorn':
-				currentPlayerType = 'rockygraffietto';
-				player = createPlayerRockyGraffietto();
-				document.getElementById('btn-player').innerText = '🥊';
-				currentPlayerDeadSound = 'deadSoundCat';
-				break;
-
-			case 'rockygraffietto':
-				currentPlayerType = 'siamese';
-				player = createPlayerSiamese();
-				document.getElementById('btn-player').innerText = '😸';
-				currentPlayerDeadSound = 'deadSoundCat';
-				break;
-
-			case 'siamese':
-				currentPlayerType = 'chicken';
-				player = createPlayerChicken();
-				document.getElementById('btn-player').innerText = '🐔';
-				currentPlayerDeadSound = 'deadSoundChicken';
-				break;
-		}
+		// Aggiorna stato, modello e UI
+		currentPlayerType = nextPlayer.type;
+		player = nextPlayer.create();
+		document.getElementById('btn-player').innerText = nextPlayer.icon;
+		currentPlayerDeadSound = nextPlayer.sound;
 
 		player.position.copy(pos);
 		player.rotation.y = rotY;
@@ -902,7 +799,7 @@
 			'...##.##...'
 		];
 
-		const invPalette = [
+		const invadersPalette = [
 			0x9b59d0, // viola
 			0x39d353, // verde classico
 			0x2ec4d6, // ciano
@@ -911,7 +808,7 @@
 			0xf0f0f0, // bianco
 			0xffff00  // giallo
 		];
-		const invColor = invPalette[(++currentPaletteIndex % invPalette.length)];
+		const invColor = invadersPalette[(++currentPaletteIndex % invadersPalette.length)];
 		
 		const bodyMat = new THREE.MeshLambertMaterial({ color: invColor });
 		const eyeMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
@@ -964,7 +861,8 @@
 			[0xf5f5f0, 0x1a1a1a, 0xe0ddd2], // bianco e nero (originale)
 			[0xf5f5f0, 0x2f5fa8, 0xdfe6f0], // bianco e blu
 			[0xe9d0c4, 0x4a2c11, 0xe0c9a6], // marrone chiaro / scuro
-			[0xf5f5f0, 0xe8809a, 0xf3dfe3]  // bianco e rosa
+			[0xf5f5f0, 0xe8809a, 0xf3dfe3], // bianco e rosa
+			[0xc85a32, 0x2b1d1d, 0xf5ebd6]  // panda rossiccio (rosso ruggine, marrone scuro, crema)
 		];
 		const pc = pandaPalette[(++currentPaletteIndex % pandaPalette.length)];
 
@@ -1571,9 +1469,14 @@ function createPlayerRoblox() {
 		const group = new THREE.Group();
 
 		const penguinPalette = [				
-			[0x0b3c85, 0xa5d0f5, 0x111111],// 1) Come l'attuale blu su blu
-			[0x111111, 0xffffff, 0x666666],// 2) sul nero
-			[0x554433, 0xbbaa99, 0x111111],// 3) sul marrò
+			[0x0b3c85, 0xa5d0f5, 0x111111], // 1) Blu su blu (attuale)
+			[0x111111, 0xffffff, 0x666666], // 2) Nero e bianco classico
+			[0x554433, 0xbbaa99, 0x111111], // 3) Marrone (attuale)
+			[0x1a332a, 0xa2d9c1, 0x0f1d18], // 4) Verde pino / menta
+			[0x362148, 0xd1b3e8, 0x1b1024], // 5) Viola / lavanda
+			[0x2b2b2b, 0xffd166, 0xe65c00], // 6) Pinguino Reale (grigio scuro, petto giallo/oro, becco arancione)
+			[0x004d40, 0x80cbd3, 0x002520], // 7) Ottanio / turchese glaciale
+			[0x3a2010, 0xfce1b6, 0xd97724]  // 8) Rosa cipria / pesca e terracotta
 		];
 		
 		const penguinColor = penguinPalette[(++currentPaletteIndex % penguinPalette.length)];
@@ -1680,7 +1583,12 @@ function createPlayerRoblox() {
 		const foxPalette = [
 			0xf08c3c, // arancione (originale)
 			0xd2491a, // rossa
-			0x8a5a3a  // marrone
+			0x8a5a3a, // marrone
+			0xf0f0eb, // volpe artica (bianca/panna)
+			0x2c2e33, // volpe d'argento / melanica (grigio scuro/antracite)
+			0xe2ad5a, // volpe dorata / bionda (giallo sabbia)
+			0x9b59b6, // viola / lavanda
+			0x27ae60  // verde bosco
 		];
 		
 		// Materiali
@@ -2193,9 +2101,15 @@ function createPlayerRoblox() {
 		const group = new THREE.Group();
 		
 		const duckPalette = [				
-			[0x55aa55, 0x664422],// 1) Come l'attuale verde su marrone
-			[0x885533, 0x664422],// 1) marrone chiaro su marrone scuro
-		];
+		[0x55aa55, 0x664422], // 1) Verde smeraldo e marrone (Germano reale classico)
+		[0x885533, 0x664422], // 2) Marrone chiaro e marrone scuro (Anatra femmina)
+		[0x2b4c7e, 0x1f2a38], // 3) Blu notte e grigio scuro metallizzato (Anatra selvatica marina)
+		[0x008080, 0x4a3b32], // 4) Ottanio / Verde Teala e cioccolato (Alzavola)
+		[0x222222, 0x111111], // 5) Nero e grigio antracite (Anatra melanica / Rubber Duck gothic)
+		[0xf1c40f, 0xe67e22], // 6) Giallo e arancione (Paparella classica da bagno)
+		[0xd5dbdb, 0x85929e], // 7) Bianco gesso e grigio cenere (Anatra artica / cigno)
+		[0x8e44ad, 0x2c3e50]  // 8) Viola e blu scuro (Variante fantasy)
+	];
 		
 		const duckColor = duckPalette[(++currentPaletteIndex % duckPalette.length)];
 
@@ -3023,6 +2937,218 @@ function createPlayerRoblox() {
 		return group;
 	}
 
+
+	//ARMADILLO DI Zerocalcare
+	function createPlayerArmadilloZeroCalcare() {
+		const group = new THREE.Group();
+
+		const armadilloPalette = [
+			[0xff7a1a, 0x664422, 0xc94d06, 0xff8c33, 0x111111, 0xc94d06], // Zerocalcare (arancione)
+			[0x34495e, 0x1b2631, 0x2c3e50, 0x212f3d, 0xffffff, 0x2c3e50], // Notturno
+			[0xd5c8a0, 0x795548, 0x5d4037, 0x8d6e63, 0x111111, 0x5d4037], // Desertico
+			[0xff8800, 0xffbb33, 0xcc4400, 0xff8800, 0xffffff, 0x111111]  // ALB
+		];
+
+		const colors = armadilloPalette[(++currentPaletteIndex % armadilloPalette.length)];
+
+		const matSkin   = new THREE.MeshLambertMaterial({ color: colors[0] });
+		const matShell  = new THREE.MeshLambertMaterial({ color: colors[1] });
+		const matBands  = new THREE.MeshLambertMaterial({ color: colors[2] });
+		const matEars   = new THREE.MeshLambertMaterial({ color: colors[3] });
+		const matEye    = new THREE.MeshLambertMaterial({ color: colors[4] });
+		const matEyeBrows = new THREE.MeshLambertMaterial({ color: colors[5] });
+
+		const box = (w, h, d) => !useCache ? new THREE.BoxGeometry(w, h, d) : getCachedGeometry('box', w, h, d);
+		const mkAdd = (parent) => (geo, mat, x, y, z, rx = 0, rz = 0, shadow = true) => {
+			const m = new THREE.Mesh(geo, mat);
+			m.position.set(x, y, z);
+			m.rotation.x = rx;
+			m.rotation.z = rz;
+			m.castShadow = shadow;
+			parent.add(m);
+			return m;
+		};
+
+		// Misure arti
+		const legLen = 0.55;   // gambe lunghe
+		const armLen = 0.55;   // braccia lunghe
+
+		// Busto in un sotto-gruppo rialzato dalla lunghezza delle gambe
+		const upper = new THREE.Group();
+		upper.position.y = legLen - 0.22;
+		group.add(upper);
+		const add = mkAdd(upper);
+
+		// 1. CORPO + GUSCIO: colonna curva
+		const spine = [
+			[0.30,  0.02, 0.40, 0.30, 0.30],
+			[0.46,  0.00, 0.38, 0.28, 0.40],
+			[0.62, -0.04, 0.32, 0.24, 0.50],
+			[0.78, -0.09, 0.26, 0.22, 0.40],
+			[0.92, -0.14, 0.22, 0.20, 0.30]
+		];
+		const tilt = -0.25;
+		const shellD = 0.12;
+
+		spine.forEach(([y, z, bw, bd, sw]) => {
+			add(box(bw, 0.20, bd), matSkin, 0, y, z, tilt);
+			const sz = z + bd / 2 + shellD / 2 - 0.01;
+			add(box(sw, 0.22, shellD), matShell, 0, y + 0.02, sz, tilt);
+			add(box(sw + 0.02, 0.04, 0.02), matBands, 0, y + 0.02, sz + shellD / 2, tilt, 0, false);
+		});
+		add(box(0.22, 0.20, shellD), matShell, 0, 1.08, -0.15, tilt - 0.1);
+
+		// 2. TESTA
+		add(box(0.24, 0.22, 0.24), matSkin, 0, 1.02, -0.20);
+
+		// 3. MUSO rivolto verso l'alto (angoli di rotazione X positivi)
+		add(box(0.10, 0.10, 0.187), matSkin, 0, 1.02, -0.36, 0.10);
+		add(box(0.07, 0.07, 0.187), matSkin, 0, 1.05, -0.52, 0.28);
+		add(box(0.04, 0.04, 0.107), matSkin, 0, 1.10, -0.64, 0.45);
+
+		// 4. ORECCHIE piatte, verticali (BoxGeometry: larghezza 0.08, altezza 0.26, spessore sottile 0.02)
+		const earGeo = box(0.08, 0.26, 0.02);
+		add(earGeo, matEars, -0.08, 1.24, -0.16, 0, 0.10); // orecchia sinistra leggermente inclinata
+		add(earGeo, matEars,  0.08, 1.24, -0.16, 0, -0.10); // orecchia destra leggermente inclinata
+
+		// 5. OCCHI + sopracciglia
+		add(box(0.04, 0.05, 0.04), matEye, -0.11, 1.05, -0.31, 0, 0, false);
+		add(box(0.04, 0.05, 0.04), matEye,  0.11, 1.05, -0.31, 0, 0, false);
+		add(box(0.07, 0.02, 0.03), matEyeBrows, -0.11, 1.10, -0.31, 0, 0.25, false);
+		add(box(0.07, 0.02, 0.03), matEyeBrows,  0.11, 1.10, -0.31, 0, -0.25, false);
+
+		const limbs = {};
+
+		// 6. BRACCIA lunghe, rivolte verso il basso
+		[-1, 1].forEach(s => {
+			const pivot = new THREE.Group();
+			pivot.position.set(s * 0.23, 0.74, -0.08);
+			pivot.rotation.z = s * 0.06;
+			upper.add(pivot);
+			const a = mkAdd(pivot);
+			a(box(0.05, armLen, 0.05), matSkin, 0, -armLen / 2, 0);
+			a(box(0.08, 0.08, 0.08), matSkin, 0, -armLen - 0.02, -0.01);
+			limbs[s < 0 ? 'armL' : 'armR'] = pivot;
+		});
+
+		// 7. GAMBE lunghe + PIEDONI
+		[-1, 1].forEach(s => {
+			const pivot = new THREE.Group();
+			pivot.position.set(s * 0.11, legLen + 0.04, 0.02);
+			group.add(pivot);
+			const l = mkAdd(pivot);
+			l(box(0.06, legLen, 0.06), matSkin, 0, -legLen / 2, 0);
+			l(box(0.18, 0.04, 0.33), matSkin, 0, -legLen - 0.02, -0.06);//PIEDONI
+			limbs[s < 0 ? 'legL' : 'legR'] = pivot;
+		});
+
+		group.userData.limbs = limbs;
+
+		group.position.set(0, 0, 0);
+		group.scale.setScalar(0.9);
+
+		applyCurrentVisualMode(group);
+
+		scene.add(group);
+		return group;
+	}
+	
+	//ARMADILLO
+	function createPlayerArmadillo() {
+		const group = new THREE.Group();
+
+		const armadilloPalette = [
+			[0xe67e22, 0x6e2c00, 0xa04000, 0xd35400, 0x111111], // Originale
+			[0x34495e, 0x1b2631, 0x2c3e50, 0x212f3d, 0xffffff], // Notturno
+			[0xd5c8a0, 0x795548, 0x5d4037, 0x8d6e63, 0x111111]  // Desertico
+		];
+
+		const colors = armadilloPalette[(++currentPaletteIndex % armadilloPalette.length)];
+
+		// Materiali
+		const matSkin = new THREE.MeshLambertMaterial({ color: colors[0] });
+		const matShell = new THREE.MeshLambertMaterial({ color: colors[1] });
+		const matBands = new THREE.MeshLambertMaterial({ color: colors[2] });
+		const matEars = new THREE.MeshLambertMaterial({ color: colors[3] });
+		const matEye = new THREE.MeshLambertMaterial({ color: colors[4] });
+
+		// 1. CORPO (Pancia / Base arancione)
+		const bodyGeo = !useCache ? new THREE.BoxGeometry(0.5, 0.4, 0.6) : getCachedGeometry('box', 0.5, 0.4, 0.6);
+		const body = new THREE.Mesh(bodyGeo, matSkin);
+		body.position.y = 0.2;
+		body.castShadow = true;
+		group.add(body);
+
+		// 2. CORAZZA PRINCIPALE (Schiena ricurva/gobba)
+		const shellGeo = !useCache ? new THREE.BoxGeometry(0.54, 0.35, 0.55) : getCachedGeometry('box', 0.54, 0.35, 0.55);
+		const shell = new THREE.Mesh(shellGeo, matShell);
+		shell.position.set(0, 0.38, 0.02);
+		shell.castShadow = true;
+		group.add(shell);
+
+		// 3. FASCE DELLA CORAZZA (3 strisce orizzontali sulla schiena)
+		const bandGeo = !useCache ? new THREE.BoxGeometry(0.56, 0.08, 0.12) : getCachedGeometry('box', 0.56, 0.08, 0.12);
+		for (let i = 0; i < 3; i++) {
+			const band = new THREE.Mesh(bandGeo, matBands);
+			band.position.set(0, 0.39, -0.15 + i * 0.15);
+			band.castShadow = true;
+			group.add(band);
+		}
+
+		// 4. TESTA & MUSARETTO
+		const headGeo = !useCache ? new THREE.BoxGeometry(0.35, 0.3, 0.3) : getCachedGeometry('box', 0.35, 0.3, 0.3);
+		const head = new THREE.Mesh(headGeo, matSkin);
+		head.position.set(0, 0.32, -0.38);
+		head.castShadow = true;
+		group.add(head);
+
+		// Capuccio/Corazza sulla testa
+		const headShellGeo = !useCache ? new THREE.BoxGeometry(0.37, 0.1, 0.22) : getCachedGeometry('box', 0.37, 0.1, 0.22);
+		const headShell = new THREE.Mesh(headShellGeo, matShell);
+		headShell.position.set(0, 0.43, -0.35);
+		group.add(headShell);
+
+		// 5. ORECCHIE LUNGHE (Caratteristiche di Zerocalcare)
+		const earGeo = !useCache ? new THREE.BoxGeometry(0.08, 0.3, 0.06) : getCachedGeometry('box', 0.08, 0.3, 0.06);
+		
+		const leftEar = new THREE.Mesh(earGeo, matEars);
+		leftEar.position.set(-0.12, 0.6, -0.32);
+		leftEar.rotation.z = -0.15; // Inclinata leggermente all'esterno
+		leftEar.rotation.x = -0.1;
+		group.add(leftEar);
+
+		const rightEar = new THREE.Mesh(earGeo, matEars);
+		rightEar.position.set(0.12, 0.6, -0.32);
+		rightEar.rotation.z = 0.15;
+		rightEar.rotation.x = -0.1;
+		group.add(rightEar);
+
+		// 6. OCCHI (Grandi ed espressivi)
+		const eyeGeo = !useCache ? new THREE.BoxGeometry(0.06, 0.1, 0.06) : getCachedGeometry('box', 0.06, 0.1, 0.06);
+
+		const leftEye = new THREE.Mesh(eyeGeo, matEye);
+		leftEye.position.set(-0.18, 0.35, -0.45);
+		group.add(leftEye);
+
+		const rightEye = new THREE.Mesh(eyeGeo, matEye);
+		rightEye.position.set(0.18, 0.35, -0.45);
+		group.add(rightEye);
+
+		// 7. CODA SEGMENTATA
+		const tailGeo = !useCache ? new THREE.BoxGeometry(0.12, 0.12, 0.3) : getCachedGeometry('box', 0.12, 0.12, 0.3);
+		const tail = new THREE.Mesh(tailGeo, matShell);
+		tail.position.set(0, 0.12, 0.4);
+		tail.rotation.x = -0.2;
+		group.add(tail);
+
+		group.position.set(0, 0, 0);
+
+		applyCurrentVisualMode(group);
+
+		scene.add(group);
+		return group;
+	}
+	
 	// OH NO... ROCKY GRAFFIETTO!!!
 	function createPlayerRockyGraffietto() {
 		const group = new THREE.Group();
@@ -3685,9 +3811,14 @@ function createPlayerRoblox() {
 
 		// Materiali
 		const turtlePalette = [					
-			[0x27ae60, 0x7e5109, 0xd35400, 0x111111],// 1) Come l'attuale (Pelle verde, guscio marrone scuro, piastre arancioni, occhi neri)
-			[0x2ecc71, 0x1e8449, 0x117a65, 0xf4d03f],// 2) Verde con corazza verde scura ed occhi giallastri
-			[0x8d6e63, 0x4a2c11, 0x3e2723, 0x111111] // 3) Marrone con corazza più scura
+			[0x27ae60, 0x7e5109, 0xd35400, 0x111111], // 1) Verde, guscio marrone, piastre arancioni (originale)
+			[0x2ecc71, 0x1e8449, 0x117a65, 0xf4d03f], // 2) Verde smeraldo con piastre teal ed occhi gialli (originale)
+			[0x8d6e63, 0x4a2c11, 0x3e2723, 0x111111], // 3) Marrone terrestre (originale)
+			[0xd4ac0d, 0x78281f, 0xb9770e, 0x111111], // 4) Tartaruga del deserto (pelle dorata/sabbia, guscio rosso mattone, piastre ocra)
+			[0x16a085, 0x1b4f72, 0x2e4053, 0x2471a3], // 5) Tartaruga marina / abissale (pelle turchese scuro, guscio blu notte, occhi azzurri)
+			[0x7d6608, 0x1c2833, 0x111111, 0xe74c3c], // 6) Tartaruga mecha / vulcanica (pelle oliva scuro, guscio antracite, piastre nere, occhi rossi)
+			[0xf5ee2a, 0xf0f0f0, 0xe5e7e9, 0xe67e22], // 7) Tartaruga albina (pelle giallo chiaro, guscio e piastre bianco/grigio chiaro, occhi arancioni)
+			[0xa569bd, 0x4a235a, 0x7d3c98, 0xf1c40f]  // 8) Tartaruga tossica / neon (pelle viola chiaro, guscio prugna scuro, occhi gialli)
 		];
 		const turtleColor = turtlePalette[(++currentPaletteIndex % turtlePalette.length)];
 		
@@ -3902,12 +4033,6 @@ function createPlayerRoblox() {
 	}
 
 
-	//croco: { col1: 0x6b4e2e, col2: 0x422f1b } //marroncino
-	//croco: { col1: 0x2e6b30, col2: 0x1f4d24 } //verde
-	//croco: { col1: 0x76c943, col2: 0x419120 } //verde chiaro
-	//croco: { col1: 0x8c5226, col2: 0x542e13 } //cioccolato
-	//croco: { col1: 0xd0d7de, col2: 0x8b949e } //grigio
-
 	//colori ambiente
 	const colors = [
 		{ probTruck: 0.2, probBus: 0.1, probPolice: 0.05, probTaxi: 0.05, probCactus: 0.0, probCroco: 0.1, croco: { col1: 0x2e6b30, col2: 0x1f4d24 }, log: { col1: 0x795548, col2: 0x5f4035 }, tree: { col1: 0x2e7d32, col2: 0x388e3c }, cactus: { col1: 0x276a2b, col2: 0x307933 }, grass: { col1: 0x66bb66, col2: 0x60b560 }, river: { col1: 0x33bbff, col2: 0x30b5f5 }, track: { col1: 0x444444, col2: 0x3a3a3a }},
@@ -3928,7 +4053,8 @@ function createPlayerRoblox() {
 		0xffdd00, // Giallo
 		0x11bb99, // Verde Turchese / Turchese Scuro
 		0xff8822, // Arancione
-		0x00bb99 // Verde Menta / Giada
+		0x00bb99, // Verde Menta / Giada
+		0xa6160a  // rosso italo
 	  ];
 	//colori auto
 	const carColors = [
@@ -4298,15 +4424,9 @@ function createPlayerRoblox() {
 		// ==========================================
 
 		// Usiamo MeshBasicMaterial o MeshStandardMaterial con emissive per l'effetto luminoso
-		const redMaterial = new THREE.MeshBasicMaterial({
-			color: 0xff0000
-		});
-		const whiteMaterial = new THREE.MeshBasicMaterial({
-			color: 0xeeeeee
-		});
-		const blueMaterial = new THREE.MeshBasicMaterial({
-			color: 0x0000ff
-		});
+		const redMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+		const whiteMaterial = new THREE.MeshBasicMaterial({ color: 0xeeeeee });
+		const blueMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
 
 		const cubeGeo = !useCache ? new THREE.BoxGeometry(0.08, 0.08, 0.12) : getCachedGeometry('box', 0.08, 0.08, 0.12);
 		const roofY = 0.72; // Posizione Y sopra il tettuccio
@@ -4327,44 +4447,20 @@ function createPlayerRoblox() {
 		blueCube.position.set(roofX, roofY, -0.14);
 		group.add(blueCube);
 
-		// PointLight per proiettare la luce nell'ambiente
-		const policeLight = new THREE.PointLight(0xff0000, 3, 2);
+		
+		////PointLight per proiettare la luce nell'ambiente
+		// Costruttore: PointLight(colore, intensita, distanza, decadimento)
+		//decadimento == 0 -> oltre la distanza, muore
+		//decadimento == 1 -> lineare
+		//decadimento == 2 -> default, col quadrato della distanza
+		const policeLight = new THREE.PointLight(0xff0000, 4, 5, 2);
 		policeLight.position.set(roofX, roofY + 0.1, 0);
 		group.add(policeLight);
-		const glowY = roofY + 0.1;
-
-		//due cubi luminosi (invece della sfera)
-		const glowGeo = !useCache ? new THREE.BoxGeometry(0.2, 0.15, 0.2) : getCachedGeometry('box', 0.2, 0.15, 0.2);
-
-		const glowMaterialRed = new THREE.MeshBasicMaterial({
-			color: 0xff0000,
-			transparent: true,
-			opacity: 0.05,
-			depthWrite: false
-		});
-		const glowMaterialBlue = new THREE.MeshBasicMaterial({
-			color: 0x0000ff,
-			transparent: true,
-			opacity: 0.05,
-			depthWrite: false
-		});
-
-		const lightGlowRed = new THREE.Mesh(glowGeo, glowMaterialRed);
-		lightGlowRed.position.set(policeLight.position.x, policeLight.position.y, policeLight.position.z + 0.24);
-		//lightGlowRed.position.set(roofX, glowY, 0.24);
-		group.add(lightGlowRed);
-
-		const lightGlowBlue = new THREE.Mesh(glowGeo, glowMaterialBlue);
-		lightGlowBlue.position.set(policeLight.position.x, policeLight.position.y, policeLight.position.z - 0.24);
-		//lightGlowBlue.position.set(roofX, glowY, -0.24);
-		group.add(lightGlowBlue);
-
+				
 		group.userData = {
 			redMaterial: redMaterial,
 			blueMaterial: blueMaterial,
 			policeLight: policeLight,
-			glowMaterialRed: glowMaterialRed,
-			glowMaterialBlue: glowMaterialBlue
 		};
 
 		applyCurrentVisualMode(group);
@@ -4383,7 +4479,7 @@ function createPlayerRoblox() {
 			return m;
 		};
 
-		const roofX = 0.10;
+		const roofX = 0.05;
 
 		// Insegna TAXI sul tettuccio (Basic = resta chiara anche di notte)
 		const sign = new THREE.Mesh(
@@ -7222,6 +7318,35 @@ walkSideLimbs = -walkSideLimbs;
 		"Let's go already!",
 		"Who are you and why should I care?"
 	];
+	const zeroCalcareThinksArray = [
+		"Se famo 'npacco de cazzi nostri?",
+		"Magna, bevi, dormi e strigni 'e spalle.",
+		"S'è fatta l'ora de andassene a dormì.",
+		"Te stai a fa i film in testa!",
+		"Ma chi ce lo fa fa'?",
+		"Guarda che se fai così poi te penti.",
+		"Ma che davero davero?",
+		"Sta cosa non ci riguarda proprio.",
+		"A 'sto punto me ne vado a letto.",
+		"Manco se me paghi in oro.",
+		"Tanto alla fine morimo tutti.",
+		"Stamo sempre a girà intorno ar problema.",
+		"Ce sta 'na sola cosa da fa: gnente.",
+		"Te prego, dimme che non stai a pensà a quello che penso io.",
+		"Si, stocazzo!",
+		"Me viene già la stanchezza solo a sentitte.",
+		"Sta vita è 'n continuo pianto e un continuo rimpianto.",
+		"Ordina 'na pizza e famola finita.",
+		"Macchittesencula.",
+		"Stamo a fa la fine dei sorci.",
+		"Ma secondo te a chi glie ne frega qualcosa?",
+		"Dai che stasera ce sta la serie nuova.",
+		"Ma non puoi fa finta de niente come tutti gli altri?",
+		"Non è che se te preoccupi le cose cambiano...",
+		"Io me metto a coccio e me addormento.",
+		"Andiamo, s'è fatta 'na certa!",
+		"Ma te pare il caso de tirà fora 'ste cose adesso?"
+	];
 
 	const minionThinksArray = [
 		"Bello!",
@@ -7341,6 +7466,7 @@ walkSideLimbs = -walkSideLimbs;
 		const isMinion = currentPlayerType === 'minion';
 		const isBender = currentPlayerType === 'bender';
 		const isPumpkin = currentPlayerType === 'pumpkin';
+		const isZeroCalcare = currentPlayerType === 'zerocalcare';
 
 		// Bolla forzata attiva per limite indietro superato -> ignora la logica di idle!
 		if (performance.now() < forcedThoughtUntil) {
@@ -7370,6 +7496,7 @@ walkSideLimbs = -walkSideLimbs;
 				isNearHouse() ? "Home sweet home..." :
 				isCat ? rockyThinksArray[rockyThinksIndex] :
 				isBender ? benderThinksArray[rockyThinksIndex] :
+				isZeroCalcare ? zeroCalcareThinksArray[rockyThinksIndex] :
 				isMinion ? minionThinksArray[rockyThinksIndex] :
 				isPumpkin ? pumpkinThinksArray[rockyThinksIndex] :
 				genericThinksArray[rockyThinksIndex];
@@ -7642,8 +7769,10 @@ updatePlayerLimbs();
 
 
 		//calcola polizia/treno piu vicino
+		let nearestPolice = null;
 		let minPoliceDistance = 9999;
 		let minTrainDistance = 9999;
+		const flash = Math.floor(performance.now() / 500) % 2;
 
 		// 4. MOVIMENTO MACCHINE E COLLISIONI
 		for (let i = cars.length - 1; i >= 0; i--) {
@@ -7658,28 +7787,24 @@ updatePlayerLimbs();
 				if (car.isPolice && carDistance < minPoliceDistance) {
 					//console.log('police', carDistance);
 					minPoliceDistance = carDistance;
+					nearestPolice = car;
 				} else if (car.isTrain && carDistance < minTrainDistance) {
 					//console.log('train', carDistance);
 					minTrainDistance = carDistance;
 				}
 			}
 
-			if (car.isPolice && car.mesh && car.mesh.userData && car.mesh.userData.redMaterial && car.mesh.userData.blueMaterial && car.mesh.userData.policeLight) {
-				const flash = Math.floor(performance.now() / 500) % 2;
+			if (car.isPolice && car.mesh && car.mesh.userData && car.mesh.userData.redMaterial && car.mesh.userData.blueMaterial) {
 				if (flash) {
 					// Stato 1: Rosso acceso, Blu spento
 					car.mesh.userData.redMaterial.color.setHex(0xff0000);
 					car.mesh.userData.blueMaterial.color.setHex(0x222255);
 					car.mesh.userData.policeLight.color.setHex(0xff0000);
-					car.mesh.userData.glowMaterialRed.color.setHex(0xff0000);
-					car.mesh.userData.glowMaterialBlue.color.setHex(0x000066); // spento/scuro
 				} else {
 					// Stato 2: Rosso spento, Blu acceso
 					car.mesh.userData.redMaterial.color.setHex(0x552222);
 					car.mesh.userData.blueMaterial.color.setHex(0x0000ff);
 					car.mesh.userData.policeLight.color.setHex(0x0000ff);
-					car.mesh.userData.glowMaterialRed.color.setHex(0x660000); // spento/scuro
-					car.mesh.userData.glowMaterialBlue.color.setHex(0x0000ff);
 				}
 			}
 
@@ -7713,6 +7838,15 @@ updatePlayerLimbs();
 
 		//se esiste polizia/treno vicino -> SUONA!!!
 		if (minPoliceDistance < 9) playSound('policeSound', minPoliceDistance < 3 ? 1 : minPoliceDistance < 6 ? 0.33 : 0.1);
+		/*if (nearestPolice && minPoliceDistance < 9) {
+			globalPoliceLight.position.set(nearestPolice.mesh.position.x, 0.82, nearestPolice.z);
+			globalPoliceLight.color.setHex(flash ? 0xff0000 : 0x0000ff);
+			globalPoliceLight.intensity = 3;
+			playSound('policeSound', minPoliceDistance < 3 ? 1 : minPoliceDistance < 6 ? 0.33 : 0.1);
+		} else {
+			globalPoliceLight.intensity = 0;
+		}*/
+		
 		if (minTrainDistance < 14) playSound('trainSound', minTrainDistance < 3 ? 1 : minTrainDistance < 6 ? 0.66 : minTrainDistance < 9 ? 0.45 : minTrainDistance < 12 ? 0.25 : 0.1);
 
 
@@ -8450,9 +8584,7 @@ updatePlayerLimbs();
 		resetIdle();
 	}
 	
-	isMute=1;
 	
-
 	animate();
   </script>
 </body>
