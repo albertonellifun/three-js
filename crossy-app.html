@@ -236,12 +236,17 @@
       background: rgba(255,255,255,0.45);
     }
     .action-btn.toggled-on {
-      background: rgba(46, 204, 113, 0.55);
-      border-color: #2ecc71;
+      background: rgba(40, 204, 120, 0.50);
+      border-color: #22cc77;
+    }
+	
+	.action-btn.toggled-blue {
+      background: rgba(70, 90, 255, 0.50);
+      border-color: #4455cc;
     }
 	
 	.action-btn.toggled-red {
-      background: rgba(204, 0, 0, 0.55);
+      background: rgba(204, 0, 0, 0.50);
       border-color: #cc0000;
     }
 	
@@ -340,13 +345,13 @@
   </div>
   
   <div id="action-controls">
-    <button class="action-btn" id="btn-zoom-out"    aria-label="Zoom out">−</button>
-    <button class="action-btn" id="btn-zoom-in"     aria-label="Zoom in">+</button>
-    <button class="action-btn" id="btn-rot-right"   aria-label="Rotate view">↻</button>
-    <button class="action-btn" id="btn-rot-left"    aria-label="Rotate view">↺</button>
-	<button class="action-btn" id="btn-cam-up"      aria-label="Raise view">↑</button>
-    <button class="action-btn" id="btn-cam-down"    aria-label="Lower view">↓</button>
-    <button class="action-btn" id="btn-perspective" aria-label="Perspective toggle">👁️</button>
+    <button class="action-btn toggled-blue" id="btn-zoom-out"    aria-label="Zoom out">−</button>
+    <button class="action-btn toggled-blue" id="btn-zoom-in"     aria-label="Zoom in">+</button>
+    <button class="action-btn toggled-blue" id="btn-rot-right"   aria-label="Rotate view">↻</button>
+    <button class="action-btn toggled-blue" id="btn-rot-left"    aria-label="Rotate view">↺</button>
+	<button class="action-btn toggled-blue" id="btn-cam-up"      aria-label="Raise view">↑</button>
+    <button class="action-btn toggled-blue" id="btn-cam-down"    aria-label="Lower view">↓</button>
+    <button class="action-btn toggled-blue" id="btn-perspective" aria-label="Perspective toggle">👁️</button>
 	<button class="action-btn" id="btn-wireframe" aria-label="Wireframe toggle">📐</button>
 	<button class="action-btn toggled-on" id="btn-shadows" aria-label="Shadows toggle">🌗</button>
 	<button class="action-btn toggled-on" id="btn-grass"     aria-label="Grass toggle">🍀</button>
@@ -355,8 +360,9 @@
 	<button class="action-btn" id="btn-bw"        aria-label="Black & White toggle">☯</button>
 	<button class="action-btn" id="btn-godmode"   aria-label="GodMode toggle">🛡️</button>
 	<button class="action-btn" id="btn-fps"		  aria-label="FPS toggle">🕵️</button>
-	<button class="action-btn" id="btn-mute"      aria-label="Mute toggle">🎵</button>
-    <button class="action-btn" id="btn-info"      aria-label="Game info">?</button>
+	<button class="action-btn" id="btn-mute-sound"     aria-label="Sound toggle">🔊</button>
+	<button class="action-btn" id="btn-mute-music"     aria-label="Music toggle">🎵</button>
+	<button class="action-btn" id="btn-info"      aria-label="Game info">?</button>
     <button class="action-btn" id="btn-player"    aria-label="Change player">🥊</button>
 	<button class="action-btn" id="btn-refresh"   aria-label="Refresh player">🎨</button>
 	<button class="action-btn toggled-red" id="btn-restart"   aria-label="Restart game">💀</button>
@@ -475,6 +481,8 @@
 	const MIN_LANE = 5;
 	const MAX_LANE = -30;
 	const JUMP_SPEED = 0.10;
+	const LOG_TOP_Y = 0.045; // superficie del tronco quando è "premuto" (-0.075 + 0.12)
+	let jumpStartY = 0;//altezza dalla quale parte il salto (non è sempre zero)
 
 	// --- SCENA, CAMERA, RENDERER ---
 	const scene = new THREE.Scene();
@@ -652,7 +660,8 @@
 	let isDying = false;
 	let gameStarted = false;
 
-	let isMute = false; //il silenzio e' d'oro
+	let isMuteSound = false; //il silenzio e' d'oro
+	let isMuteMusic = false; //il silenzio e' d'oro
 	let isWireframe = false; //wireframe disabilitato
 	let isBW = false;
 	let isShadows = true; //ombre abilitate
@@ -1822,11 +1831,11 @@ function createPlayerRoblox() {
 		const footGeo = !useCache ? new THREE.BoxGeometry(0.12, 0.05, 0.15) : getCachedGeometry('box', 0.12, 0.05, 0.15);
 
 		const leftFoot = new THREE.Mesh(footGeo, clawMat);
-		leftFoot.position.set(-0.15, 0.0, -0.15); // Sotto a sinistra
+		leftFoot.position.set(-0.15, 0.025, -0.15);   //0.0
 		group.add(leftFoot);
 
 		const rightFoot = new THREE.Mesh(footGeo, clawMat);
-		rightFoot.position.set(0.15, 0.0, -0.15); // Sotto a destra
+		rightFoot.position.set(0.15, 0.025, -0.15); //0.0
 		group.add(rightFoot);
 
 		// --- Setup finale del gruppo ---
@@ -2101,15 +2110,15 @@ function createPlayerRoblox() {
 		const group = new THREE.Group();
 		
 		const duckPalette = [				
-		[0x55aa55, 0x664422], // 1) Verde smeraldo e marrone (Germano reale classico)
-		[0x885533, 0x664422], // 2) Marrone chiaro e marrone scuro (Anatra femmina)
-		[0x2b4c7e, 0x1f2a38], // 3) Blu notte e grigio scuro metallizzato (Anatra selvatica marina)
-		[0x008080, 0x4a3b32], // 4) Ottanio / Verde Teala e cioccolato (Alzavola)
-		[0x222222, 0x111111], // 5) Nero e grigio antracite (Anatra melanica / Rubber Duck gothic)
-		[0xf1c40f, 0xe67e22], // 6) Giallo e arancione (Paparella classica da bagno)
-		[0xd5dbdb, 0x85929e], // 7) Bianco gesso e grigio cenere (Anatra artica / cigno)
-		[0x8e44ad, 0x2c3e50]  // 8) Viola e blu scuro (Variante fantasy)
-	];
+			[0x55aa55, 0x664422], // 1) Verde smeraldo e marrone (Germano reale classico)
+			[0x885533, 0x664422], // 2) Marrone chiaro e marrone scuro (Anatra femmina)
+			[0x2b4c7e, 0x1f2a38], // 3) Blu notte e grigio scuro metallizzato (Anatra selvatica marina)
+			[0x008080, 0x4a3b32], // 4) Ottanio / Verde Teala e cioccolato (Alzavola)
+			[0x222222, 0x111111], // 5) Nero e grigio antracite (Anatra melanica / Rubber Duck gothic)
+			[0xf1c40f, 0xe67e22], // 6) Giallo e arancione (Paparella classica da bagno)
+			[0xd5dbdb, 0x85929e], // 7) Bianco gesso e grigio cenere (Anatra artica / cigno)
+			[0x8e44ad, 0x2c3e50]  // 8) Viola e blu scuro (Variante fantasy)
+		];
 		
 		const duckColor = duckPalette[(++currentPaletteIndex % duckPalette.length)];
 
@@ -2119,7 +2128,7 @@ function createPlayerRoblox() {
 				color: duckColor[0]
 			})
 		);
-		body.position.y = 0.45;
+		body.position.y = 0.55;//0.45
 		body.castShadow = true;
 		group.add(body);
 
@@ -2129,7 +2138,7 @@ function createPlayerRoblox() {
 				color: 0xffffff
 			})
 		);
-		bodyWhite.position.y = 0.2;
+		bodyWhite.position.y = 0.3;//0.2
 		bodyWhite.castShadow = true;
 		group.add(bodyWhite);
 
@@ -2139,7 +2148,7 @@ function createPlayerRoblox() {
 				color: duckColor[1]
 			})
 		);
-		bodyBrown.position.y = 0.0;
+		bodyBrown.position.y = 0.1;//0.1
 		bodyBrown.castShadow = true;
 		group.add(bodyBrown);
 
@@ -2149,7 +2158,7 @@ function createPlayerRoblox() {
 				color: 0xf39c12
 			})
 		);
-		beak.position.set(0, 0.38, -0.4);
+		beak.position.set(0, 0.48, -0.38);//0.38
 		group.add(beak);
 
 		const wattle = new THREE.Mesh(
@@ -2158,7 +2167,7 @@ function createPlayerRoblox() {
 				color: 0xe74c3c
 			})
 		);
-		wattle.position.set(0, 0.22, -0.36);
+		wattle.position.set(0, 0.32, -0.36);//0.22
 		group.add(wattle);
 
 		const eyeGeo = !useCache ? new THREE.BoxGeometry(0.04, 0.24, 0.24) : getCachedGeometry('box', 0.04, 0.24, 0.24);
@@ -2167,11 +2176,11 @@ function createPlayerRoblox() {
 		});
 
 		const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
-		leftEye.position.set(-0.31, 0.42, -0.15);
+		leftEye.position.set(-0.31, 0.52, -0.15);//0.42
 		group.add(leftEye);
 
 		const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
-		rightEye.position.set(0.31, 0.42, -0.15);
+		rightEye.position.set(0.31, 0.52, -0.15);//0.42
 		group.add(rightEye);
 
 		const pupilGeo = !useCache ? new THREE.BoxGeometry(0.08, 0.12, 0.08) : getCachedGeometry('box', 0.08, 0.12, 0.08);
@@ -2180,11 +2189,11 @@ function createPlayerRoblox() {
 		});
 
 		const leftEyePupil = new THREE.Mesh(pupilGeo, pupilMat);
-		leftEyePupil.position.set(-0.32, 0.42, -0.15);
+		leftEyePupil.position.set(-0.32, 0.52, -0.15);//0.42
 		group.add(leftEyePupil);
 
 		const rightEyePupil = new THREE.Mesh(pupilGeo, pupilMat);
-		rightEyePupil.position.set(0.32, 0.42, -0.15);
+		rightEyePupil.position.set(0.32, 0.52, -0.15);//0.42
 		group.add(rightEyePupil);
 
 		group.position.set(0, 0, 0);
@@ -5393,41 +5402,26 @@ function createPlayerRoblox() {
 	// --- EFFETTO MORTE: X ROSSA CHE APPARE E SPARISCE ---
 	function createDeathMarker() {
 		const group = new THREE.Group();
-		const barGeo = !useCache ? new THREE.BoxGeometry(1.1, 0.16, 0.14) : getCachedGeometry('box', 1.1, 0.16, 0.14);
+		const barGeo = !useCache ? new THREE.BoxGeometry(1.1, 0.05, 0.16) : getCachedGeometry('box', 1.1, 0.05, 0.16);
 
-		const mat1 = new THREE.MeshBasicMaterial({
-			color: 0xff1e1e,
-			transparent: true,
-			opacity: 1,
-			depthTest: false
-		});
+		const mat1 = new THREE.MeshBasicMaterial({ color: 0xff1e1e, transparent: true, opacity: 1, depthTest: false });
 		const bar1 = new THREE.Mesh(barGeo, mat1);
-		bar1.rotation.z = Math.PI / 4;
+		bar1.rotation.y = Math.PI / 4;
 		group.add(bar1);
 
-		const mat2 = new THREE.MeshBasicMaterial({
-			color: 0xff1e1e,
-			transparent: true,
-			opacity: 1,
-			depthTest: false
-		});
+		const mat2 = new THREE.MeshBasicMaterial({ color: 0xff1e1e, transparent: true, opacity: 1, depthTest: false });
 		const bar2 = new THREE.Mesh(barGeo, mat2);
-		bar2.rotation.z = -Math.PI / 4;
+		bar2.rotation.y = -Math.PI / 4;
 		group.add(bar2);
 
-		// Orienta la X verso la camera in base all'angolazione corrente
-		const offset = getRotatedCameraOffset();
-		group.rotation.y = Math.atan2(offset.x, offset.z);
 		group.renderOrder = 999;
-
 		applyCurrentVisualMode(group);
-
 		return group;
 	}
 
 	function playDeathMarker(position) {
 		const marker = createDeathMarker();
-		marker.position.set(position.x, 0.5, position.z);
+		marker.position.set(position.x, 0.1, position.z);
 		marker.scale.set(0.2, 0.2, 0.2);
 		scene.add(marker);
 
@@ -6740,6 +6734,7 @@ function createPlayerRoblox() {
 		targetPos.x = nextX;
 		targetPos.z = nextZ;
 		jumpProgress = 0;
+		jumpStartY = player.position.y;//il salto non parte sempre da zero!
 		isJumping = true;
 walkSideLimbs = -walkSideLimbs;
 
@@ -6772,8 +6767,11 @@ walkSideLimbs = -walkSideLimbs;
 		} else if (e.key === 'p' || e.key === 'P') {
 			togglePlayerModel();
 		} else if (e.key === 'm' || e.key === 'M') {
-			isMute = !isMute;
+			isMuteMusic = !isMuteMusic;
 			updateMusic();
+		} else if (e.key === 'n' || e.key === 'N') {
+			isMuteSound = !isMuteSound;
+			updateSound();
 		}
 	});
 
@@ -6956,9 +6954,14 @@ walkSideLimbs = -walkSideLimbs;
 		toggleFps();
 	});
 
-	bindTouchButton('btn-mute', () => {
-		isMute = !isMute;
+	bindTouchButton('btn-mute-music', () => {
+		isMuteMusic = !isMuteMusic;
 		updateMusic();
+	});
+	
+	bindTouchButton('btn-mute-sound', () => {
+		isMuteSound = !isMuteSound;
+		updateSound();
 	});
 
 	bindTouchButton('btn-perspective', () => {
@@ -7038,17 +7041,12 @@ walkSideLimbs = -walkSideLimbs;
 		const m3 = document.getElementById("musicSound3");
 		if (!m1 || !m2 || !m3) return;
 
-		document.getElementById('btn-mute').innerText = isMute ? '🔇' : '🎵';
+		document.getElementById('btn-mute-music').innerText = isMuteMusic ? '🔇' : '🎵';
 
-		if (isMute) {
+		if (isMuteMusic) {
 			m1.pause();
 			m2.pause();
 			m3.pause();
-			let sounds = ["trainSound", "policeSound", "splashSound", "crocoSound"];
-			sounds.forEach(s => {
-				let elem = document.getElementById(s);
-				if (elem) elem.pause();
-			});
 			return;
 		}
 
@@ -7077,9 +7075,18 @@ walkSideLimbs = -walkSideLimbs;
 			}
 		}
 	}
+	
+	function updateSound() {
+		document.getElementById('btn-mute-sound').innerText = isMuteSound ? '🔕' : '🔊';
+		if (!isMuteSound) return;
+		["trainSound", "policeSound", "splashSound", "crocoSound", "bonusSound"].forEach(s => {
+			const elem = document.getElementById(s);
+			if (elem) elem.pause();
+		});
+	}
 
 	function playSound(id, vol = 1) {
-		if (isMute) return;
+		if (isMuteSound) return;
 		const audio = document.getElementById(id);
 		if (audio) {
 			//audio.currentTime = 0;
@@ -7572,7 +7579,8 @@ walkSideLimbs = -walkSideLimbs;
 			jumpProgress = Math.min(1, jumpProgress + JUMP_SPEED);
 			player.position.x = THREE.MathUtils.lerp(playerPos.x, targetPos.x, jumpProgress);
 			player.position.z = THREE.MathUtils.lerp(playerPos.z, targetPos.z, jumpProgress);
-			player.position.y = Math.abs(Math.sin(jumpProgress * Math.PI) * 0.4);
+			//player.position.y = Math.abs(Math.sin(jumpProgress * Math.PI) * 0.4);
+			player.position.y = THREE.MathUtils.lerp(jumpStartY, 0, jumpProgress) + Math.abs(Math.sin(jumpProgress * Math.PI) * 0.4);
 
 			if (jumpProgress >= 1) {
 				isJumping = false;
@@ -7901,6 +7909,7 @@ updatePlayerLimbs();
 						targetPos.x = log.mesh.position.x;
 					} else {
 						player.position.x += log.speed;
+						player.position.y = LOG_TOP_Y;//altezza tronco premuto
 						playerPos.x = player.position.x;
 						targetPos.x = player.position.x;
 
@@ -8583,7 +8592,6 @@ updatePlayerLimbs();
 		playSpawnEffect(player.position);
 		resetIdle();
 	}
-	
 	
 	animate();
   </script>
