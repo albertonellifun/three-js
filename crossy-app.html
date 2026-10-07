@@ -78,16 +78,37 @@
       color: #ffffff;
       font-size: 42px;
       font-weight: 900;
-      margin: 0 0 6px 0;
+      margin: 0;
+	  line-height: 32px;
       text-shadow: 3px 3px 0px rgba(0,0,0,0.5);
       letter-spacing: -1px;
     }
+	
+	#start-overlay h1 .first {
+	  transition: transform 0.08s ease;
+	  opacity: 0; /* Parte invisibile */
+	  animation: fadeInNoScale 0.5s ease-in 0.50s forwards; /* Durata  + ritardo */
+	}
+	#start-overlay h1 .second {
+	  transition: transform 0.08s ease;
+	  opacity: 0; /* Parte invisibile */
+	  animation: fadeInNoScale 0.5s ease-in 1.0s forwards; /* Durata  + ritardo */
+	}
+	#start-overlay h1 .third {
+	  transition: transform 0.08s ease;
+	  opacity: 0; /* Parte invisibile */
+	  animation: fadeInNoScale 0.5s ease-in 1.5s forwards; /* Durata  + ritardo */
+	}
+	
     #start-overlay .edition {
       color: #ffd54f;
       font-size: 18px;
       font-weight: bold;
-      margin-bottom: 34px;
+      margin: 6px 0 90px 0;
       text-shadow: 2px 2px 0px rgba(0,0,0,0.5);
+	  transition: transform 0.08s ease;
+	  opacity: 0; /* Parte invisibile */
+	  animation: fadeIn 1.0s ease-in 2s forwards; /* Durata 0.5s, ritardo di 1s */
     }
     #play-btn {
       background: linear-gradient(145deg, #2ecc71, #27ae60);
@@ -101,11 +122,17 @@
       box-shadow: 0 6px 0 #1e8449, 0 12px 22px rgba(0,0,0,0.4);
       transition: transform 0.08s ease;
 	  opacity: 0; /* Parte invisibile */
-	  animation: fadeIn 0.5s ease-in 1s forwards; /* Durata 0.5s, ritardo di 1s */
+	  animation: fadeInNoScale 0.5s ease-in 4s forwards; /* Durata 0.5s, ritardo di 2s */
     }
-
+	
+	@keyframes fadeInNoScale {
+	  from { opacity: 0; }
+      to   { opacity: 1; }
+	}
+	
     @keyframes fadeIn {
-      to { opacity: 1; } 
+	  from { transform: scale(0); opacity: 0; }
+      to   { transform: scale(1); opacity: 1; }
 	}
   
     #play-btn:active {
@@ -351,12 +378,12 @@
     <button class="action-btn toggled-blue" id="btn-rot-left"    aria-label="Rotate view">↺</button>
 	<button class="action-btn toggled-blue" id="btn-cam-up"      aria-label="Raise view">↑</button>
     <button class="action-btn toggled-blue" id="btn-cam-down"    aria-label="Lower view">↓</button>
-    <button class="action-btn toggled-blue" id="btn-perspective" aria-label="Perspective toggle">👁️</button>
+    <button class="action-btn" id="btn-perspective" aria-label="Perspective toggle">👁️</button>
 	<button class="action-btn" id="btn-wireframe" aria-label="Wireframe toggle">📐</button>
 	<button class="action-btn toggled-on" id="btn-shadows" aria-label="Shadows toggle">🌗</button>
-	<button class="action-btn toggled-on" id="btn-grass"     aria-label="Grass toggle">🍀</button>
-	<button class="action-btn toggled-on" id="btn-limbs" aria-label="Limbs animation toggle">🎬</button>
-	<button class="action-btn" id="btn-clock" aria-label="Advance time">🕐</button>
+	<button class="action-btn toggled-on" id="btn-grass"   aria-label="Grass toggle">🍀</button>
+	<button class="action-btn toggled-on" id="btn-limbs"   aria-label="Limbs animation toggle">🎬</button>
+	<button class="action-btn" id="btn-clock"     aria-label="Advance time">🕐</button>
 	<button class="action-btn" id="btn-bw"        aria-label="Black & White toggle">☯</button>
 	<button class="action-btn" id="btn-godmode"   aria-label="GodMode toggle">🛡️</button>
 	<button class="action-btn" id="btn-fps"		  aria-label="FPS toggle">🕵️</button>
@@ -369,7 +396,7 @@
   </div>
 
   <div id="start-overlay">
-    <h1>Urban Blox Crossing</h1>
+    <h1><span class="first">Urban</span> <span class="second">Blox</span> <span class="third">Crossing</span></h1>
     <div class="edition">🥊😼Rocky Graffietto Edition</div>
     <button id="play-btn">▶ PLAY</button>
   </div>
