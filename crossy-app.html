@@ -378,10 +378,11 @@
     <button class="action-btn toggled-blue" id="btn-rot-left"    aria-label="Rotate view">↺</button>
 	<button class="action-btn toggled-blue" id="btn-cam-up"      aria-label="Raise view">↑</button>
     <button class="action-btn toggled-blue" id="btn-cam-down"    aria-label="Lower view">↓</button>
-    <button class="action-btn" id="btn-perspective" aria-label="Perspective toggle">👁️</button>
-	<button class="action-btn" id="btn-wireframe" aria-label="Wireframe toggle">📐</button>
+    <button class="action-btn" id="btn-perspective"        aria-label="Perspective toggle">👁️</button>
+	<button class="action-btn" id="btn-wireframe"          aria-label="Wireframe toggle">📐</button>
 	<button class="action-btn toggled-on" id="btn-shadows" aria-label="Shadows toggle">🌗</button>
 	<button class="action-btn toggled-on" id="btn-grass"   aria-label="Grass toggle">🍀</button>
+	<button class="action-btn" id="btn-clouds"             aria-label="Clouds toggle">☁️</button>
 	<button class="action-btn toggled-on" id="btn-limbs"   aria-label="Limbs animation toggle">🎬</button>
 	<button class="action-btn" id="btn-clock"     aria-label="Advance time">🕐</button>
 	<button class="action-btn" id="btn-bw"        aria-label="Black & White toggle">☯</button>
@@ -520,7 +521,7 @@
 	const ZOOM_MAX = 7;
 	const ZOOM_STEP = 0.25;
 	let d = 5; // zoom iniziale (modificabile con i pulsanti +/-)
-	let camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 500);
+	let camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, -50, 500);//near plane negativo -50 invece di 1
 	/*camera = new THREE.PerspectiveCamera( 
 		20+d*d, // FOV alto == 120-150 == prospettiva distorta, basso == 40-60 == normale
 		aspect,
@@ -531,14 +532,8 @@
 
 	// Offset base della camera rispetto al player, con stato di rotazione "a caldo"
 	const baseCameraOffset = new THREE.Vector3(6, 8, 6);
-	const ZOOM_DEFAULT = d; // zoom iniziale (5)
-	const CAM_Y_PER_ZOOM = 1.75; // di quanto cambia la y per ogni unità di zoom (d)
 	let CAM_Y = 8;
-	// d piccolo (zoom vicino) -> camera più bassa, d grande (zoom lontano) -> camera più alta
-	function getCameraHeight() {
-		return baseCameraOffset.y + Math.min(0, (d - ZOOM_DEFAULT) * CAM_Y_PER_ZOOM);
-	}
-
+	
 	let cameraAngle = 0;
 	let targetCameraAngle = 0;
 
@@ -656,7 +651,7 @@
 	
 	function applyTimeOfDay() {
 		const slot = timeSlots.find(s => currentHours >= s.start && currentHours < s.end) || timeSlots[0];
-		console.log(slot);
+		//console.log(slot);
 		const prog = (currentHours - slot.start) / (slot.end - slot.start);
 		sunHeight = slot.heightStart + (slot.heightEnd - slot.heightStart) * prog;
 
@@ -1373,8 +1368,7 @@ function createPlayerRoblox() {
 		const pivot = new THREE.Group();
 		pivot.position.set(s * (TORSO_W / 2 + ARM_GAP), LEG_H + TORSO_H, 0);
 		pivot.rotation.z = s * ARM_ANGLE;
-		pivot.userData.restZ = s * ARM_ANGLE;
-
+		
 		const arm = new THREE.Mesh(box(ARM_W, TORSO_H, DEPTH), yellowMat);
 		arm.position.set(s * ARM_W / 2, -TORSO_H / 2, 0);
 		arm.castShadow = true;
@@ -2732,16 +2726,12 @@ function createPlayerRoblox() {
 
 
 	// ALBERO SECCO stile Halloween: tronco contorto, nero, senza foglie
-	function createDeadTreeMesh(col1, col2) {
+	function createDeadTreeMesh() {
 		const group = new THREE.Group();
 		const isTall = Math.random() > 0.5;
 
-		const barkMat = new THREE.MeshLambertMaterial({
-			color: 0x161616
-		});
-		const barkDarkMat = new THREE.MeshLambertMaterial({
-			color: 0x0a0a0a
-		});
+		const barkMat = new THREE.MeshLambertMaterial({ color: 0x161616 });
+		const barkDarkMat = new THREE.MeshLambertMaterial({ color: 0x0a0a0a });
 
 		const trunkHeight = isTall ? 1.3 : 0.95;
 
@@ -4977,13 +4967,11 @@ function createPlayerRoblox() {
 
 
 	// modello specie di aiuola per ALBERO
-	function createTreeBorder(col1) {
+	function createTreeBorder() {
 		const group = new THREE.Group();
 		const border = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(1.0, 0.02, 0.70) : getCachedGeometry('box', 1.0, 0.02, 0.70),
-			new THREE.MeshLambertMaterial({
-				color: 0x333333
-			})
+			new THREE.MeshLambertMaterial({ color: 0x333333 })
 		);
 		border.position.y = 0.01;
 		border.castShadow = false; //ottimizzazione
@@ -5577,8 +5565,6 @@ function createPlayerRoblox() {
 
 
 	function getObjectColorByZ(z) {
-		let isLight = z % 2 === 0;
-
 		if (z > -5) return colors[0];
 
 		let colorIdx = ((-z * 0.025) | 0) % colors.length;
@@ -6316,7 +6302,7 @@ function createPlayerRoblox() {
 							laneData.decor.push(tree); //anche nelle decorazioni
 
 							//bordo aiuola intorno
-							const border = createTreeBorder(color.tree.col1);
+							const border = createTreeBorder();
 							border.position.set(x, 0, z);
 							scene.add(border);
 							laneData.decor.push(border); //anche nelle decorazioni
@@ -6347,7 +6333,7 @@ function createPlayerRoblox() {
 							laneData.obstacles.push(x);
 							laneData.decor.push(tree); //anche nelle decorazioni
 							if (isPavement) {
-								const border = createTreeBorder(color.tree.col1);
+								const border = createTreeBorder();
 								border.position.set(x, 0, z);
 								scene.add(border);
 								laneData.decor.push(border); //anche nelle decorazioni				
@@ -6496,9 +6482,7 @@ function createPlayerRoblox() {
 			laneData.trafficLight = {
 				mesh: trafficLightMesh,
 				state: 'green', // 'green' o 'red'
-				timer: 0,
-				isTrainSignal: false,
-				switchInterval: 300 // Cambia stato ogni ~5 secondi (300 frame)
+				isTrainSignal: false
 			};
 		}
 
@@ -6511,9 +6495,7 @@ function createPlayerRoblox() {
 			laneData.trafficLight = {
 				mesh: trafficLightMesh,
 				state: 'green', // 'green' o 'red'
-				timer: 0,
-				isTrainSignal: true,
-				switchInterval: 300 // Cambia stato ogni ~5 secondi (300 frame)
+				isTrainSignal: true
 			};
 		}
 
@@ -6539,68 +6521,7 @@ function createPlayerRoblox() {
 	}
 
 
-	/*
-	// --- NUVOLE IN ALTO NEL CIELO ---
-	const cloudGroup = new THREE.Group();
-	scene.add(cloudGroup);
-
-	// Creazione di una singola nuvola con blocchi voxel
-	function createCloudMesh() {
-	  const group = new THREE.Group();
-	  const mat = new THREE.MeshLambertMaterial({ 
-		color: 0xffffff, 
-		transparent: true, 
-		opacity: 0.75 
-	  });
-
-	  // Genera un cluster casuale di 3-6 cubi vicini
-	  const count = 3 + Math.floor(Math.random() * 3);
-	  for (let i = 0; i < count; i++) {
-		const w = 1.2 + Math.random() * 1.5;
-		const h = 0.6 + Math.random() * 0.3;
-		const d = 1.0 + Math.random() * 1.2;
-		const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
-		mesh.position.set(
-		  (Math.random() - 0.5) * 2,
-		  (Math.random() - 0.5) * 0.2,
-		  (Math.random() - 0.5) * 1.5
-		);
-		group.add(mesh);
-	  }
-	  return group;
-	}
-
-	function createClouds() {
-		for (let i = 0; i < NUM_CLOUDS; i++) {
-		  const cloud = createCloudMesh();
-		  const x = (Math.random() - 0.5) * (BOARD_WIDTH - 6);
-		  const y = 5 + Math.random() * 2; // Altezza nel cielo
-		  const z = -20 + Math.random() * 100;
-		  cloud.position.set(x, y, z);
-		  
-		  const speed = 0.005 + Math.random() * 0.01; // Velocità di scorrimento
-		  clouds.push({ mesh: cloud, speed: speed });
-		  cloudGroup.add(cloud);
-		}
-	}
-
-
-	// Aggiorna la posizione delle nuvole a ogni frame
-	function updateClouds() {
-	  clouds.forEach(c => {
-		c.mesh.position.z -= c.speed;
-		if (Math.abs(c.mesh.position.z - playerPos.z) > (BOARD_WIDTH - 3)) {
-		  c.mesh.position.z = playerPos.z + (Math.random() - 0.5) * 4;
-		}
-	  });
-	}
-
-	// Genera un set iniziale di nuvole
-	const clouds = [];
-	const NUM_CLOUDS = 10;
-	createClouds();
 	
-	*/
 	
 
 	//pulizia lane vecchie
@@ -6920,6 +6841,20 @@ walkSideLimbs = -walkSideLimbs;
 		document.getElementById('btn-wireframe').classList.toggle('toggled-on', isWireframe);
 	});
 	
+	bindTouchButton('btn-clouds', () => {
+		isClouds = !isClouds;
+		document.getElementById('btn-clouds').classList.toggle('toggled-on', isClouds);
+		for (const c of clouds) {
+			if (isClouds) {
+				c.alpha = 0;   // riaccese: rientrano in dissolvenza
+				c.sAlpha = 0;
+			} else {
+				c.mesh.visible = false;
+				c.mesh.userData.shadow.visible = false;
+			}
+		}
+	});
+	
 	bindTouchButton('btn-limbs', () => {
 		isLimbsAnim = !isLimbsAnim;
 		document.getElementById('btn-limbs').classList.toggle('toggled-on', isLimbsAnim);
@@ -6999,7 +6934,7 @@ walkSideLimbs = -walkSideLimbs;
 
 		camera = isPerspective ?
 			new THREE.PerspectiveCamera(20 + d * d, aspect, 0.1, 100) :
-			new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
+			new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, -50, 1000);//near plane negativo -50 invece di 1
 
 		camera.position.copy(oldPos); // niente più scatto a (0,0,0)
 		camera.lookAt(player.position.x, player.position.y, player.position.z);
@@ -7210,7 +7145,7 @@ walkSideLimbs = -walkSideLimbs;
 		}
 
 		// Lerp posizione Y (NUOVO)
-		const targetY = CAM_Y; //getCameraHeight();
+		const targetY = CAM_Y;
 		camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetY, 0.1);
 		const yMoving = Math.abs(camera.position.y - targetY) >= 0.001;
 		if (!yMoving) {
@@ -7235,14 +7170,6 @@ walkSideLimbs = -walkSideLimbs;
 		const sunX = Math.cos(sunAngle) * 10;      // 6:00 = +15 (est/destra), 18:00 = -15 (ovest/sinistra)
 		const sunZ = Math.sin(sunAngle) * 5;       // a mezzogiorno più a sud (+z), all'alba/tramonto più laterale
 		dirLight.position.set(player.position.x + sunX, sunHeight, player.position.z + sunZ);
-	}
-
-
-
-	function updateClippingPlanes() {
-		return;
-		clipFront.constant = -(player.position.z - VISIBLE_AHEAD);
-		clipBack.constant = (player.position.z + VISIBLE_BEHIND);
 	}
 
 
@@ -7634,16 +7561,16 @@ walkSideLimbs = -walkSideLimbs;
 		}
 
 		updatePlayerRotation();
-updatePlayerLimbs();
+		
+		updatePlayerLimbs();//braccia+gambe
 
 		updatePawsRotation();
 		updateGrassTuftRotation();
 		
 		// 2. CAMERA E LUCI
 		setCameraAndLights();
-		updateClippingPlanes();
-
-		//updateClouds();
+		
+		updateClouds(now);//nuvole
 
 		updateRiverTexture();
 		
@@ -8003,19 +7930,6 @@ updatePlayerLimbs();
 		}
 	});
 
-	function setWorldWireframe(target = scene, enableWireframe = true) {
-		target.traverse((child) => {
-			if (child.isMesh && child.material) {
-				// Gestisce sia materiali singoli che array di materiali
-				if (Array.isArray(child.material)) {
-					child.material.forEach(mat => mat.wireframe = enableWireframe);
-				} else {
-					child.material.wireframe = enableWireframe;
-				}
-			}
-		});
-	}
-	
 	function applyPointLightsMode(target = scene) {
 		target.traverse(child => {
 			if (child.isPointLight) child.visible = isShadows;
@@ -8618,6 +8532,185 @@ updatePlayerLimbs();
 		playSpawnEffect(player.position);
 		resetIdle();
 	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+// --- NUVOLE SQUADRATE + OMBRE ---
+const CLOUD_COUNT = 20;
+const CLOUD_Y_MIN = 8, CLOUD_Y_MAX = 10;
+const CLOUD_AHEAD = 40, CLOUD_BEHIND = 25;
+const CLOUD_MAX_ALPHA = 0.70;
+const CLOUD_SHADOW_ALPHA = 0.10;
+const clouds = [];
+const _cvP = new THREE.Vector3();
+const _cvC = new THREE.Vector3();
+const _fwd = new THREE.Vector3();
+let isClouds = false;//flag on/off
+
+function createCloudMesh() {
+	const group = new THREE.Group();
+	const mat = new THREE.MeshLambertMaterial({
+		color: 0xffffff, emissive: 0x333333,
+		transparent: true, opacity: 0, depthWrite: false
+	});
+	const W = [1.2, 1.6, 2.0, 2.4], H = [0.5, 0.6, 0.7], D = [1.0, 1.4, 1.8];
+	const pick = a => a[Math.floor(Math.random() * a.length)];
+	const count = 1 + Math.floor(Math.random() * 3);
+	const rects = [];
+	let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+
+	for (let i = 0; i < count; i++) {
+		const w = pick(W), h = pick(H), d = pick(D);
+		const m = new THREE.Mesh(getCachedGeometry('box', w, h, d), mat);
+		m.position.set((Math.random() - 0.5) * 2.2, (Math.random() - 0.3) * 0.5, (Math.random() - 0.5) * 1.4);
+		group.add(m);
+		rects.push({ x: m.position.x, z: m.position.z, w, d });
+		minX = Math.min(minX, m.position.x - w / 2); maxX = Math.max(maxX, m.position.x + w / 2);
+		minZ = Math.min(minZ, m.position.z - d / 2); maxZ = Math.max(maxZ, m.position.z + d / 2);
+	}
+	const s = 1 + Math.random() * 0.8;
+	group.scale.set(s, s, s);
+
+	// silhouette dall'alto su canvas, pixelata (per l'ombra)
+	const bw = maxX - minX, bd = maxZ - minZ;
+	const RES = 48;
+	const cv = document.createElement('canvas');
+	cv.width = cv.height = RES;
+	const ctx = cv.getContext('2d');
+	ctx.fillStyle = '#000';
+	for (const r of rects) {
+		ctx.fillRect(
+			Math.floor((r.x - r.w / 2 - minX) / bw * RES),
+			Math.floor((r.z - r.d / 2 - minZ) / bd * RES),
+			Math.ceil(r.w / bw * RES), Math.ceil(r.d / bd * RES));
+	}
+	const tex = new THREE.CanvasTexture(cv);
+	tex.magFilter = tex.minFilter = THREE.NearestFilter;
+	tex.generateMipmaps = false;
+
+	const shadowMat = new THREE.MeshBasicMaterial({
+		map: tex, color: 0x000000, transparent: true, opacity: 0, depthWrite: false
+	});
+	const shadow = new THREE.Mesh(new THREE.PlaneGeometry(bw * s, bd * s), shadowMat);
+	shadow.rotation.x = -Math.PI / 2;
+	shadow.renderOrder = 1;
+
+	group.userData.mat = mat;
+	group.userData.shadow = shadow;
+	group.userData.offX = (minX + maxX) / 2 * s;
+	group.userData.offZ = (minZ + maxZ) / 2 * s;
+	group.userData.halfW = Math.max(Math.abs(minX), Math.abs(maxX)) * s; // semilarghezza reale
+	applyCurrentVisualMode(group);
+	return group;
+}
+
+function respawnCloud(c, x) {
+	const pz = player.position.z;
+	const lim = VISIBLE_SIDE - 0.3 - c.mesh.userData.halfW; // limite per-nuvola
+	c.mesh.position.x = x !== undefined ? x : (Math.random() * 2 - 1) * lim;
+	c.mesh.position.z = pz - CLOUD_AHEAD + Math.random() * (CLOUD_AHEAD + CLOUD_BEHIND);
+	c.y = CLOUD_Y_MIN + Math.random() * (CLOUD_Y_MAX - CLOUD_Y_MIN);
+	c.alpha = 0;
+	c.sAlpha = 0;
+}
+
+function createClouds() {
+	for (let i = 0; i < CLOUD_COUNT; i++) {
+		const mesh = createCloudMesh();
+		scene.add(mesh);
+		scene.add(mesh.userData.shadow);
+		const c = {
+			mesh,
+			speed: 0.006 + Math.random() * 0.010,
+			phase: Math.random() * Math.PI * 2,
+			bob: 0.3 + Math.random() * 0.4,
+			y: 0, alpha: 0, sAlpha: 0
+		};
+		respawnCloud(c);
+		clouds.push(c);
+	}
+}
+
+function updateClouds(now) {
+	if (!isClouds) return;
+	const pz = player.position.z;
+	const aspect = window.innerWidth / window.innerHeight;
+	_cvP.set(player.position.x, player.position.y + 0.5, player.position.z).project(camera);
+
+	// direzione del sole (stessa formula di setCameraAndLights)
+	const sunAngle = ((currentHours - 6) / 24) * Math.PI * 2;
+	const sx = Math.cos(sunAngle) * 10, sz = Math.sin(sunAngle) * 5;
+	const sunFactor = THREE.MathUtils.clamp(sunHeight / 12, 0.3, 1);
+
+	for (const c of clouds) {
+		const m = c.mesh;
+		const ud = m.userData;
+		m.position.x += c.speed;
+		m.position.y = c.y + Math.sin(now * 0.0008 * c.bob + c.phase) * 0.25;
+
+		const lim = VISIBLE_SIDE - 0.3 - ud.halfW;
+		if (m.position.x > lim) respawnCloud(c, -lim);
+		else if (m.position.z - pz > CLOUD_BEHIND || m.position.z - pz < -CLOUD_AHEAD - 10) respawnCloud(c, m.position.x);
+
+		// fade ai bordi: arriva a 0 prima che QUALSIASI box tocchi i clipping planes
+		const edge = THREE.MathUtils.clamp((lim - Math.abs(m.position.x)) / 4, 0, 1);
+
+		// fade vicino alla camera: serve solo in prospettiva (in ortografica il near è negativo)
+		let camFade = 1;
+		if (isPerspective) {
+			camera.getWorldDirection(_fwd);
+			_cvC.copy(m.position).sub(camera.position);
+			camFade = THREE.MathUtils.clamp((_cvC.dot(_fwd) - ud.halfW - 1) / 4, 0, 1);
+		}
+
+		// fade sopra al player, così non copre il gatto
+		_cvC.copy(m.position).project(camera);
+		const dScreen = Math.hypot((_cvC.x - _cvP.x) * aspect, _cvC.y - _cvP.y);
+		const playerFade = THREE.MathUtils.clamp((dScreen - 0.2) / 0.4, 0.12, 1);
+
+		c.alpha += (CLOUD_MAX_ALPHA * edge * camFade * playerFade - c.alpha) * 0.08;
+		ud.mat.opacity = c.alpha;
+		m.visible = !isBW && c.alpha > 0.01;
+
+		// ombra: proiezione lungo la direzione della luce fino a terra
+		const sh = ud.shadow;
+		const k = Math.min(m.position.y / sunHeight, 1.5);
+		sh.position.set(m.position.x - sx * k + ud.offX, 0.03, m.position.z - sz * k + ud.offZ);
+		c.sAlpha += (CLOUD_SHADOW_ALPHA * edge * sunFactor - c.sAlpha) * 0.08;
+		sh.material.opacity = c.sAlpha;
+		sh.visible = isShadows && !isBW && c.sAlpha > 0.005;
+	}
+}
+
+createClouds();
+	
+	
+	
+	
 	
 	animate();
   </script>
