@@ -2155,9 +2155,7 @@ function createPlayerRoblox() {
 
 		const bodyWhite = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.6, 0.1, 0.6) : getCachedGeometry('box', 0.6, 0.1, 0.6),
-			new THREE.MeshLambertMaterial({
-				color: 0xffffff
-			})
+			new THREE.MeshLambertMaterial({ color: 0xffffff })
 		);
 		bodyWhite.position.y = 0.3;//0.2
 		bodyWhite.castShadow = true;
@@ -2165,9 +2163,7 @@ function createPlayerRoblox() {
 
 		const bodyBrown = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.6, 0.2, 0.6) : getCachedGeometry('box', 0.6, 0.2, 0.6),
-			new THREE.MeshLambertMaterial({
-				color: duckColor[1]
-			})
+			new THREE.MeshLambertMaterial({ color: duckColor[1] })
 		);
 		bodyBrown.position.y = 0.1;//0.1
 		bodyBrown.castShadow = true;
@@ -2175,26 +2171,20 @@ function createPlayerRoblox() {
 
 		const beak = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.4, 0.15, 0.25) : getCachedGeometry('box', 0.4, 0.15, 0.25),
-			new THREE.MeshLambertMaterial({
-				color: 0xf39c12
-			})
+			new THREE.MeshLambertMaterial({ color: 0xf39c12 })
 		);
 		beak.position.set(0, 0.48, -0.38);//0.38
 		group.add(beak);
 
 		const wattle = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.12, 0.15, 0.12) : getCachedGeometry('box', 0.12, 0.15, 0.12),
-			new THREE.MeshLambertMaterial({
-				color: 0xe74c3c
-			})
+			new THREE.MeshLambertMaterial({ color: 0xe74c3c })
 		);
 		wattle.position.set(0, 0.32, -0.36);//0.22
 		group.add(wattle);
 
 		const eyeGeo = !useCache ? new THREE.BoxGeometry(0.04, 0.24, 0.24) : getCachedGeometry('box', 0.04, 0.24, 0.24);
-		const eyeMat = new THREE.MeshLambertMaterial({
-			color: 0xffffff
-		});
+		const eyeMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
 
 		const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
 		leftEye.position.set(-0.31, 0.52, -0.15);//0.42
@@ -2205,9 +2195,7 @@ function createPlayerRoblox() {
 		group.add(rightEye);
 
 		const pupilGeo = !useCache ? new THREE.BoxGeometry(0.08, 0.12, 0.08) : getCachedGeometry('box', 0.08, 0.12, 0.08);
-		const pupilMat = new THREE.MeshLambertMaterial({
-			color: 0x000000
-		});
+		const pupilMat = new THREE.MeshLambertMaterial({ color: 0x000000 });
 
 		const leftEyePupil = new THREE.Mesh(pupilGeo, pupilMat);
 		leftEyePupil.position.set(-0.32, 0.52, -0.15);//0.42
@@ -2418,9 +2406,7 @@ function createPlayerRoblox() {
 		});
 
 		// Bocca: scura ma NON emissiva
-		const mouthMat = new THREE.MeshLambertMaterial({
-			color: 0x1a0d00
-		});
+		const mouthMat = new THREE.MeshLambertMaterial({ color: 0x1a0d00 });
 
 		// Corpo principale
 		const body = new THREE.Mesh(
@@ -2607,15 +2593,9 @@ function createPlayerRoblox() {
 
 		const stoneColors = [0x8a8a86, 0x767672, 0x9a968f, 0x6f6f6b];
 		const stoneCol = stoneColors[Math.floor(Math.random() * stoneColors.length)];
-		const stoneMat = new THREE.MeshLambertMaterial({
-			color: stoneCol
-		});
-		const stoneDarkMat = new THREE.MeshLambertMaterial({
-			color: 0x2a2a28
-		});
-		const dirtMat = new THREE.MeshLambertMaterial({
-			color: 0x3c2e1f
-		});
+		const stoneMat = new THREE.MeshLambertMaterial({ color: stoneCol });
+		const stoneDarkMat = new THREE.MeshLambertMaterial({ color: 0x2a2a28 });
+		const dirtMat = new THREE.MeshLambertMaterial({ color: 0x3c2e1f });
 
 		// Cumulo di terra alla base (leggermente più ampio)
 		const mound = new THREE.Mesh(
@@ -3178,6 +3158,7 @@ function createPlayerRoblox() {
 	function createPlayerRockyGraffietto() {
 		const group = new THREE.Group();
 
+		// Palette Colori Siamese Seal Point
 		const sc = SIAMESE_PALETTE[rockyGraffiettoIndex % SIAMESE_PALETTE.length];
 		const creamMat = new THREE.MeshLambertMaterial({ color: sc.body });
 		const sealMat = new THREE.MeshLambertMaterial({ color: sc.point });
@@ -3186,18 +3167,7 @@ function createPlayerRoblox() {
 		const whiskerMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF });
 		const noseMat = new THREE.MeshLambertMaterial({ color: new THREE.Color(sc.point).multiplyScalar(0.4).getHex() });
 		const pupilMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
-		//const group = new THREE.Group();
-
-		// Palette Colori Siamese Seal Point
-		/*const creamMat = new THREE.MeshLambertMaterial({ color: 0xe5d6c3	}); // Crema/Avorio base
-		const sealMat = new THREE.MeshLambertMaterial({ color: 0x3d2b1f	}); // Seal scuro intenso
-		const eyeMat = new THREE.MeshLambertMaterial({ color: 0x00a8ff	}); // Azzurro ciano brillante
-		const innerEarMat = new THREE.MeshLambertMaterial({ color: 0xE8A7B8	}); // Rosa interno orecchie
-		const whiskerMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF	}); // Baffi bianchi
-		const noseMat = new THREE.MeshLambertMaterial({	color: 0x150A05	}); // Tartufo scuro
-		const pupilMat = new THREE.MeshLambertMaterial({ color: 0x111111	});
-		*/
-
+		
 		// 1. Testa principale (Dimensioni: 0.6 x 0.5 x 0.5)
 		const head = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.6, 0.5, 0.5) : getCachedGeometry('box', 0.6, 0.5, 0.5),
@@ -3660,9 +3630,7 @@ function createPlayerRoblox() {
 		group.add(eyeBackground);
 
 		// Materiale per le pupille (se non lo hai già definito in alto)
-		const pupilMat = new THREE.MeshLambertMaterial({
-			color: 0x000000
-		});
+		const pupilMat = new THREE.MeshLambertMaterial({ color: 0x000000 });
 
 		// 5. Occhi azzurri (spinti più in avanti: Z = -0.565)
 		const eyeGeo = !useCache ? new THREE.BoxGeometry(0.07, 0.08, 0.02) : getCachedGeometry('box', 0.07, 0.08, 0.02);
@@ -3950,9 +3918,7 @@ function createPlayerRoblox() {
 		const group = new THREE.Group();
 		const wheel = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.3, 0.22, 0.18) : getCachedGeometry('box', 0.3, 0.22, 0.18),
-			new THREE.MeshLambertMaterial({
-				color: 0x222222
-			})
+			new THREE.MeshLambertMaterial({ color: 0x222222 })
 		);
 		wheel.position.set(0, 0, 0);
 		wheel.castShadow = false; //true;ottimizzazione
@@ -3960,9 +3926,7 @@ function createPlayerRoblox() {
 
 		const axis = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.10, 0.11, 0.19) : getCachedGeometry('box', 0.10, 0.11, 0.19), //0.15, 0.11, 0.28 <-- piu stretto
-			new THREE.MeshLambertMaterial({
-				color: 0x666666
-			})
+			new THREE.MeshLambertMaterial({ color: 0x666666 })
 		);
 		axis.position.set(0, 0, 0);
 		axis.castShadow = false; //true;ottimizzazione
@@ -4024,9 +3988,7 @@ function createPlayerRoblox() {
 		const group = new THREE.Group();
 
 		// Traverse di legno (orizzontali)
-		const tieMat = new THREE.MeshLambertMaterial({
-			color: 0x4a2e18
-		});
+		const tieMat = new THREE.MeshLambertMaterial({ color: 0x4a2e18 });
 		const tieGeo = !useCache ? new THREE.BoxGeometry(0.2, 0.05, 0.85) : getCachedGeometry('box', 0.2, 0.05, 0.85);
 
 		for (let x = -BOARD_WIDTH / 2; x <= BOARD_WIDTH / 2; x += 0.6) {
@@ -4037,9 +3999,7 @@ function createPlayerRoblox() {
 		}
 
 		// Rotaie metalliche (2 barre di ferro longitudinali)
-		const railMat = new THREE.MeshLambertMaterial({
-			color: 0x888888
-		});
+		const railMat = new THREE.MeshLambertMaterial({ color: 0x888888 });
 		const railGeo = !useCache ? new THREE.BoxGeometry(BOARD_WIDTH, 0.08, 0.08) : getCachedGeometry('box', BOARD_WIDTH, 0.08, 0.08);
 
 		const leftRail = new THREE.Mesh(railGeo, railMat);
@@ -4169,9 +4129,7 @@ function createPlayerRoblox() {
 
 	function getFlowerMaterial(colorHex) {
 		if (!flowerMatCache.has(colorHex)) {
-			flowerMatCache.set(colorHex, new THREE.MeshLambertMaterial({
-				color: colorHex
-			}));
+			flowerMatCache.set(colorHex, new THREE.MeshLambertMaterial({ color: colorHex }));
 		}
 		return flowerMatCache.get(colorHex);
 	}
@@ -4306,9 +4264,7 @@ function createPlayerRoblox() {
 		const colorWagon = trainColors[Math.floor(Math.random() * trainColors.length)];
 
 		// 1. Locomotiva (Frontale)
-		const locoMat = new THREE.MeshLambertMaterial({
-			color: color
-		});
+		const locoMat = new THREE.MeshLambertMaterial({ color: color });
 		const loco = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(wagonLength, 0.95, 0.8) : getCachedGeometry('box', wagonLength, 0.95, 0.8),
 			locoMat);
@@ -4317,11 +4273,10 @@ function createPlayerRoblox() {
 		group.add(loco);
 
 		// Cabina guida rialzata
+		const cabinMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
 		const cabin = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.8, 0.3, 0.78) : getCachedGeometry('box', 0.8, 0.3, 0.78),
-			new THREE.MeshLambertMaterial({
-				color: 0x111111
-			})
+			cabinMat
 		);
 		cabin.position.set(wagonsCount < 3 ? -0.6 : 0.7, 1.05, 0);
 		group.add(cabin);
@@ -4331,27 +4286,22 @@ function createPlayerRoblox() {
 		windowCabinOffsetsX.forEach((offsetX) => {
 			const win = new THREE.Mesh(
 				!useCache ? new THREE.BoxGeometry(0.4, 0.25, 0.82) : getCachedGeometry('box', 0.4, 0.25, 0.82),
-				new THREE.MeshLambertMaterial({
-					color: 0x111111
-				}));
+				cabinMat
+			);
 			win.position.set(offsetX, 0.70, 0);
 			group.add(win);
 		});
 
 		const windshield = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.11, 0.25, 0.81) : getCachedGeometry('box', 0.11, 0.25, 0.81),
-			new THREE.MeshLambertMaterial({
-				color: 0x111111
-			})
+			cabinMat
 		);
 		windshield.position.set(1.15, 0.70, 0);
 		group.add(windshield);
 
 
 		// 2. Vagoni collegati DIETRO la locomotiva
-		const wagonMat = new THREE.MeshLambertMaterial({
-			color: colorWagon
-		});
+		const wagonMat = new THREE.MeshLambertMaterial({ color: colorWagon });
 		for (let i = 1; i <= wagonsCount; i++) {
 
 			const xPos = -i * (wagonLength + gap);
@@ -4368,9 +4318,8 @@ function createPlayerRoblox() {
 			windowOffsetsX.forEach((offsetX) => {
 				const win = new THREE.Mesh(
 					!useCache ? new THREE.BoxGeometry(0.4, 0.25, 0.82) : getCachedGeometry('box', 0.4, 0.25, 0.82),
-					new THREE.MeshLambertMaterial({
-						color: 0x111111
-					}));
+					cabinMat
+				);
 				win.position.set(xPos + offsetX, 0.70, 0);
 				group.add(win);
 			});
@@ -4378,9 +4327,7 @@ function createPlayerRoblox() {
 			// Gancio di collegamento
 			const coupler = new THREE.Mesh(
 				!useCache ? new THREE.BoxGeometry(gap + 0.05, 0.1, 0.2) : getCachedGeometry('box', gap + 0.05, 0.1, 0.2),
-				new THREE.MeshLambertMaterial({
-					color: 0x222222
-				})
+				new THREE.MeshLambertMaterial({ color: 0x222222 })
 			);
 			coupler.position.set(xPos + (wagonLength / 2) + (gap / 2), 0.25, 0);
 			group.add(coupler);
@@ -4400,9 +4347,7 @@ function createPlayerRoblox() {
 		// Telaio inferiore (Larghezza ridotta a 0.6)
 		const body = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(1.5, 0.35, 0.6) : getCachedGeometry('box', 1.5, 0.35, 0.6), //new THREE.BoxGeometry(1.5, 0.35, 0.8),
-			new THREE.MeshLambertMaterial({
-				color: color
-			})
+			new THREE.MeshLambertMaterial({ color: color })
 		);
 		body.position.y = 0.25;
 		body.castShadow = true;
@@ -4411,9 +4356,7 @@ function createPlayerRoblox() {
 		// Blocco Vetri Neri (Larghezza ridotta a 0.54)
 		const glass = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.85, 0.28, 0.54) : getCachedGeometry('box', 0.85, 0.28, 0.54), //new THREE.BoxGeometry(0.85, 0.28, 0.72),
-			new THREE.MeshLambertMaterial({
-				color: 0x111111
-			})
+			new THREE.MeshLambertMaterial({ color: 0x111111 })
 		);
 		glass.position.set(-0.05, 0.48, 0);
 		glass.castShadow = true;
@@ -4422,9 +4365,7 @@ function createPlayerRoblox() {
 		// Tettuccio Bianco (Larghezza ridotta a 0.51)
 		const roof = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.75, 0.08, 0.51) : getCachedGeometry('box', 0.75, 0.08, 0.51), //new THREE.BoxGeometry(0.75, 0.08, 0.68),
-			new THREE.MeshLambertMaterial({
-				color: 0xffffff
-			})
+			new THREE.MeshLambertMaterial({ color: 0xffffff })
 		);
 		roof.position.set(-0.05, 0.64, 0);
 		roof.castShadow = true;
@@ -4609,21 +4550,20 @@ function createPlayerRoblox() {
 		// Cabina anteriore
 		const cabin = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.8, 0.65, 0.77) : getCachedGeometry('box', 0.8, 0.65, 0.77),
-			new THREE.MeshLambertMaterial({
-				color: color
-			})
+			new THREE.MeshLambertMaterial({ color: color })
 		);
 		cabin.position.set(1.0, 0.425, 0); //0.6..1.4
 		cabin.castShadow = true;
 		group.add(cabin);
 
 		//spoiler scopiazzato a crossy roads sopra qualche camion
+		const whiteMat = new THREE.MeshLambertMaterial({ color: 0xffffff }); // Bianco puro 
+		const blackMat = new THREE.MeshLambertMaterial({ color: 0x111111 }); // nerastro
+		
 		if (Math.random() < 0.5) {
 			const spoiler = new THREE.Mesh(
 				!useCache ? new THREE.BoxGeometry(0.4, 0.10, 0.65) : getCachedGeometry('box', 0.4, 0.10, 0.65),
-				new THREE.MeshLambertMaterial({
-					color: 0xffffff
-				}) // Bianco puro
+				whiteMat
 			);
 			// Posizionato sopra il tetto della cabina (Y = 0.425 + 0.65/2 + 0.10/2 = 0.80) -> 0.75..0.85
 			spoiler.position.set(0.91, 0.80, 0); //
@@ -4632,9 +4572,7 @@ function createPlayerRoblox() {
 
 			const spoiler2 = new THREE.Mesh(
 				!useCache ? new THREE.BoxGeometry(0.2, 0.10, 0.60) : getCachedGeometry('box', 0.2, 0.10, 0.60),
-				new THREE.MeshLambertMaterial({
-					color: 0xffffff
-				}) // Bianco puro
+				whiteMat
 			);
 			// Posizionato sopra il tetto della cabina (Y = 0.425 + 0.65/2 + 0.10/2 = 0.80 + 0.10) -> 0.85..0.95
 			spoiler2.position.set(0.81, 0.90, 0); //
@@ -4647,9 +4585,7 @@ function createPlayerRoblox() {
 			//gira intorno
 			const windshield = new THREE.Mesh(
 				!useCache ? new THREE.BoxGeometry(0.3, 0.25, 0.79) : getCachedGeometry('box', 0.3, 0.25, 0.79),
-				new THREE.MeshLambertMaterial({
-					color: 0x111111
-				})
+				blackMat
 			);
 			windshield.position.set(1.26, 0.58, 0); //1.11 (+/-0.15) -> 1.11..1.41
 			group.add(windshield);
@@ -4657,9 +4593,7 @@ function createPlayerRoblox() {
 			//vintage solo frontale
 			const windshield = new THREE.Mesh(
 				!useCache ? new THREE.BoxGeometry(0.2, 0.25, 0.70) : getCachedGeometry('box', 0.2, 0.25, 0.70),
-				new THREE.MeshLambertMaterial({
-					color: 0x111111
-				})
+				blackMat
 			);
 			windshield.position.set(1.31, 0.58, 0); //1.31 (+/-0.1) -> 1.21..1.41
 			group.add(windshield);
@@ -4668,9 +4602,7 @@ function createPlayerRoblox() {
 		// Cassone/Container posteriore
 		const cargo = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(2.0, 0.85, 0.80) : getCachedGeometry('box', 2.0, 0.85, 0.80),
-			new THREE.MeshLambertMaterial({
-				color: 0xeeeeee
-			})
+			new THREE.MeshLambertMaterial({ color: 0xeeeeee })
 		);
 		cargo.position.set(-0.3, 0.525, 0);
 		cargo.castShadow = true;
@@ -4695,18 +4627,10 @@ function createPlayerRoblox() {
 		const group = new THREE.Group();
 
 		// Materiali
-		const skinMat = new THREE.MeshLambertMaterial({
-			color: col1
-		}); // Verde scuro (corpo/muso)
-		const scaleMat = new THREE.MeshLambertMaterial({
-			color: col2
-		}); // Verde più scuro (scaglie)
-		const eyeMat = new THREE.MeshLambertMaterial({
-			color: 0xffe000
-		}); // Giallo (occhi)
-		const pupilMat = new THREE.MeshLambertMaterial({
-			color: 0x111111
-		}); // Nero (pupille)
+		const skinMat = new THREE.MeshLambertMaterial({ color: col1 }); // Verde scuro (corpo/muso)
+		const scaleMat = new THREE.MeshLambertMaterial({ color: col2 }); // Verde più scuro (scaglie)
+		const eyeMat = new THREE.MeshLambertMaterial({ color: 0xffe000 }); // Giallo (occhi)
+		const pupilMat = new THREE.MeshLambertMaterial({ color: 0x111111 }); // Nero (pupille)
 
 
 
@@ -4725,40 +4649,8 @@ function createPlayerRoblox() {
 		body.castShadow = true; //ottimizzazione?
 		group.add(body);
 
-		/*
-		  // 2. Muso: più stretto e un filo più basso — ora quasi a filo d'acqua
-		  const snout = new THREE.Mesh(
-			!useCache ? new THREE.BoxGeometry(snoutLen, 0.12, 0.50) : getCachedGeometry('box', snoutLen, 0.16, 0.50),
-			skinMat);
-		  snout.position.set(bodyEnd + snoutLen / 2, -0.01, 0);
-		  snout.receiveShadow = true;
-		  snout.castShadow = true;//ottimizzazione?
-		  group.add(snout);
-		  
-		  // 2b. Rettangolo del naso sulla punta del muso, con due buchi per le narici
-		  const noseMat = new THREE.MeshLambertMaterial({ color: col2 });
-
-		  const nose = new THREE.Mesh(
-			!useCache ? new THREE.BoxGeometry(0.16, 0.06, 0.38) : getCachedGeometry('box', 0.16, 0.06, 0.38), 
-			noseMat);
-		  nose.position.set(length / 2 - 0.12, 0.05, 0);
-		  nose.castShadow = false;
-		  group.add(nose);
-		  
-		  const nostrilGeo = !useCache ? new THREE.BoxGeometry(0.05, 0.015, 0.05) : getCachedGeometry('box', 0.05, 0.015, 0.05);
-		  [-0.09, 0.09].forEach(z => {
-			const nostril = new THREE.Mesh(nostrilGeo, pupilMat);
-			nostril.position.set(length / 2 - 0.12, 0.085, z);
-			group.add(nostril);
-		  });
-		  */
-
 		//apertura bocca croco
-
-		//apertura bocca
-		const teethMat = new THREE.MeshLambertMaterial({
-			color: 0xf5f0e6
-		});
+		const teethMat = new THREE.MeshLambertMaterial({ color: 0xf5f0e6 });
 
 		// cerniera ALTA: le mascelle restano sopra il pelo dell'acqua anche col croco affondato
 		const jawRoot = new THREE.Group();
@@ -4808,9 +4700,7 @@ function createPlayerRoblox() {
 		group.userData.lowerJawPivot = lowerJawPivot;
 
 		// 2b. Naso + narici sopra la punta della mascella superiore
-		const noseMat = new THREE.MeshLambertMaterial({
-			color: col2
-		});
+		const noseMat = new THREE.MeshLambertMaterial({ color: col2 });
 		const nose = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.16, 0.04, 0.38) : getCachedGeometry('box', 0.16, 0.04, 0.38),
 			noseMat);
@@ -4888,9 +4778,7 @@ function createPlayerRoblox() {
 		// --- TRONCO ---
 		const log = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(length, 0.2, 0.70) : getCachedGeometry('box', length, 0.2, 0.70),
-			new THREE.MeshLambertMaterial({
-				color: col1
-			})
+			new THREE.MeshLambertMaterial({ color: col1 })
 		);
 
 		log.position.y = 0.02;
@@ -4902,9 +4790,7 @@ function createPlayerRoblox() {
 		const lighterColor = new THREE.Color(col1).lerp(new THREE.Color(0xffeeee), 0.30);
 		const capThickness = 0.05;
 		const capGeo = !useCache ? new THREE.BoxGeometry(capThickness, 0.2, 0.70) : getCachedGeometry('box', capThickness, 0.2, 0.70);
-		const capMat = new THREE.MeshLambertMaterial({
-			color: lighterColor
-		});
+		const capMat = new THREE.MeshLambertMaterial({ color: lighterColor });
 		// Tappo attaccato appena FUORI dalla faccia terminale (tocca, non sovrappone)
 		// per evitare z-fighting con la faccia colorata del tronco sottostante —
 		// stesso principio usato per i muri della fioriera.
@@ -4997,21 +4883,20 @@ function createPlayerRoblox() {
 		const trunkHeight = isTall ? 0.8 : 0.5;
 		const trunk = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.3, trunkHeight, 0.3) : getCachedGeometry('box', 0.3, trunkHeight, 0.3),
-			new THREE.MeshLambertMaterial({
-				color: 0x5d4037
-			})
+			new THREE.MeshLambertMaterial({ color: 0x5d4037 })
 		);
 		trunk.position.y = trunkHeight / 2;
 		trunk.castShadow = true;
 		group.add(trunk);
 
+		const leavesMat = new THREE.MeshLambertMaterial({ color: col1 });
+		const leavesLightMat = new THREE.MeshLambertMaterial({ color: col2 });
+
 		if (treeType === 'wide') {
 			// Chioma più bassa e appena più larga (0.85 x 0.5 x 0.85, entra comunque nella casella 1x1)
 			const leavesWide = new THREE.Mesh(
 				!useCache ? new THREE.BoxGeometry(0.85, 0.50, 0.85) : getCachedGeometry('box', 0.85, 0.50, 0.85),
-				new THREE.MeshLambertMaterial({
-					color: col1
-				})
+				leavesMat
 			);
 			leavesWide.position.y = trunkHeight + 0.25 - 0.02; // leggermente affondata nel fusto, niente buchi
 			leavesWide.castShadow = true;
@@ -5020,16 +4905,12 @@ function createPlayerRoblox() {
 			// Gradino sopra, più stretto, in col2 per dare volume
 			const leavesCap = new THREE.Mesh(
 				!useCache ? new THREE.BoxGeometry(0.65, 0.12, 0.65) : getCachedGeometry('box', 0.65, 0.12, 0.65),
-				new THREE.MeshLambertMaterial({
-					color: col2
-				})
+				leavesLightMat
 			);
 			leavesCap.position.y = trunkHeight + 0.50 + 0.04;
 			leavesCap.castShadow = true;
 			group.add(leavesCap);
 		} else if (treeType === 'xmas') {
-			const leavesMat = new THREE.MeshLambertMaterial({ color: col1 });
-			
 			const leavesBottom = new THREE.Mesh(
 				!useCache ? new THREE.BoxGeometry(0.70, 0.40, 0.70) : getCachedGeometry('box', 0.70, 0.40, 0.70),
 				leavesMat
@@ -5057,9 +4938,7 @@ function createPlayerRoblox() {
 		} else {
 			const leavesBottom = new THREE.Mesh(
 				!useCache ? new THREE.BoxGeometry(0.70, 0.75, 0.70) : getCachedGeometry('box', 0.70, 0.75, 0.70),
-				new THREE.MeshLambertMaterial({
-					color: col1
-				})
+				leavesMat
 			);
 			leavesBottom.position.y = trunkHeight + 0.35;
 			leavesBottom.castShadow = true;
@@ -5068,9 +4947,7 @@ function createPlayerRoblox() {
 			if (isTall) {
 				const leavesTop = new THREE.Mesh(
 					!useCache ? new THREE.BoxGeometry(0.60, 0.20, 0.60) : getCachedGeometry('box', 0.60, 0.20, 0.60),
-					new THREE.MeshLambertMaterial({
-						color: col2
-					})
+					leavesLightMat
 				);
 				leavesTop.position.y = trunkHeight + 0.825;//0.35 + 0.75/2 + 0.20/2 = 0.35 + 0.375 + 0.10 = 0.825
 				leavesTop.castShadow = true;
@@ -5090,9 +4967,7 @@ function createPlayerRoblox() {
 		const col = Math.random() > 0.5 ? col1 : col2;
 
 		// Materiale verde principale e secondario (o opzionale per i bracci)
-		const cactusMaterial = new THREE.MeshLambertMaterial({
-			color: col
-		});
+		const cactusMaterial = new THREE.MeshLambertMaterial({ color: col });
 
 		// 1. TRONCO CENTRALE
 		const trunkHeight = isTall ? 1.4 : 1.0;
@@ -5266,9 +5141,7 @@ function createPlayerRoblox() {
 		// Palo
 		const pole = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.1, 0.9, 0.1) : getCachedGeometry('box', 0.1, 0.9, 0.1),
-			new THREE.MeshLambertMaterial({
-				color: 0x333333
-			})
+			new THREE.MeshLambertMaterial({ color: 0x333333 })
 		);
 		pole.position.y = 0.45;
 		pole.castShadow = true;
@@ -5277,22 +5150,16 @@ function createPlayerRoblox() {
 		// Scatola semaforo
 		const box = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.22, 0.5, 0.22) : getCachedGeometry('box', 0.22, 0.5, 0.22),
-			new THREE.MeshLambertMaterial({
-				color: 0x111111
-			})
+			new THREE.MeshLambertMaterial({ color: 0x111111 })
 		);
 		box.position.y = 0.85;
 		box.castShadow = true;
 		group.add(box);
 
 		// Materiali: acceso / spento
-		const redLightMat = new THREE.MeshLambertMaterial({
-			color: 0x330000
-		});
+		const redLightMat = new THREE.MeshLambertMaterial({ color: 0x330000 });
 
-		const greenLightMat = new THREE.MeshLambertMaterial({
-			color: 0x003300
-		});
+		const greenLightMat = new THREE.MeshLambertMaterial({ color: 0x003300 });
 
 		const redLight = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.12, 0.12, 0.24) : getCachedGeometry('box', 0.12, 0.12, 0.24),
@@ -5324,9 +5191,7 @@ function createPlayerRoblox() {
 
 		const pole = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.08, 1.3, 0.08) : getCachedGeometry('box', 0.08, 1.3, 0.08),
-			new THREE.MeshLambertMaterial({
-				color: 0x2b2b2b
-			})
+			new THREE.MeshLambertMaterial({ color: 0x2b2b2b })
 		);
 		pole.position.y = 0.65;
 		pole.castShadow = true;
@@ -5335,21 +5200,15 @@ function createPlayerRoblox() {
 		// Pannello nero orizzontale
 		const head = new THREE.Mesh(
 			!useCache ? new THREE.BoxGeometry(0.5, 0.18, 0.16) : getCachedGeometry('box', 0.5, 0.18, 0.16),
-			new THREE.MeshLambertMaterial({
-				color: 0x111111
-			})
+			new THREE.MeshLambertMaterial({ color: 0x111111 })
 		);
 		head.position.y = 1.4;
 		head.castShadow = true;
 		group.add(head);
 
 		// Due lenti rosse, affiancate orizzontalmente
-		const leftMat = new THREE.MeshLambertMaterial({
-			color: 0x330000
-		});
-		const rightMat = new THREE.MeshLambertMaterial({
-			color: 0x330000
-		});
+		const leftMat = new THREE.MeshLambertMaterial({ color: 0x330000 });
+		const rightMat = new THREE.MeshLambertMaterial({ color: 0x330000 });
 		const lensGeo = new THREE.CylinderGeometry(0.075, 0.075, 0.04, 16);
 
 		const leftLight = new THREE.Mesh(lensGeo, leftMat);
@@ -5376,12 +5235,8 @@ function createPlayerRoblox() {
 		const portalGroup = new THREE.Group();
 
 		// Materiali
-		const concreteMat = new THREE.MeshLambertMaterial({
-			color: 0x888888
-		}); // Cemento grigio
-		const holeMat = new THREE.MeshBasicMaterial({
-			color: 0x050505
-		}); // Buco nero profondo
+		const concreteMat = new THREE.MeshLambertMaterial({ color: 0x888888 }); // Cemento grigio
+		const holeMat = new THREE.MeshBasicMaterial({ color: 0x050505 }); // Buco nero profondo
 
 		// --- 1. Struttura del Pannello (Cemento) ---
 		// Sagoma con buco al centro usata per creare una forma estrusa (o combinazione di blocchi)
