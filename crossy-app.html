@@ -4990,7 +4990,7 @@ function createPlayerRoblox() {
 
 		// 3 tipi: 'tall' (alto), 'short' (basso, originale), 'wide' (chioma bassa e larga)
 		const roll = Math.random();
-		const treeType = roll < 0.30 ? 'tall' : roll < 0.80 ? 'short' : 'wide';
+		const treeType = roll < 0.30 ? 'tall' : roll < 0.80 ? 'short' : roll < 0.90 ? 'wide' : 'xmas';
 		const isTall = treeType === 'tall';
 
 		// Il fusto è identico per tutti: stessa sezione 0.3x0.3, altezza 0.8 per l'alto, 0.5 per gli altri
@@ -5027,6 +5027,33 @@ function createPlayerRoblox() {
 			leavesCap.position.y = trunkHeight + 0.50 + 0.04;
 			leavesCap.castShadow = true;
 			group.add(leavesCap);
+		} else if (treeType === 'xmas') {
+			const leavesMat = new THREE.MeshLambertMaterial({ color: col1 });
+			
+			const leavesBottom = new THREE.Mesh(
+				!useCache ? new THREE.BoxGeometry(0.70, 0.40, 0.70) : getCachedGeometry('box', 0.70, 0.40, 0.70),
+				leavesMat
+			);
+			leavesBottom.position.y = trunkHeight + 0.20;
+			leavesBottom.castShadow = true;
+			group.add(leavesBottom);
+			
+			const leavesMiddle = new THREE.Mesh(
+				!useCache ? new THREE.BoxGeometry(0.50, 0.40, 0.50) : getCachedGeometry('box', 0.50, 0.40, 0.50),
+				leavesMat
+			);
+			leavesMiddle.position.y = trunkHeight + 0.60;
+			leavesMiddle.castShadow = true;
+			group.add(leavesMiddle);
+			
+			const leavesTop = new THREE.Mesh(
+				!useCache ? new THREE.BoxGeometry(0.30, 0.40, 0.30) : getCachedGeometry('box', 0.30, 0.40, 0.30),
+				leavesMat
+			);
+			leavesTop.position.y = trunkHeight + 1.00;//
+			leavesTop.castShadow = true;
+			group.add(leavesTop);
+			
 		} else {
 			const leavesBottom = new THREE.Mesh(
 				!useCache ? new THREE.BoxGeometry(0.70, 0.75, 0.70) : getCachedGeometry('box', 0.70, 0.75, 0.70),
@@ -5045,7 +5072,7 @@ function createPlayerRoblox() {
 						color: col2
 					})
 				);
-				leavesTop.position.y = trunkHeight + 0.85;
+				leavesTop.position.y = trunkHeight + 0.825;//0.35 + 0.75/2 + 0.20/2 = 0.35 + 0.375 + 0.10 = 0.825
 				leavesTop.castShadow = true;
 				group.add(leavesTop);
 			}
