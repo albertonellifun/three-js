@@ -7081,9 +7081,10 @@ walkSideLimbs = -walkSideLimbs;
 			const info = renderer.info;
 			fpsEl.textContent =
 				fps + ' fps\n' +
+				info.programs.length + ' shaders\n' +
 				info.render.calls + ' draw calls\n' +
 				info.render.triangles + ' triangles\n' +
-				info.memory.geometries + ' geometries';
+				info.memory.geometries + ' geometries'; 				
 		}
 		fpsFrames = 0;
 		fpsLast = now;
