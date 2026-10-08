@@ -487,6 +487,9 @@
   <audio id="deadSoundPacman" preload="auto">
     <source src="./crossy-dead-pacman.mp3" type="audio/mpeg">
   </audio>
+    <audio id="deadSoundTRex" preload="auto">
+    <source src="./crossy-dead-trex.mp3" type="audio/mpeg">
+  </audio>
   
   <audio id="trainSound" preload="auto">
     <source src="./crossy-train.mp3" type="audio/mpeg">
@@ -514,6 +517,8 @@
 	const JUMP_SPEED = 0.10;
 	const LOG_TOP_Y = 0.045; // superficie del tronco quando è "premuto" (-0.075 + 0.12)
 	let jumpStartY = 0;//altezza dalla quale parte il salto (non è sempre zero)
+	
+	const TREX_ANIM_SPEED = 0.75;
 
 	// --- SCENA, CAMERA, RENDERER ---
 	const scene = new THREE.Scene();
@@ -764,7 +769,8 @@
 		{ type: 'invaders',        create: createPlayerInvaders,             icon: '👾', sound: 'deadSoundInvaders' },
 		{ type: 'pacman',          create: createPlayerPacman,               icon: '🍒', sound: 'deadSoundPacman' },
 		{ type: 'zerocalcare',     create: createPlayerArmadilloZeroCalcare, icon: '📙', sound: 'deadSoundZeroCalcare' },
-		{ type: 'unicorn',         create: createPlayerUnicorn,              icon: '🦄', sound: 'deadSoundZeroCalcare' }
+		{ type: 'unicorn',         create: createPlayerUnicorn,              icon: '🦄', sound: 'deadSoundHorse' },
+		{ type: 'trex',            create: createPlayerTRex,                 icon: '🦖', sound: 'deadSoundTRex' }
 	];
 
 	function refreshPlayerModel() {
@@ -1296,7 +1302,19 @@
 			swing = Math.sin(jumpProgress * Math.PI) * walkSideLimbs;
 		}
 		applyLimbs(player, swing, isJumping);
-		
+
+		if (player.userData.trex) {
+			const moving = isJumping && !isDying && isLimbsAnim;
+			// durante il salto la fase segue jumpProgress (un ciclo di gambe per salto),
+			// da fermo usa il tempo per il respiro/coda
+			// Il T-Rex ha un'animazione volutamente più lenta, senza rallentare il movimento del player.
+			const t = moving
+				? jumpProgress * Math.PI * 2 / 12 * TREX_ANIM_SPEED
+				: performance.now() / 1000 * TREX_ANIM_SPEED;
+												 
+			animateTRex(player, t, moving);
+		}
+
 		updatePacmanMouth(player);
 	}
 	
@@ -1310,6 +1328,26 @@
 	  top.rotation.x = a;
 	  bottom.rotation.x = -a;
 	}
+	
+	// time = secondi, moving = true mentre salta/avanza.
+	function animateTRex(group, time, moving) {
+		const r = group.userData.trex; 
+		if (!r) return;
+		const ph = time * 12;
+		for (const L of r.legs) {
+			const p = ph + (L.sx > 0 ? 0 : Math.PI);
+			const k = moving ? 1 : 0;
+			L.hip.rotation.x += (Math.sin(p) * 0.55 * k - L.hip.rotation.x) * 0.3;
+			L.knee.rotation.x += ((Math.max(0, Math.cos(p)) * 0.6 + 0.3) * k - L.knee.rotation.x) * 0.3;
+		}
+		r.torso.position.y = moving ? -Math.abs(Math.sin(ph)) * 0.2 + 0.1 : Math.sin(time * 2) * 0.06;
+		r.tail.rotation.y = Math.sin(moving ? ph : time * 1.3) * (moving ? 0.22 : 0.2);
+		r.t2.rotation.y = Math.sin((moving ? ph : time * 1.3) - 0.7) * 0.3;
+		r.t3.rotation.y = Math.sin((moving ? ph : time * 1.3) - 1.4) * 0.35;
+		r.head.rotation.x = Math.sin(ph * 2) * 0.05 * (moving ? 1 : 0) - 0.06;
+		r.jaw.rotation.x = moving ? 0.3 + 0.55 * Math.abs(Math.sin(time * 9)) : 0.15 + 0.08 * Math.sin(time * 2);
+	}
+
 	
 	
 	function createPlayerRoblox() {
@@ -3036,6 +3074,189 @@
 
 		applyCurrentVisualMode(group);
 
+		scene.add(group);
+		return group;
+	}
+
+	//T-REX
+	function createPlayerTRex() {
+		const group = new THREE.Group();
+		const model = new THREE.Group();
+		model.scale.set(0.3, 0.35, 0.3); // scalato altrimenti occupa 5 caselle!
+		model.rotation.y = Math.PI;
+		group.add(model);
+
+		const trexPalette = [
+			// skin      dark      belly
+			[ 0x66aa44, 0x448833, 0xddee88 ], // 1) verde standard
+			[ 0xbb7744, 0x885533, 0xeeccaa ], // 2) marrone
+			[ 0x9966dd, 0x6644aa, 0xeeddff ], // 3) violetto
+			[ 0xff99cc, 0xdd6688, 0xffeeee ], // 4) rosa
+			[ 0x99aaaa, 0x667777, 0xddeeee ], // 5) grigio
+			[ 0xaaff33, 0x66aa44, 0xddee88 ], // 6) giallastro acido
+			[ 0x664422, 0x443322, 0xccaa77 ], // 7) marrone scuro
+			[ 0x227733, 0x115522, 0x99cc77 ], // 8) verde scuro
+			[ 0x55bbdd, 0x3388aa, 0xddeeff ]  // 9) azzurrino
+		];
+
+		const trexColor = trexPalette[(++currentPaletteIndex % trexPalette.length)];
+
+		const skin    = new THREE.MeshLambertMaterial({ color: trexColor[0] });
+		const dark    = new THREE.MeshLambertMaterial({ color: trexColor[1] });
+		const belly   = new THREE.MeshLambertMaterial({ color: trexColor[2] });
+
+		const tooth   = new THREE.MeshLambertMaterial({ color: 0xffffee }); // dentoni bianchi
+		const mouth   = new THREE.MeshLambertMaterial({ color: 0x992222 }); // bocca rossa
+		const tongueM = new THREE.MeshLambertMaterial({ color: 0xdd5544 }); // linguazza
+		const white   = new THREE.MeshLambertMaterial({ color: 0xffffff }); // bianco
+		const black   = new THREE.MeshLambertMaterial({ color: 0x111111 }); // nero (quasi)
+		const claw    = new THREE.MeshLambertMaterial({ color: 0xffeedd }); // artigli
+
+		// ---- GAMBE (hip -> knee) ----
+		const legs = [];
+		for (const sx of [1, -1]) {
+			const hip = new THREE.Group();
+			hip.position.set(0.8 * sx, 2.0, -0.3);
+			model.add(hip);
+
+			const thigh = new THREE.Mesh(getCachedGeometry('box', 0.85, 1.1, 1.1), skin);
+			thigh.position.set(0, -0.45, 0); thigh.castShadow = true; hip.add(thigh);
+
+			const knee = new THREE.Group();
+			knee.position.set(0, -0.95, 0.1);
+			hip.add(knee);
+
+			const shin = new THREE.Mesh(getCachedGeometry('box', 0.6, 0.8, 0.6), skin);
+			shin.position.set(0, -0.35, -0.05); shin.castShadow = true; knee.add(shin);
+
+			const foot = new THREE.Mesh(getCachedGeometry('box', 0.85, 0.28, 1.15), dark);
+			foot.position.set(0, -0.84, 0.2); foot.castShadow = true; knee.add(foot);
+
+			for (const cx of [-0.28, 0, 0.28]) {
+				const nail = new THREE.Mesh(getCachedGeometry('box', 0.16, 0.14, 0.2), claw);
+				nail.position.set(cx, -0.9, 0.85); knee.add(nail);
+			}
+			legs.push({ hip, knee, sx });
+		}
+
+		// ---- TORSO ----
+		const torso = new THREE.Group();
+		model.add(torso);
+
+		const trunk = new THREE.Mesh(getCachedGeometry('box', 2.1, 1.8, 2.9), skin);
+		trunk.position.set(0, 2.85, 0); trunk.castShadow = true; torso.add(trunk);
+
+		// FIX: Abbassato Y da 2.02 a 1.90 per staccare la pancia dal centro del torso
+		const bellyM = new THREE.Mesh(getCachedGeometry('box', 1.7, 0.5, 2.3), belly);
+		bellyM.position.set(0, 1.90, 0.1); torso.add(bellyM);
+
+		const numSpikes = 3;
+		const totalSpan = 2.2;
+		const totalSpikeZ = 2.0;
+		const spikeLength = totalSpikeZ / numSpikes;
+		const startZ = -totalSpan / 2;
+		const stepZ = numSpikes > 1 ? totalSpan / (numSpikes - 1) : 0;
+
+		for (let k = 0; k < numSpikes; k++) {
+			const spike = new THREE.Mesh(getCachedGeometry('box', 0.3, 0.28, spikeLength), dark);
+			// FIX: Y impostata a 3.89 per non far coincidere la base della spina con il tetto del trunk (3.75)
+			spike.position.set(0, 3.89, startZ + k * stepZ);
+			torso.add(spike);
+		}
+
+		const chest = new THREE.Mesh(getCachedGeometry('box', 1.3, 1.3, 1.1), skin);
+		chest.position.set(0, 3.55, 1.55); chest.castShadow = true; torso.add(chest);
+
+		// braccine (spostate più avanti lungo Z)
+		for (const sx of [1, -1]) {
+			const arm = new THREE.Mesh(getCachedGeometry('box', 0.26, 0.5, 0.26), skin);
+			arm.position.set(0.98 * sx, 2.72, 1.35); torso.add(arm); // Z modificato da 1.25
+			
+			const hand = new THREE.Mesh(getCachedGeometry('box', 0.22, 0.22, 0.42), skin);
+			hand.position.set(0.98 * sx, 2.45, 1.55); torso.add(hand); // Z modificato da 1.45
+		}
+
+		// ---- CODA (3 segmenti spinosissimi) ----
+		const tail = new THREE.Group();
+		tail.position.set(0, 3.0, -1.45); torso.add(tail);
+
+		// Segmento 1
+		const tail1 = new THREE.Mesh(getCachedGeometry('box', 1.5, 1.3, 1.4), skin);
+		tail1.position.set(0, -0.05, -0.6); tail1.castShadow = true; tail.add(tail1);
+
+		const spikeTail1 = new THREE.Mesh(getCachedGeometry('box', 0.3, 0.28, 0.7), dark);
+		spikeTail1.position.set(0, 0.79, 0);
+		tail1.add(spikeTail1);
+
+		// Segmento 2
+		const t2 = new THREE.Group();
+		t2.position.set(0, -0.12, -1.3); tail.add(t2);
+
+		const tail2 = new THREE.Mesh(getCachedGeometry('box', 1.0, 0.9, 1.4), skin);
+		tail2.position.set(0, -0.05, -0.6); tail2.castShadow = true; t2.add(tail2);
+
+		const spikeTail2 = new THREE.Mesh(getCachedGeometry('box', 0.26, 0.24, 0.6), dark);
+		spikeTail2.position.set(0, 0.57, 0);
+		tail2.add(spikeTail2);
+
+		// Segmento 3
+		const t3 = new THREE.Group();
+		t3.position.set(0, -0.06, -1.3); t2.add(t3);
+
+		const tail3 = new THREE.Mesh(getCachedGeometry('box', 0.6, 0.55, 1.3), skin);
+		tail3.position.set(0, -0.05, -0.55); tail3.castShadow = true; t3.add(tail3);
+
+		const spikeTail3 = new THREE.Mesh(getCachedGeometry('box', 0.22, 0.20, 0.5), dark);
+		spikeTail3.position.set(0, 0.38, 0);
+		tail3.add(spikeTail3);
+
+		// ---- TESTA ----
+		const head = new THREE.Group();
+		head.position.set(0, 4.05, 1.85); torso.add(head);
+
+		const skull = new THREE.Mesh(getCachedGeometry('box', 1.7, 1.15, 2.1), skin);
+		skull.position.set(0, 0.3, 0.95); skull.castShadow = true; head.add(skull);
+
+		// FIX: Alzato Y da 0.86 a 0.89 per evitare lo z-fighting con la cima del teschio (Y=0.875)
+		const brow = new THREE.Mesh(getCachedGeometry('box', 1.76, 0.24, 0.5), dark);
+		brow.position.set(0, 0.89, 0.55); head.add(brow);
+
+		const palate = new THREE.Mesh(getCachedGeometry('box', 1.5, 0.1, 1.9), mouth);
+		palate.position.set(0, -0.24, 0.95); head.add(palate);
+
+		for (const sx of [1, -1]) {
+			const eye = new THREE.Mesh(getCachedGeometry('box', 0.1, 0.34, 0.34), white);
+			eye.position.set(0.86 * sx, 0.5, 0.55); head.add(eye);
+
+			// FIX: Spostata la pupilla a X = 0.92 * sx (era 0.91) per farla sporgere rispetto alla faccia esterna dell'occhio
+			const pupil = new THREE.Mesh(getCachedGeometry('box', 0.06, 0.2, 0.18), black);
+			pupil.position.set(0.92 * sx, 0.47, 0.62); head.add(pupil);
+
+			// FIX: Narice spostata a Y=0.89 e Z=1.98 per emergere correttamente dall'angolo frontale del teschio
+			const nostril = new THREE.Mesh(getCachedGeometry('box', 0.14, 0.08, 0.1), black);
+			nostril.position.set(0.35 * sx, 0.89, 1.98); head.add(nostril);
+
+			for (const tz of [0.55, 0.95, 1.35, 1.75]) {
+				const t = new THREE.Mesh(getCachedGeometry('box', 0.14, 0.24, 0.14), tooth);
+				t.position.set(0.66 * sx, -0.36, tz); head.add(t);
+			}
+		}
+
+		// mascella inferiore (ruota per aprire la bocca)
+		const jaw = new THREE.Group();
+		jaw.position.set(0, -0.28, 0.05); head.add(jaw);
+		const jawBox = new THREE.Mesh(getCachedGeometry('box', 1.5, 0.42, 1.95), skin);
+		jawBox.position.set(0, -0.21, 0.97); jawBox.castShadow = true; jaw.add(jawBox);
+		const tongue = new THREE.Mesh(getCachedGeometry('box', 0.9, 0.1, 1.2), tongueM);
+		tongue.position.set(0, 0.03, 0.8); jaw.add(tongue);
+		for (const sx of [1, -1]) for (const tz of [0.75, 1.15, 1.6]) {
+			const t = new THREE.Mesh(getCachedGeometry('box', 0.12, 0.2, 0.12), tooth);
+			t.position.set(0.6 * sx, 0.1, tz); jaw.add(t);
+		}
+
+		group.userData.trex = { model, legs, torso, tail, t2, t3, head, jaw };
+
+		applyCurrentVisualMode(group);
 		scene.add(group);
 		return group;
 	}
@@ -7636,11 +7857,11 @@ walkSideLimbs = -walkSideLimbs;
 
 		// 1. ANIMAZIONE SALTO
 		if (isJumping && !isDying) {
-			jumpProgress = Math.min(1, jumpProgress + JUMP_SPEED);
+			jumpProgress = Math.min(1, jumpProgress + JUMP_SPEED * (currentPlayerType === 'trex' ? TREX_ANIM_SPEED : 1));
 			player.position.x = THREE.MathUtils.lerp(playerPos.x, targetPos.x, jumpProgress);
 			player.position.z = THREE.MathUtils.lerp(playerPos.z, targetPos.z, jumpProgress);
 			//player.position.y = Math.abs(Math.sin(jumpProgress * Math.PI) * 0.4);
-			player.position.y = THREE.MathUtils.lerp(jumpStartY, 0, jumpProgress) + Math.abs(Math.sin(jumpProgress * Math.PI) * 0.4);
+			if (currentPlayerType !== 'trex') player.position.y = THREE.MathUtils.lerp(jumpStartY, 0, jumpProgress) + Math.abs(Math.sin(jumpProgress * Math.PI) * 0.4);
 
 			if (jumpProgress >= 1) {
 				isJumping = false;
