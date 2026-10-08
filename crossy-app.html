@@ -2945,7 +2945,135 @@ function createPlayerRoblox() {
 
 
 	//ARMADILLO DI Zerocalcare
-	function createPlayerArmadilloZeroCalcare() {
+function createPlayerArmadilloZeroCalcare() {
+	const group = new THREE.Group();
+
+	const armadilloPalette = [
+		//corpo    scaglie   punte     orecchie  occhi     ciglia
+		[0xff7711, 0xaa4422, 0xcc4411, 0xff8c33, 0x111111, 0xcc4400], // Zerocalcare (arancione)
+		[0x334455, 0x112233, 0x223355, 0x112233, 0xffffff, 0x223355], // Notturno
+		[0xddccaa, 0x997755, 0x775544, 0x997755, 0x111111, 0x554433], // Desertico
+		[0xff8800, 0xffbb33, 0xdd6600, 0xdd6600, 0xffffff, 0x111111], // ALB
+		[0xff88bb, 0xaa1155, 0x880044, 0xffbbdd, 0x111111, 0x880044], // Rosa
+		[0x77bb44, 0x336611, 0x115522, 0x559922, 0x111111, 0x115522]  // Verde
+	];
+
+	const colors = armadilloPalette[(++currentPaletteIndex % armadilloPalette.length)];
+
+	const matSkin     = new THREE.MeshLambertMaterial({ color: colors[0] });
+	const matShell    = new THREE.MeshLambertMaterial({ color: colors[1] });
+	const matBands    = new THREE.MeshLambertMaterial({ color: colors[2] });
+	const matEars     = new THREE.MeshLambertMaterial({ color: colors[3] });
+	const matEye      = new THREE.MeshLambertMaterial({ color: colors[4] });
+	const matEyeBrows = new THREE.MeshLambertMaterial({ color: colors[5] });
+
+	const box = (w, h, d) => !useCache ? new THREE.BoxGeometry(w, h, d) : getCachedGeometry('box', w, h, d);
+	const mkAdd = (parent) => (geo, mat, x, y, z, rx = 0, rz = 0, shadow = true) => {
+		const m = new THREE.Mesh(geo, mat);
+		m.position.set(x, y, z);
+		m.rotation.x = rx;
+		m.rotation.z = rz;
+		m.castShadow = shadow;
+		parent.add(m);
+		return m;
+	};
+
+	// Misure arti
+	const legLen = 0.55;   // gambe lunghe
+	const armLen = 0.55;   // braccia lunghe
+
+	// Busto in un sotto-gruppo rialzato dalla lunghezza delle gambe
+	const upper = new THREE.Group();
+	upper.position.y = legLen - 0.22;
+	group.add(upper);
+	const add = mkAdd(upper);
+
+	// 1. CORPO: un unico box
+    //add(box(0.42, 0.80, 0.44), matSkin, 0, 0.60, 0);
+	// 1. CORPO: due box (basso più largo, alto appena più stretto)
+	const lowerH = 0.48, upperH = 0.36, split = upperH * 0.5 + lowerH;      // split = y di giunzione (0.66)
+	add(box(0.42, lowerH, 0.44), matSkin, 0, 0.20 + lowerH / 2, 0);  // basso
+	add(box(0.40, upperH, 0.38), matSkin, 0, split + upperH / 2, 0.03); // alto
+
+
+    // 1b. 3 grosse SCAGLIE sulla schiena
+    // [y attacco, z attacco, larghezza, lunghezza, tilt]
+    const scales = [
+        [0.90, 0.08, 0.50, 0.24, -3.14*0.50],
+        [0.85, 0.16, 0.49, 0.22, -3.14*0.30],
+        [0.65, 0.16, 0.48, 0.20, -3.14*0.20],
+		[0.45, 0.16, 0.47, 0.18, -3.14*0.10],
+        [0.30, 0.16, 0.46, 0.16, -3.14*0.00]
+    ];
+    scales.forEach(([y, z, sw, len, scaleTilt]) => {
+        const pivot = new THREE.Group();
+        pivot.position.set(0, y, z);   // attacco appena dentro il dorso
+        pivot.rotation.x = scaleTilt;
+        upper.add(pivot);
+        const sc = mkAdd(pivot);
+        sc(box(sw, 0.08, len), matShell, 0, 0, len / 2);                   // piastra
+        sc(box(sw + 0.02, 0.09, 0.04), matBands, 0, 0, len, 0, 0, false);  // bordo della punta
+    });
+	
+	// 2. TESTA incassata nel corpo (abbassata e arretrata)
+	add(box(0.24, 0.22, 0.24), matSkin, 0, 0.94, -0.14);
+
+	// 3. MUSO rivolto verso l'alto (angoli di rotazione X positivi)
+	add(box(0.10, 0.10, 0.187), matSkin, 0, 0.96, -0.30, 0.10);
+	add(box(0.07, 0.07, 0.187), matSkin, 0, 0.99, -0.46, 0.28);
+	add(box(0.04, 0.04, 0.107), matSkin, 0, 1.04, -0.58, 0.45);
+
+	// 4. ORECCHIE piatte, verticali
+	const earGeo = box(0.08, 0.26, 0.02);
+	add(earGeo, matEars, -0.08, 1.12, -0.10, 0,  0.10);
+	add(earGeo, matEars,  0.08, 1.12, -0.10, 0, -0.10);
+
+	// 5. OCCHI + sopracciglia
+	add(box(0.04, 0.05, 0.04), matEye, -0.11, 0.97, -0.265, 0, 0, false);
+	add(box(0.04, 0.05, 0.04), matEye,  0.11, 0.97, -0.265, 0, 0, false);
+	add(box(0.07, 0.02, 0.03), matEyeBrows, -0.11, 1.02, -0.28, 0,  0.25, false);
+	add(box(0.07, 0.02, 0.03), matEyeBrows,  0.11, 1.02, -0.28, 0, -0.25, false);
+
+	const limbs = {};
+
+	// 6. BRACCIA lunghe, rivolte verso il basso
+	[-1, 1].forEach(s => {
+		const pivot = new THREE.Group();
+		pivot.position.set(s * 0.23, 0.74, -0.08);
+		pivot.rotation.z = s * 0.06;
+		upper.add(pivot);
+		const a = mkAdd(pivot);
+		a(box(0.05, armLen, 0.05), matSkin, 0, -armLen / 2, 0);
+		a(box(0.10, 0.10, 0.10), matEars, 0, -armLen - 0.02, -0.01);//pugni
+		limbs[s < 0 ? 'armL' : 'armR'] = pivot;
+	});
+
+	// 7. GAMBE lunghe + PIEDONI
+	[-1, 1].forEach(s => {
+		const pivot = new THREE.Group();
+		pivot.position.set(s * 0.11, legLen + 0.04, 0.02);
+		group.add(pivot);
+		const l = mkAdd(pivot);
+		l(box(0.06, legLen, 0.06), matSkin, 0, -legLen / 2, 0);
+		l(box(0.18, 0.04, 0.33), matEars, 0, -legLen - 0.02, -0.06); // PIEDONI
+		limbs[s < 0 ? 'legL' : 'legR'] = pivot;
+	});
+
+	group.userData.limbs = limbs;
+
+	group.position.set(0, 0, 0);
+	group.scale.setScalar(0.9);
+
+	applyCurrentVisualMode(group);
+
+	scene.add(group);
+	return group;
+}
+
+
+
+
+	function createPlayerArmadilloZeroCalcareOLD() {
 		const group = new THREE.Group();
 
 		const armadilloPalette = [
@@ -7084,7 +7212,7 @@ walkSideLimbs = -walkSideLimbs;
 				info.programs.length + ' shaders\n' +
 				info.render.calls + ' draw calls\n' +
 				info.render.triangles + ' triangles\n' +
-				info.memory.geometries + ' geometries'; 				
+				info.memory.geometries + ' geometries';
 		}
 		fpsFrames = 0;
 		fpsLast = now;
