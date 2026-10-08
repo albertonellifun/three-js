@@ -2984,6 +2984,7 @@
 		  getCachedGeometry('sphere', R, FACCE, FACCE*0.5, 0, Math.PI * 2, 0, Math.PI / 2),
 		  yellow
 		);
+		topHalf.castShadow = true;
 		jawTop.add(topHalf);
 
 		// --- POSIZIONAMENTO PARAMETRICO DEGLI OCCHI ---
@@ -2998,10 +2999,12 @@
 
 		const eyeL = new THREE.Mesh(eyeGeo, black);
 		eyeL.position.set(-eyeX, eyeY, eyeZ);
+		eyeL.castShadow = true;
 		jawTop.add(eyeL);
 
 		const eyeR = new THREE.Mesh(eyeGeo, black);
 		eyeR.position.set(eyeX, eyeY, eyeZ);
+		eyeR.castShadow = true;
 		jawTop.add(eyeR);
 
 		// mascella inferiore: semisfera bassa
@@ -3013,6 +3016,7 @@
 		  getCachedGeometry('sphere', R, FACCE, FACCE*0.5, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2),
 		  yellow
 		);
+		bottomHalf.castShadow = true;
 		jawBottom.add(bottomHalf);
 
 		group.userData.jawTop = jawTop;
