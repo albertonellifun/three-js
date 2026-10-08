@@ -2972,7 +2972,7 @@
 		const black  = new THREE.MeshLambertMaterial({ color: 0x111111 });//occhi
 		const red    = new THREE.MeshLambertMaterial({ color: 0xaa1111 });//interno bocca
 
-		const R = 0.45;
+		const R = 0.40;
 		const FACCE = 8;
 
 		// mascella superiore: semisfera alta (perno al centro della sfera)
@@ -2981,18 +2981,27 @@
 		group.add(jawTop);
 
 		const topHalf = new THREE.Mesh(
-		  getCachedGeometry('sphere', R, FACCE, FACCE-2, 0, Math.PI * 2, 0, Math.PI / 2),
+		  getCachedGeometry('sphere', R, FACCE, FACCE*0.5, 0, Math.PI * 2, 0, Math.PI / 2),
 		  yellow
 		);
 		jawTop.add(topHalf);
 
-		// occhi sulla mascella superiore
-		const eyeL = new THREE.Mesh(getCachedGeometry('sphere', 0.06, FACCE-2, FACCE-2), black);
-		eyeL.position.set(-0.39, 0.2, -0.10);
+		// --- POSIZIONAMENTO PARAMETRICO DEGLI OCCHI ---
+		const eyeRadius = R * 0.18; // Raggio dell'occhio proporzionale a R
+		const eyeGeo = getCachedGeometry('sphere', eyeRadius, FACCE * 0.5, FACCE * 0.5);
+
+		// Posizione relativa calcolata come percentuale rispetto al raggio R
+		// Rispetto alle coordinate originali (x: 0.39, y: 0.20, z: -0.10 con R=0.45):
+		const eyeX = R * 0.867; // Proporzione x
+		const eyeY = R * 0.444; // Proporzione y
+		const eyeZ = -R * 0.222; // Proporzione z
+
+		const eyeL = new THREE.Mesh(eyeGeo, black);
+		eyeL.position.set(-eyeX, eyeY, eyeZ);
 		jawTop.add(eyeL);
 
-		const eyeR = new THREE.Mesh(getCachedGeometry('sphere', 0.06, FACCE-2, FACCE-2), black);
-		eyeR.position.set(0.39, 0.2, -0.10);
+		const eyeR = new THREE.Mesh(eyeGeo, black);
+		eyeR.position.set(eyeX, eyeY, eyeZ);
 		jawTop.add(eyeR);
 
 		// mascella inferiore: semisfera bassa
@@ -3001,7 +3010,7 @@
 		group.add(jawBottom);
 
 		const bottomHalf = new THREE.Mesh(
-		  getCachedGeometry('sphere', R, FACCE, FACCE-2, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2),
+		  getCachedGeometry('sphere', R, FACCE, FACCE*0.5, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2),
 		  yellow
 		);
 		jawBottom.add(bottomHalf);
