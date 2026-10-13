@@ -4939,23 +4939,27 @@
 		const stripeColor = color[1];
 		const L = 3.0;
 		const W = 0.8;
+		const busType = Math.random() < 0.33 ? 0 : Math.random() < 0.5 ? 1 : 2; 
 
-		// Fiancata bassa colorata + fascia decorativa chiara
-		mesh(L, 0.45, W, baseColor, 0, 0.325, 0, true);
-		
-		if (Math.random() < 0.5) {
+		if (busType === 0) {
 			//vintage
+			
+			// Fiancata bassa colorata
+			mesh(L, 0.45, W, baseColor, 0, 0.325, 0, true);//0.325-0.225=0.1 ... 0.55
 			
 			// Fascia decorativa: leggermente più lunga e più larga del corpo (niente facce coplanari)
 			mesh(L + 0.02, 0.06, W + 0.02, stripeColor, 0, 0.30, 0);
 
 			// Fascia vetri scura (leggermente più larga del corpo, come nel truck) + montanti
-			mesh(L - 0.1, 0.30, W - 0.01, 0x111111, 0, 0.70, 0);
+			mesh(L - 0.1, 0.30, W - 0.01, 0x111111, 0, 0.70, 0);//0.55..0.85 = 0.30
 		
 			// Montanti: un filo più bassi della fascia vetri, così top/bottom non coincidono
 			for (let x = -1.2; x <= 1.21; x += 0.4) {
 				mesh(0.05, 0.28, W + 0.02, 0xffffff, x, 0.70, 0);
 			}
+			
+			// Tetto bianco 
+			mesh(L, 0.08, W, 0xffffff, 0, 0.89, 0, true);//0.85..0.93 = 0.08
 			
 			// Fari anteriori
 			[-1, 1].forEach(s => mesh(0.05, 0.14, 0.14, 0xfff2a0, L / 2 + 0.005, 0.30, s * 0.26));
@@ -4963,9 +4967,32 @@
 			// gradino per l'aria condizionata dietro
 			mesh(0.5, 0.07, 0.60, 0xdddddd, -1.0, 0.965, 0);
 
+		} else if (busType === 2) {
+			//moderno tutto vetrato ampio nero
+			// Fiancata bassa colorata (da 0.1 a 0.3 -> altezza 0.2, centro Y = 0.2)
+			mesh(L, 0.2, W, baseColor, 0, 0.2, 0, true);//0.1..0.3
+		
+			// Vetri: unico blocco nero che avvolge tutta la fascia (da 0.3 a 0.85 -> altezza 0.55, centro Y = 0.575)
+			mesh(L + 0.02, 0.55, W + 0.02, 0x111111, 0, 0.575, 0);
+			
+			// Tetto bianco 
+			mesh(L, 0.08, W, 0xffffff, 0, 0.89, 0, true);//0.85..0.93 = 0.08
+			
+			// Fari anteriori
+			mesh(0.05, 0.06, W, 0xeeeeee, L / 2 + 0.005, 0.24, 0);
+			
+			// gradino per l'aria condizionata centrato
+			mesh(1.4, 0.07, 0.5, 0xeeeeee, -0.3, 0.965, 0);
 		} else {
-			// Vetri: unico blocco nero che avvolge tutta la fascia (anche davanti e dietro)
-			mesh(L + 0.02, 0.30, W + 0.02, 0x111111, 0, 0.70, 0);
+			//moderno ma non troppo vetrato
+			// Fiancata bassa colorata
+			mesh(L, 0.45, W, baseColor, 0, 0.325, 0, true);//0.325-0.225=0.1 ... 0.55
+			
+			// Fascia vetri scura (leggermente più larga del corpo, come nel truck) + montanti
+			mesh(L - 0.1, 0.30, W - 0.01, 0x111111, 0, 0.70, 0);//0.55..0.85 = 0.30
+		
+			// Tetto bianco 
+			mesh(L, 0.08, W, 0xffffff, 0, 0.89, 0, true);//0.85..0.93 = 0.08
 			
 			// Fari anteriori
 			mesh(0.05, 0.06, W, 0xeeeeee, L / 2 + 0.005, 0.24, 0);
@@ -4974,8 +5001,7 @@
 			mesh(1.0, 0.07, 0.5, 0xdddddd, -0.3, 0.965, 0);
 		}
 
-		// Tetto bianco 
-		mesh(L, 0.08, W, 0xffffff, 0, 0.89, 0, true);
+		
 		
 		// Ruote: anteriori + doppio asse posteriore
 		const wheelZ = 0.35;
@@ -7001,8 +7027,17 @@
 		}
 
 		const targetLane = lanes.find(l => l.z === nextZ);
-		if (targetLane && targetLane.obstacles.includes(nextX) && !isGod) {
-			return;
+		if (targetLane && targetLane.obstacles.includes(nextX) && !isGod) {	
+			if (currentPlayerType === 'trex') {	
+				// Calcoliamo la direzione del passo
+				const moveDir = {
+					x: nextX - player.position.x, // o basato sui delta dei tasti premuti
+					z: nextZ - player.position.z
+				};
+				destroyTreeAt(nextX, nextZ, moveDir);
+			} else {
+				return;
+			}
 		}
 
 		playerPos.x = startX;
@@ -7975,7 +8010,7 @@ walkSideLimbs = -walkSideLimbs;
 							const isTruck = !isBus && Math.random() < color.probTruck;
 							const isPolice = !isBus && !isTruck && Math.random() < color.probPolice;
 							const isTaxi = !isBus && !isTruck && !isPolice && Math.random() < color.probTaxi;
-							const vehicle = isBus ? createBusMesh() : 
+							const vehicle = isBus ||1 ? createBusMesh() : 
 								isTruck ? createTruckMesh() : 
 								isPolice ? createCarPoliceMesh() : 
 								isTaxi ? createCarTaxiMesh() : 
@@ -8119,7 +8154,12 @@ walkSideLimbs = -walkSideLimbs;
 				const dx = Math.abs(player.position.x - carCenterX);
 
 				if (!isGod && dx < hitBoxX && dz < 0.4) {
-					handleDeath();
+					if (currentPlayerType === 'trex' && !car.isTrain) {
+						// Se siamo il T-Rex, distruggiamo l'auto invece di morire!
+						destroyCarAt(i, car);
+					} else {
+						handleDeath();
+					}
 				}
 			}
 
@@ -9268,7 +9308,192 @@ function updateClouds(now) {
 }
 
 createClouds();
-	
+
+
+
+
+
+// Aggiungiamo un parametro 'dir' (es. {x: 1, z: 0} oppure {x: 0, z: -1}) 
+// per conoscere la direzione in cui si stava muovendo il T-Rex.
+function destroyTreeAt(x, z, moveDir = {x: 1, z: 0}) {
+  // 1. Rimuovi l'albero dalla scena e puliscilo
+  const lane = lanes.find(l => l.z === z);
+  if (!lane) return;
+  
+  lane.decor.forEach((obj, idx) => {
+    if (Math.round(obj.position.x) === x) {
+      scene.remove(obj);
+      disposeObject3D(obj);
+      lane.decor.splice(idx, 1);
+    }
+  });
+  
+  lane.obstacles = lane.obstacles.filter(obsX => obsX !== x);
+
+  // 2. Crea i detriti (fumo grigio semitrasparente)
+  const debrisGroup = new THREE.Group();
+  debrisGroup.position.set(x, 0, z);
+  
+  const boxGeo = !useCache ? new THREE.BoxGeometry(0.25, 0.25, 0.25) : getCachedGeometry('box', 0.25, 0.25, 0.25);
+  const debrisItems = []; 
+
+  // Creiamo 4 o 5 cubi di fumo grigio semitrasparente
+  const smokeCount = 4 + Math.floor(Math.random() * 2); 
+  for (let i = 0; i < smokeCount; i++) {
+    // Materiale grigio, trasparente con opacità iniziale a 0.6
+    const mat = new THREE.MeshLambertMaterial({ 
+      color: 0x999999, 
+      transparent: true, 
+      opacity: 0.6 
+    });
+    const m = new THREE.Mesh(boxGeo, mat);
+    m.position.set((Math.random() - 0.5) * 0.4, 0.2 + Math.random() * 0.3, (Math.random() - 0.5) * 0.4);
+    debrisGroup.add(m);
+    debrisItems.push(m);
+  }
+
+  scene.add(debrisGroup);
+
+  // 3. Anima il rotolamento e l'effetto dissolvenza/espansione del fumo
+  const startTime = performance.now();
+  const duration = 600; // Durata in ms
+
+  const velocities = debrisItems.map(() => ({
+    vx: (moveDir.x + (Math.random() - 0.5) * 0.5) * (0.04 + Math.random() * 0.04),
+    vz: (moveDir.z + (Math.random() - 0.5) * 0.5) * (0.04 + Math.random() * 0.04),
+    vy: 0.06 + Math.random() * 0.05
+  }));
+
+  function animateDebris(now) {
+    const t = Math.min((now - startTime) / duration, 1);
+
+    debrisItems.forEach((item, index) => {
+      const v = velocities[index];
+      
+      // Muovi e fai rotolare i pezzi
+      item.position.x += v.vx;
+      item.position.z += v.vz;
+      item.position.y += v.vy;
+      v.vy -= 0.007; // Gravità
+      
+      if (item.position.y < 0) {
+        item.position.y = 0;
+        v.vy = -v.vy * 0.2;
+        v.vx *= 0.8;
+        v.vz *= 0.8;
+      }
+
+      item.rotation.x += v.vz * 4;
+      item.rotation.z -= v.vx * 4;
+
+      // Effetto "fumo": i cubi di fumo si ingrandiscono leggermente e sfumano fino a sparire
+      if (index < debrisItems.length - 1) { // Applica solo ai cubi di fumo, non al tronco
+        const scaleFactor = 1 + t * 0.8; // Si espandono
+        item.scale.set(scaleFactor, scaleFactor, scaleFactor);
+        item.material.opacity = 0.6 * (1 - t); // Svaniscono gradualmente
+      }
+    });
+
+    if (t < 1) {
+      requestAnimationFrame(animateDebris);
+    } else {
+      scene.remove(debrisGroup);
+      disposeObject3D(debrisGroup);
+    }
+  }
+  requestAnimationFrame(animateDebris);
+}
+
+function destroyCarAt(index, car) {
+  // 1. Rimuovi l'auto dalla scena e puliscila
+  scene.remove(car.mesh);
+  disposeObject3D(car.mesh);
+  
+  const carX = car.mesh.position.x;
+  const carZ = car.z;
+  const carSpeed = car.speed * 0.5;
+
+  // Rimuovi dall'array delle auto
+  cars.splice(index, 1);
+
+  // 2. Crea i detriti dell'auto distrutta (lamiere metalliche e fumo)
+  const debrisGroup = new THREE.Group();
+  debrisGroup.position.set(carX, 0, carZ);
+  
+  const boxGeo = !useCache ? new THREE.BoxGeometry(0.3, 0.3, 0.3) : getCachedGeometry('box', 0.3, 0.3, 0.3);
+  const debrisItems = []; 
+
+  // Creiamo alcuni cubi color metallo/carrozzeria e fumo grigio
+  const count = 5;
+  for (let i = 0; i < count; i++) {
+    // Alterna tra grigio fumo e colori metallici scuri
+    const color = i % 2 === 0 ? 0x777777 : 0x333333;
+    const isSmoke = i >= 3; // Gli ultimi sembrano fumo semitrasparente
+    
+    const mat = new THREE.MeshLambertMaterial({ 
+      color: isSmoke ? 0x999999 : color, 
+      transparent: isSmoke, 
+      opacity: isSmoke ? 0.6 : 1.0 
+    });
+
+    const m = new THREE.Mesh(boxGeo, mat);
+    m.position.set((Math.random() - 0.5) * 0.8, 0.2 + Math.random() * 0.4, (Math.random() - 0.5) * 0.6);
+    m.castShadow = true;
+    debrisGroup.add(m);
+    debrisItems.push({ mesh: m, isSmoke: isSmoke });
+  }
+
+  scene.add(debrisGroup);
+
+  // 3. Anima la dispersione e il rotolamento dei pezzi nel senso del movimento o dell'urto
+  const startTime = performance.now();
+  const duration = 600;
+
+  const velocities = debrisItems.map(() => ({
+    vx: (carSpeed !== 0 ? Math.sign(carSpeed) : 1) * (0.06 + Math.random() * 0.06) + (Math.random() - 0.5) * 0.04,
+    vz: (Math.random() - 0.5) * 0.08,
+    vy: 0.08 + Math.random() * 0.06
+  }));
+
+  function animateCarDebris(now) {
+    const t = Math.min((now - startTime) / duration, 2);
+
+    debrisItems.forEach((item, idx) => {
+      const v = velocities[idx];
+      const m = item.mesh;
+
+      m.position.x += v.vx;
+      m.position.z += v.vz;
+      m.position.y += v.vy;
+      v.vy -= 0.008; // Gravità
+
+      if (m.position.y < 0) {
+        m.position.y = 0;
+        v.vy = -v.vy * 0.2;
+        v.vx *= 0.8;
+        v.vz *= 0.8;
+      }
+
+      m.rotation.x += v.vx * 5;
+      m.rotation.z -= v.vz * 5;
+
+      // Se è fumo, ingrandiscilo e fallo svanire
+      if (item.isSmoke) {
+        const scaleFactor = 1 + t * 0.8;
+        m.scale.set(scaleFactor, scaleFactor, scaleFactor);
+        if (m.material) m.material.opacity = 0.6 * (1 - t);
+      }
+    });
+
+    if (t < 2) {
+      requestAnimationFrame(animateCarDebris);
+    } else {
+      scene.remove(debrisGroup);
+      disposeObject3D(debrisGroup);
+    }
+  }
+  requestAnimationFrame(animateCarDebris);
+}
 	
 	
 	
