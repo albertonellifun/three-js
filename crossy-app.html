@@ -3218,7 +3218,9 @@
 		skull.position.set(0, 0.3, 0.95); skull.castShadow = true; head.add(skull);
 
 		// FIX: Alzato Y da 0.86 a 0.89 per evitare lo z-fighting con la cima del teschio (Y=0.875)
-		const brow = new THREE.Mesh(getCachedGeometry('box', 1.76, 0.24, 0.5), dark);
+		////const brow = new THREE.Mesh(getCachedGeometry('box', 1.76, 0.24, 0.5), dark);
+		////brow.position.set(0, 0.89, 0.55); head.add(brow);
+		const brow = new THREE.Mesh(getCachedGeometry('box', 0.30, 0.55, 0.65), dark);
 		brow.position.set(0, 0.89, 0.55); head.add(brow);
 
 		const palate = new THREE.Mesh(getCachedGeometry('box', 1.5, 0.1, 1.9), mouth);
@@ -8323,8 +8325,223 @@ walkSideLimbs = -walkSideLimbs;
 		});
 	}
 
+	//TORRE DI AMATRICE
+	function createAmatriceHouse() {
+		const group = new THREE.Group();
+		
+		const stoneBase  = new THREE.MeshLambertMaterial({ color: 0xbb9977 });
+		const stoneShaft = new THREE.MeshLambertMaterial({ color: 0xaa9966 });
+		const stoneBell  = new THREE.MeshLambertMaterial({ color: 0xbbaa88 });
+		const stoneCorn  = new THREE.MeshLambertMaterial({ color: 0x998866 });
+		const terracotta = new THREE.MeshLambertMaterial({ color: 0x664422 });
+		const dark       = new THREE.MeshLambertMaterial({ color: 0x111111 });
+		const frameMat   = new THREE.MeshLambertMaterial({ color: 0x555566 });
+		const white      = new THREE.MeshLambertMaterial({ color: 0xffffee });
+		const bronze     = new THREE.MeshLambertMaterial({ color: 0x334444 });
+		const eagleGreen = new THREE.MeshLambertMaterial({ color: 0x226644 });
+		
+		// basamento 3x3, alto 3
+		const base = new THREE.Mesh(getCachedGeometry('box', 3.0, 3.0, 3.0), stoneBase);
+		base.position.set(0, 1.5, 0);
+		group.add(base);
+		
+		// piano terracotta sopra il basamento, sporge 0.1 per lato
+		const topPlane = new THREE.Mesh(getCachedGeometry('box', 3.2, 0.12, 3.2), terracotta);
+		topPlane.position.set(0, 3.06, 0);
+		group.add(topPlane);
+		
+		// feritoia sul basamento
+		const slit = new THREE.Mesh(getCachedGeometry('box', 0.12, 0.35, 0.04), dark);
+		slit.position.set(0.8, 2.0, 1.52);
+		group.add(slit);
+		
+		// fusto della torre (più stretto, arretrato)
+		const shaft = new THREE.Mesh(getCachedGeometry('box', 2.1, 3.8, 2.1), stoneShaft);
+		shaft.position.set(0, 4.9, -0.3);
+		group.add(shaft);
+		
+		// cornicione
+		const cornice = new THREE.Mesh(getCachedGeometry('box', 2.4, 0.2, 2.4), terracotta);
+		cornice.position.set(0, 6.9, -0.3);
+		group.add(cornice);
+		
+		// --- cella campanaria bucata su 4 facciate ---
+		// pavimento
+		const bellFloor = new THREE.Mesh(getCachedGeometry('box', 1.7, 0.2, 1.7), stoneBell);
+		bellFloor.position.set(0, 7.1, -0.3);
+		group.add(bellFloor);
+		
+		// 4 pilastri d'angolo
+		const pillarNE = new THREE.Mesh(getCachedGeometry('box', 0.45, 1.1, 0.45), stoneBell);
+		pillarNE.position.set(0.625, 7.75, 0.325);
+		group.add(pillarNE);
+		
+		const pillarNW = new THREE.Mesh(getCachedGeometry('box', 0.45, 1.1, 0.45), stoneBell);
+		pillarNW.position.set(-0.625, 7.75, 0.325);
+		group.add(pillarNW);
+		
+		const pillarSE = new THREE.Mesh(getCachedGeometry('box', 0.45, 1.1, 0.45), stoneBell);
+		pillarSE.position.set(0.625, 7.75, -0.925);
+		group.add(pillarSE);
+		
+		const pillarSW = new THREE.Mesh(getCachedGeometry('box', 0.45, 1.1, 0.45), stoneBell);
+		pillarSW.position.set(-0.625, 7.75, -0.925);
+		group.add(pillarSW);
+		
+		// architrave superiore
+		const lintel = new THREE.Mesh(getCachedGeometry('box', 1.7, 0.3, 1.7), stoneBell);
+		lintel.position.set(0, 8.45, -0.3);
+		group.add(lintel);
+		
+		// campana appesa al centro
+		const bellHanger = new THREE.Mesh(getCachedGeometry('box', 0.04, 0.25, 0.04), dark);
+		bellHanger.position.set(0, 7.97, -0.3);
+		group.add(bellHanger);
+		
+		const bell = new THREE.Mesh(getCachedGeometry('cylinder', 0.12, 0.22, 0.3, 10), bronze);
+		bell.position.set(0, 7.7, -0.3);
+		group.add(bell);
+		
+		// tetto a padiglione (piramide a 4 lati)
+		const roof = new THREE.Mesh(getCachedGeometry('cylinder', 0.05, 1.75, 0.9, 4), terracotta);
+		roof.rotation.y = Math.PI / 4;
+		roof.position.set(0, 9.05, -0.3);
+		group.add(roof);
 
+		//bandierina in cima, asta esile
+		const flagPole = new THREE.Mesh(getCachedGeometry('box', 0.03, 0.65, 0.03), eagleGreen);
+		flagPole.position.set(0, 9.775, -0.3);
+		group.add(flagPole);
 
+		// bandierina (attaccata all'asta, in cima)
+		const flag = new THREE.Mesh(getCachedGeometry('box', 0.3, 0.18, 0.015), eagleGreen);
+		flag.position.set(0.165, 9.98, -0.3);
+		group.add(flag);
+		
+		
+		// --- orologio (costruito una volta, faccia verso +z, poi clonato) ---
+		const clock = new THREE.Group();
+		
+		const clockFrame = new THREE.Mesh(getCachedGeometry('box', 0.95, 0.95, 0.08), frameMat);
+		clockFrame.position.set(0, 0, 0.04);
+		clock.add(clockFrame);
+		
+		const clockFace = new THREE.Mesh(getCachedGeometry('cylinder', 0.38, 0.38, 0.04, 20), white);
+		clockFace.rotation.x = Math.PI / 2;
+		clockFace.position.set(0, 0, 0.09);
+		clock.add(clockFace);
+		
+		const tick12 = new THREE.Mesh(getCachedGeometry('box', 0.04, 0.07, 0.02), dark);
+		tick12.position.set(0, 0.32, 0.12);
+		clock.add(tick12);
+		
+		const tick6 = new THREE.Mesh(getCachedGeometry('box', 0.04, 0.07, 0.02), dark);
+		tick6.position.set(0, -0.32, 0.12);
+		clock.add(tick6);
+		
+		const tick3 = new THREE.Mesh(getCachedGeometry('box', 0.07, 0.04, 0.02), dark);
+		tick3.position.set(0.32, 0, 0.12);
+		clock.add(tick3);
+		
+		const tick9 = new THREE.Mesh(getCachedGeometry('box', 0.07, 0.04, 0.02), dark);
+		tick9.position.set(-0.32, 0, 0.12);
+		clock.add(tick9);
+		
+		// ore 3:36 -> lancetta ore a 108°, lancetta minuti a 216° (in senso orario da ore 12)
+		const hourHand = new THREE.Mesh(getCachedGeometry('box', 0.05, 0.18, 0.02), dark);
+		hourHand.rotation.z = -1.885;
+		hourHand.position.set(0.0856, -0.0278, 0.13);
+		clock.add(hourHand);
+		
+		const minuteHand = new THREE.Mesh(getCachedGeometry('box', 0.04, 0.28, 0.02), dark);
+		minuteHand.rotation.z = -3.770;
+		minuteHand.position.set(-0.0823, -0.1133, 0.14);
+		clock.add(minuteHand);
+		
+		// 4 facciate del fusto (superficie a ±1.05 dal centro z = -0.3)
+		const clockFront = clock;
+		clockFront.position.set(0, 5.5, 0.75);
+		group.add(clockFront);
+		
+		const clockRight = clock.clone();
+		clockRight.position.set(1.05, 5.5, -0.3);
+		clockRight.rotation.y = Math.PI / 2;
+		group.add(clockRight);
+		
+		const clockBack = clock.clone();
+		clockBack.position.set(0, 5.5, -1.35);
+		clockBack.rotation.y = Math.PI;
+		group.add(clockBack);
+		
+		const clockLeft = clock.clone();
+		clockLeft.position.set(-1.05, 5.5, -0.3);
+		clockLeft.rotation.y = -Math.PI / 2;
+		group.add(clockLeft);
+		
+		
+		// --- targa commemorativa a libro aperto (sotto l'orologio frontale) ---
+		const memorial = new THREE.Group();
+		
+		const plaqueL = new THREE.Mesh(getCachedGeometry('box', 0.8, 0.6, 0.05), white);
+		plaqueL.position.set(-0.155, 4.25, 0.78);
+		plaqueL.rotation.y = 0.1;
+		memorial.add(plaqueL);
+		
+		const plaqueR = new THREE.Mesh(getCachedGeometry('box', 0.8, 0.6, 0.05), white);
+		plaqueR.position.set(0.155, 4.25, 0.78);
+		plaqueR.rotation.y = -0.1;
+		memorial.add(plaqueR);
+		
+		const spine = new THREE.Mesh(getCachedGeometry('box', 0.02, 0.64, 0.02), frameMat);
+		spine.position.set(0, 4.25, 0.765);
+		memorial.add(spine);
+		
+		// --- aquila ad ali aperte in bronzo ossidato (sopra la targa) ---
+		const eagleBody = new THREE.Mesh(getCachedGeometry('box', 0.1, 0.24, 0.05), eagleGreen);
+		eagleBody.position.set(0, 4.6, 0.8);
+		memorial.add(eagleBody);
+		
+		const eagleHead = new THREE.Mesh(getCachedGeometry('box', 0.08, 0.08, 0.05), eagleGreen);
+		eagleHead.position.set(0, 4.8, 0.8);
+		memorial.add(eagleHead);
+		
+		const eagleBeak = new THREE.Mesh(getCachedGeometry('box', 0.04, 0.03, 0.04), eagleGreen);
+		eagleBeak.position.set(0.06, 4.79, 0.8);
+		memorial.add(eagleBeak);
+		
+		const eagleTail = new THREE.Mesh(getCachedGeometry('box', 0.12, 0.1, 0.04), eagleGreen);
+		eagleTail.position.set(0, 4.62, 0.8);
+		memorial.add(eagleTail);
+		
+		const wingRInner = new THREE.Mesh(getCachedGeometry('box', 0.22, 0.07, 0.04), eagleGreen);
+		wingRInner.position.set(0.17, 4.68, 0.8);
+		wingRInner.rotation.z = 0.3;
+		memorial.add(wingRInner);
+		
+		const wingROuter = new THREE.Mesh(getCachedGeometry('box', 0.18, 0.06, 0.04), eagleGreen);
+		wingROuter.position.set(0.35, 4.76, 0.8);
+		wingROuter.rotation.z = 0.6;
+		memorial.add(wingROuter);
+		
+		const wingLInner = new THREE.Mesh(getCachedGeometry('box', 0.22, 0.07, 0.04), eagleGreen);
+		wingLInner.position.set(-0.17, 4.68, 0.8);
+		wingLInner.rotation.z = -0.3;
+		memorial.add(wingLInner);
+		
+		const wingLOuter = new THREE.Mesh(getCachedGeometry('box', 0.18, 0.06, 0.04), eagleGreen);
+		wingLOuter.position.set(-0.35, 4.76, 0.8);
+		wingLOuter.rotation.z = -0.6;
+		memorial.add(wingLOuter);
+		
+		memorial.position.set(0, -3.0, 0.75);
+		group.add(memorial);
+		
+		applyCurrentVisualMode(group);
+		
+		scene.add(group);
+		return group;
+	}
+	
 	//CONCA
 	function createConcaHouse() {
 		const house = new THREE.Group();
@@ -8801,10 +9018,12 @@ walkSideLimbs = -walkSideLimbs;
 	const HOUSE_POSITION = { x: -11, z: -1 };
 	const CONCA_SIZE = { x: 3, z: 5 };
 	const MONTE_SIZE = { x: 6, z: 5 };
+	const AMATRICE_SIZE = { x: 3, z: 3};
 
 	function placeRandomHouse() {
-		const isConca = new Date().getSeconds() % 2;
-		if (isConca) {
+		const randomHouse = new Date().getSeconds() % 3;
+		
+		if (randomHouse === 1) {
 			const house = createConcaHouse(); //8x6x6.4 + scale -> 10x6 -> 5x3
 			house.rotation.y = Math.PI / 2; // facciata verso +x, visibile dalla camera
 			house.scale.set(5 / 8, 0.5, 3 / 8); //scalata storta	    
@@ -8812,7 +9031,16 @@ walkSideLimbs = -walkSideLimbs;
 			scene.add(house);
 
 			placeHouse(HOUSE_POSITION.x, HOUSE_POSITION.z, CONCA_SIZE.x, CONCA_SIZE.z, house); // centro (-12, 0), 3 caselle in x, 5 in z
-		} else {
+		} else if (randomHouse === 2) {
+			const house = createAmatriceHouse(); //3x3
+			house.rotation.y = Math.PI / 2; // facciata verso +x, visibile dalla camera
+			house.scale.set(5 / 8, 0.75, 5 / 8); //scalata 2:1 circa
+			house.position.set(HOUSE_POSITION.x, 0, HOUSE_POSITION.z); //centrata in base al size
+			scene.add(house);
+
+			placeHouse(HOUSE_POSITION.x, HOUSE_POSITION.z, AMATRICE_SIZE.x, AMATRICE_SIZE.z, house); // centro (-12, 0), 3 caselle in x, 3 in z
+		}
+		else {
 			const house = createMonteHouse(); //8x6x6.4 + 10x6x6.4 -> 10x12 -> 5x6
 			house.rotation.y = Math.PI / 2; // facciata verso +x, visibile dalla camera
 			house.scale.set(8 / 20, 0.5, 9 / 20); //scalata 2:1 circa
