@@ -5258,8 +5258,8 @@
 		// 3 righe di venature
 		// Lunghezze venature quantizzate: pool fisso così la cache resta piccola
 		// indipendentemente da quanti tronchi vengono generati in partita.
-		const VEIN_LENGTHS = [0.16, 0.20, 0.24, 0.28, 0.32, 0.36, 0.40, 0.44, 0.48, 0.52, 0.56, 0.60];
-		const VEIN_DISTANCE = [0.02, 0.04, 0.06, 0.08, 0.10];
+		const VEIN_LENGTHS = [0.16, 0.24, 0.32, 0.40, 0.48];
+		const VEIN_DISTANCE = [0.08, 0.12, 0.16];
 
 		// 3 righe di venature
 		const rows = [-0.20, 0, 0.20];
@@ -5271,7 +5271,7 @@
 			while (x < length / 2) {
 
 				// Spazio casuale prima della prossima venatura
-				x += 0.1 + VEIN_DISTANCE[Math.floor(Math.random() * VEIN_DISTANCE.length)];
+				x += VEIN_DISTANCE[Math.floor(Math.random() * VEIN_DISTANCE.length)];
 
 				// Evita di uscire dal tronco
 				const remaining = length / 2 - x * 1.1;
@@ -7997,22 +7997,28 @@ walkSideLimbs = -walkSideLimbs;
 
 					if (lane.type === 'river') {
 						const startX = lane.speed > 0 ? -BOARD_WIDTH / 2 - 2 : BOARD_WIDTH / 2 + 2;
+
+						const logLengths = [2.2, 3.0, 1.5];
+						const logLength = logLengths[Math.floor(Math.random() * logLengths.length)];
+						const MIN_LOG_GAP = 0.20; // spazio libero tra due tronchi
+
 						const lastLogOnLane = logs.filter(c => c.z === lane.z && !c.isBridge);
 						let canSpawn = true;
 						for (let v of lastLogOnLane) {
-							if (Math.abs(v.mesh.position.x - startX) < 3) {
+							const required = (v.length + logLength) / 2 + MIN_LOG_GAP;
+							if (Math.abs(v.mesh.position.x - startX) < required) {
 								canSpawn = false;
 								break;
 							}
 						}
 
 						if (canSpawn) {
-							const logLengths = [2.2, 3.0, 1.5];
-							const logLength = logLengths[Math.floor(Math.random() * logLengths.length)];
 							const isCroco = Math.random() < color.probCroco && logLength > 1.5;
-							const log = isCroco ? createCrocoMesh(logLength, color.croco.col1, color.croco.col2) : createLogMesh(logLength, color.log.col1, color.log.col2);
+							const log = isCroco
+								? createCrocoMesh(logLength, color.croco.col1, color.croco.col2)
+								: createLogMesh(logLength, color.log.col1, color.log.col2);
 							log.position.set(startX, 0, lane.z);
-							if (isCroco && lane.speed < 0) log.rotation.y = Math.PI; // muso verso sinistra
+							if (isCroco && lane.speed < 0) log.rotation.y = Math.PI;
 							scene.add(log);
 							logs.push({
 								mesh: log,
@@ -8020,7 +8026,6 @@ walkSideLimbs = -walkSideLimbs;
 								z: lane.z,
 								length: logLength,
 								lane: lane,
-								//type: 'river',
 								isCroco: isCroco,
 								isBridge: false
 							});
