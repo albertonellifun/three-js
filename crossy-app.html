@@ -506,6 +506,9 @@
   <audio id="bonusSound" preload="auto">
     <source src="./crossy-bonus.mp3" type="audio/mpeg">
   </audio>
+  <audio id="smashSound" preload="auto">
+    <source src="./crossy-smash.mp3" type="audio/mpeg">
+  </audio>
 
   <script>
     // --- COSTANTI DI GIOCO ---
@@ -7035,6 +7038,7 @@
 					z: nextZ - player.position.z
 				};
 				destroyTreeAt(nextX, nextZ, moveDir);
+				playSound('smashSound');
 			} else {
 				return;
 			}
@@ -8010,7 +8014,7 @@ walkSideLimbs = -walkSideLimbs;
 							const isTruck = !isBus && Math.random() < color.probTruck;
 							const isPolice = !isBus && !isTruck && Math.random() < color.probPolice;
 							const isTaxi = !isBus && !isTruck && !isPolice && Math.random() < color.probTaxi;
-							const vehicle = isBus ||1 ? createBusMesh() : 
+							const vehicle = isBus ? createBusMesh() : 
 								isTruck ? createTruckMesh() : 
 								isPolice ? createCarPoliceMesh() : 
 								isTaxi ? createCarTaxiMesh() : 
@@ -8157,6 +8161,7 @@ walkSideLimbs = -walkSideLimbs;
 					if (currentPlayerType === 'trex' && !car.isTrain) {
 						// Se siamo il T-Rex, distruggiamo l'auto invece di morire!
 						destroyCarAt(i, car);
+						playSound('smashSound');
 					} else {
 						handleDeath();
 					}
