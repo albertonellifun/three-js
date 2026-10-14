@@ -1,0 +1,2940 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+		<title>Fury On The Rails</title>
+		<script src="./three.min.js"></script>
+
+<style>
+:root {
+  --sky: #adf;
+  --ink: #232;
+  --sun: #fd5;
+  --leaf: #9e6;
+  --danger: #f54;
+  --paper: #ffe;
+  --xfont: ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", system-ui, sans-serif;
+  --font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  --border-radius: 8px;
+}
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+[hidden] {
+  display: none !important;
+}
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--sky);
+  font-family: var(--font);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+canvas {
+  display: block;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+}
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.outline {
+  color: #fff;
+  -webkit-text-stroke: 5px var(--ink);
+  paint-order: stroke fill;
+  font-weight: 900;
+}
+html.touch .only-keys {
+  display: none;
+}
+html:not(.touch) .only-touch {
+  display: none;
+}
+
+/* ---------- HUD ---------- */
+#hud {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: calc(env(safe-area-inset-top) + 14px) 16px 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+#dist {
+  font-size: 52px;
+  line-height: 1;
+  letter-spacing: -1px;
+}
+#dist small {
+  font-size: 24px;
+  margin-left: 2px;
+}
+#danger {
+  position: relative;
+  width: min(260px, 62vw);
+  height: 16px;
+  border-radius: var(--border-radius);
+  background: rgba(35, 53, 36, 0.35);
+  border: 3px solid var(--ink);
+}
+#dangerFill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-radius: var(--border-radius);
+  background: var(--sun);
+}
+#danger .rex {
+  position: absolute;
+  left: -35px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 24px;
+}
+#danger.flash {
+  animation: dangerFlash 0.24s steps(2, jump-none) infinite;
+}
+@keyframes dangerFlash {
+  from {
+    border-color: var(--ink);
+    background: rgba(35, 53, 36, 0.35);
+  }
+  to {
+    border-color: var(--danger);
+    background: rgba(255, 90, 78, 0.55);
+  }
+}
+#slope {
+  font-size: 15px;
+  font-weight: 900;
+  padding: 4px 12px;
+  border-radius: var(--border-radius);
+  border: 3px solid var(--ink);
+  background: #fff;
+  color: var(--ink);
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 0.15s, transform 0.15s;
+}
+#slope.show {
+  opacity: 1;
+  transform: scale(1);
+}
+#slope.up {
+  background: var(--danger);
+  color: #fff;
+}
+#slope.down {
+  background: #7fd0ff;
+}
+#slope .s-up,
+#slope .s-down {
+  display: none;
+}
+#slope.up .s-up {
+  display: inline;
+}
+#slope.down .s-down {
+  display: inline;
+}
+#charge {
+  font-size: 22px;
+  font-weight: 900;
+  padding: 5px 16px;
+  border-radius: var(--border-radius);
+  border: 4px solid var(--ink);
+  background: var(--danger);
+  color: #fff;
+  box-shadow: 0 4px 0 var(--ink);
+  opacity: 0;
+  transform: scale(0.7);
+  transition: opacity 0.12s, transform 0.12s;
+  white-space: nowrap;
+}
+#charge.show {
+  opacity: 1;
+  transform: scale(1);
+  animation: chargePulse 0.32s ease-in-out infinite alternate;
+}
+@keyframes chargePulse {
+  from {
+    transform: scale(0.94);
+  }
+  to {
+    transform: scale(1.1);
+  }
+}
+
+/* debug numbers, only with DEBUG = true */
+#stats {
+  display: none;
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 14px);
+  right: calc(env(safe-area-inset-right) + 14px);
+  z-index: 6;
+  font-size: 13px;
+  color: var(--ink);
+  font-weight: 400;
+  line-height: 1.5;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 6px 10px;
+  border-radius: var(--border-radius);
+  pointer-events: none;
+}
+
+html.debug #stats {
+  display: block;
+}
+
+#vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 90, 78, 0) 45%,
+    rgba(200, 30, 20, 0.75) 100%
+  );
+}
+
+/* ---------- CORNER BUTTONS ---------- */
+#corner {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 12px);
+  right: calc(env(safe-area-inset-right) + 12px);
+  display: flex;
+  gap: 8px;
+  z-index: 5;
+}
+.ui-btn {
+  pointer-events: auto;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--border-radius);
+  border: 3px solid var(--ink);
+  background: rgba(255, 251, 232, 0.85);
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  line-height: 1;
+  box-shadow: 0 3px 0 var(--ink);
+  color: var(--ink);
+}
+.ui-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--ink);
+}
+.ui-btn.hide {
+  display: none;
+}
+
+/* ---------- PADS ---------- */
+#pads {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 100px;
+  padding: 0 calc(env(safe-area-inset-right) + 14px)
+    calc(env(safe-area-inset-bottom) + 16px)
+    calc(env(safe-area-inset-left) + 14px);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  pointer-events: none;
+}
+.pad {
+  position: relative;
+  width: 128px;
+  height: 128px;
+  border-radius: var(--border-radius);
+  border: 4px solid rgba(35, 53, 36, 0.55);
+  background: rgba(255, 255, 255, 0.28);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  text-align: center;
+  transition: transform 0.08s, background 0.08s, border-color 0.1s;
+}
+.pad .arrow {
+  font-size: 64px;
+  line-height: 1;
+  color: var(--ink);
+  opacity: 0.75;
+}
+.pad span {
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--ink);
+  line-height: 1.1;
+}
+.pad em {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--ink);
+  opacity: 0.6;
+}
+html.touch .pad em {
+  display: none;
+}
+.pad.ready {
+  border-color: var(--ink);
+  background: rgba(255, 211, 92, 0.6);
+}
+.pad.hit {
+  transform: scale(0.9);
+  background: rgba(255, 255, 255, 0.8);
+}
+.pad.bad {
+  background: rgba(255, 90, 78, 0.6);
+}
+.judge {
+  position: absolute;
+  left: 50%;
+  bottom: 128px;
+  transform: translateX(-50%);
+  font-size: 24px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.judge.show {
+  opacity: 1;
+}
+.pad .judge span {
+  font-size: inherit;
+  color: inherit;
+}
+
+#lever {
+  width: min(170px, 36vw);
+  margin-bottom: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+#lever svg {
+  width: 100%;
+  overflow: visible;
+}
+#lever span {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--ink);
+}
+
+/* ---------- OVERLAY CARDS ---------- */
+#overlay {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  background: rgba(169, 223, 242, 0.55);
+  z-index: 4;
+}
+#overlay.show {
+  display: flex;
+}
+.card {
+  background: var(--paper);
+  border: 5px solid var(--ink);
+  border-radius: var(--border-radius);
+  padding: 26px 24px 22px;
+  width: min(370px, 90vw);
+  width: min(560px, 94vw);
+  max-height: calc(100% - 24px);
+  overflow: auto;
+  box-shadow: 0 10px 0 var(--ink);
+  text-align: center;
+  color: var(--ink);
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.card h1 {
+  font-size: 40px;
+  line-height: 1.05;
+  margin-bottom: 14px;
+  font-weight: 900;
+  letter-spacing: -1px;
+}
+.card p {
+  font-size: 15px;
+  line-height: 1.55;
+  font-weight: 700;
+}
+.card button {
+  pointer-events: auto;
+}
+.rules {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px 12px;
+  text-align: left;
+  margin: 4px 0 16px;
+  align-items: center;
+}
+.chip {
+  display: inline-flex;
+  gap: 4px;
+}
+.rules > .chip {
+  justify-self: center;
+}
+.chip i {
+  font-style: normal;
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  height: 28px;
+  border-radius: var(--border-radius);
+  border: 3px solid var(--ink);
+  font-size: 13px;
+  font-weight: 900;
+  background: #fff;
+}
+.chip i.y {
+  background: var(--sun);
+}
+.chip i.g {
+  background: var(--leaf);
+}
+.chip i.r {
+  background: var(--danger);
+  color: #fff;
+}
+.mini-lever {
+  width: 58px;
+  height: auto;
+  display: block;
+}
+.go {
+  display: inline-block;
+  background: var(--sun);
+  border: 4px solid var(--ink);
+  border-radius: var(--border-radius);
+  padding: 12px 24px;
+  font-size: 20px;
+  font-weight: 900;
+  box-shadow: 0 5px 0 var(--ink);
+  color: var(--ink);
+  margin-top: 24px;
+}
+button.go:active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 var(--ink);
+}
+.opts {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.opt {
+  border: 3px solid var(--ink);
+  border-radius: var(--border-radius);
+  background: #fff;
+  padding: 7px 14px;
+  font-size: 15px;
+  font-weight: 900;
+  box-shadow: 0 3px 0 var(--ink);
+  color: var(--ink);
+}
+.opt:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--ink);
+}
+.opt.sel { outline: 3px solid #ffd35c; outline-offset: 2px; }
+.big {
+  font-size: 64px;
+  font-weight: 900;
+  line-height: 1;
+  margin: 6px 0 4px;
+  letter-spacing: -1px;
+}
+.muted {
+  opacity: 0.65;
+}
+.hint {
+  margin-top: 12px;
+  font-size: 13px !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pad,
+  .judge,
+  #charge,
+  #slope {
+    transition: none;
+  }
+  #charge.show,
+  #danger.flash {
+    animation: none;
+  }
+  #danger.flash {
+    border-color: var(--danger);
+  }
+}
+
+/* short screens (landscape phones): compact cards so they fit without scrolling */
+@media (max-height: 560px) {
+  .card {
+    padding: 14px 18px 14px;
+    border-width: 4px;
+    box-shadow: 0 6px 0 var(--ink);
+  }
+  .card h1 {
+    font-size: 30px;
+    margin-bottom: 8px;
+  }
+  .card p {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .rules {
+    gap: 6px 10px;
+    margin: 2px 0 10px;
+  }
+  .chip i {
+    min-width: 24px;
+    height: 24px;
+    font-size: 12px;
+  }
+  .mini-lever {
+    width: 48px;
+  }
+  .go {
+    padding: 8px 18px;
+    font-size: 17px;
+  }
+  .opts {
+    margin-top: 10px;
+  }
+  .big {
+    font-size: 48px;
+  }
+}
+
+#action-controls {
+  width: calc(100vw - 8px);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 4px;
+  position: absolute;
+  bottom: 0;
+  user-select: none;
+}
+.action-btn {
+  flex: 1 1 0;
+  min-width: 50px;
+  padding: 0;
+  height: 50px;
+  border-radius: var(--border-radius);
+  font-size: 15px;
+  font-weight: 900;
+  box-shadow: 0 2px 0 var(--ink);
+}
+</style>
+	</head>
+	<body>
+
+
+<!--
+<audio data-sfx="clack"        src="fury-clack.mp3"        preload="auto"></audio>
+<audio data-sfx="pump-perfect" src="fury-pump-perfect.mp3" preload="auto"></audio>
+<audio data-sfx="pump-good"    src="fury-pump-good.mp3"    preload="auto"></audio>
+<audio data-sfx="pump-late"    src="fury-pump-late.mp3"    preload="auto"></audio>
+<audio data-sfx="wrong"        src="fury-wrong.mp3"        preload="auto"></audio>
+<audio data-sfx="empty"        src="fury-empty.mp3"        preload="auto"></audio>
+<audio data-sfx="ready"        src="fury-ready.mp3"        preload="auto"></audio>
+<audio data-sfx="ui"           src="fury-ui.mp3"           preload="auto"></audio>
+
+
+<audio data-sfx="best"         src="fury-best.mp3"         preload="auto"></audio>
+<audio data-sfx="over"         src="fury-best.mp3"         preload="auto"></audio>
+<audio data-sfx="chomp"        src="fury-chomp.mp3"        preload="auto"></audio>
+<audio data-sfx="charge"       src="fury-charge.mp3"       preload="auto"></audio>
+<audio data-sfx="smash"        src="fury-smash.mp3"        preload="auto"></audio>
+<audio data-sfx="stomp"        src="fury-stomp.mp3"        preload="auto"></audio>
+<audio data-sfx="roar"         src="fury-roar.mp3"         preload="auto"></audio>
+<audio data-sfx="wind"         src="fury-wind.mp3"         preload="auto" loop></audio>
+-->
+
+		<canvas id="canvas"></canvas>
+
+		<div id="vignette"></div>
+		<div id="hud">
+			<div id="dist" class="outline">
+				<span id="distN">0</span>
+				<small>m</small>
+			</div>
+			<div id="danger">
+				<div id="dangerFill"></div>
+				<span class="rex">😡</span>
+			</div>
+			<div id="slope">
+				<span class="s-up">▲ Uphill</span>
+				<span class="s-down">▼ Downhill</span>
+			</div>
+			<div id="charge">CHARGE</div>
+		</div>
+		<div id="stats">
+			<span>SPEED</span>
+			<b id="spd">0.0</b>
+			<br/>
+			<span>ACCURACY</span>
+			<b id="acc">0</b>%
+			<br/>
+			<span>GRADE</span>
+			<b id="grd">0</b>%
+			<br/>
+			<span>CHARGE</span>
+			<b id="chg">-</b>
+			<br/>
+			<span>DRAW CALLS</span>
+			<b id="dcl">0</b>
+			<br/>
+			<span>TRIANGLES</span>
+			<b id="tri">0</b>
+			<br/>
+			<span>GEOMETRIES</span>
+			<b id="geo">0</b>
+			<br/>
+			<span>SHADERS</span>
+			<b id="shd">0</b>
+		</div>
+		<div id="pads">
+			<div class="pad" id="padL">
+				<b class="judge outline" id="judgeL">
+					<span data-j="perfect" hidden>Perfect!</span><span data-j="good" hidden>Good</span><span data-j="late" hidden>Late</span><span data-j="wrong" hidden>Miss</span>
+				</b>
+				<div class="arrow">◀︎</div>
+				<!--span>LEFT HANDLE</span>
+				<em>A or ←</em-->
+			</div>
+			<div id="lever">
+				<svg viewBox="-60 -40 120 70">
+					<rect x="-7" y="-2" width="14" height="30" rx="4" fill="#233524" />
+					<g id="beam">
+						<rect x="-52" y="-5" width="104" height="10" rx="5" fill="#885533" stroke="#233322" stroke-width="3" />
+						<circle id="hL" cx="-50" cy="0" r="10" fill="#fff" stroke="#223322" stroke-width="3" />
+						<circle id="hR" cx="50" cy="0" r="10" fill="#fff" stroke="#223322" stroke-width="3" />
+					</g>
+				</svg>
+				<span>LEVER</span>
+			</div>
+			<div class="pad" id="padR">
+				<b class="judge outline" id="judgeR">
+					<span data-j="perfect" hidden>Perfect!</span><span data-j="good" hidden>Good</span><span data-j="late" hidden>Late</span><span data-j="wrong" hidden>Miss</span>
+				</b>
+				<div class="arrow">▶︎</div>
+				<!--span>RIGHT HANDLE</span>
+				<em>D or →</em-->
+			</div>
+		</div>
+		
+		<div id="action-controls">
+		  <button type="button" class="ui-btn action-btn" data-cam="KeyZ" aria-label="Zoom in" title="Zoom in">+</button>
+		  <button type="button" class="ui-btn action-btn" data-cam="KeyX" aria-label="Zoom out" title="Zoom out">−</button>
+		  <button type="button" class="ui-btn action-btn" data-cam="KeyW" aria-label="Camera up" title="Camera up">▲</button>
+		  <button type="button" class="ui-btn action-btn" data-cam="KeyC" aria-label="Camera down" title="Camera down">▼</button>
+		  <button type="button" class="ui-btn action-btn" data-cam="KeyQ" aria-label="Rotate clockwise" title="Rotate clockwise">↻</button>
+		  <button type="button" class="ui-btn action-btn" data-cam="KeyE" aria-label="Rotate counterclockwise" title="Rotate counterclockwise">↺</button>
+		  <button type="button" class="ui-btn action-btn" id="nextBtn" aria-label="Change monster" title="Change monster">😡</button>
+		  <button type="button" class="ui-btn action-btn" id="colorBtn" aria-label="Change color" title="Change color">🎨</button>
+		  <button type="button" class="ui-btn action-btn" id="debugBtn" aria-label="Debug toggle" title="Debug toggle">🕵️</button>
+		  <button type="button" class="ui-btn action-btn" id="muteBtn" aria-label="Toggle sound" title="Toggle sound">
+			<span id="muteOnIcon">🔊</span><span id="muteOffIcon" hidden>🔇</span>
+		  </button>
+		  <button type="button" class="ui-btn action-btn" id="pauseBtn" aria-label="Pause / Resume" title="Pause / Resume">
+			<span id="pauseIcon" hidden>⏸</span><span id="playIcon">▶</span>
+		  </button>
+		</div>
+
+		<div id="overlay">
+
+			<!-- TITLE -->
+			<div class="card" id="cardTitle" hidden>
+				<h1>Fury on the Rails</h1>
+				<div class="rules">
+					<span class="chip"><i class="y">L</i><i class="g">R</i></span>
+					<p>Press the left and right handles in turn to roll the handcar</p>
+
+					<span class="chip">
+						<svg class="mini-lever" viewBox="-54 -32 108 66" aria-hidden="true">
+							<rect x="-6" y="0" width="12" height="22" rx="3" fill="#223322"/>
+							<g transform="rotate(18)">
+								<rect x="-36" y="-5" width="72" height="10" rx="5" fill="#885533" stroke="#223322" stroke-width="3"/>
+								<circle cx="-36" cy="0" r="14" fill="#ffdd55" stroke="#223322" stroke-width="4"/>
+								<circle cx="36" cy="0" r="14" fill="#ffffff" stroke="#223322" stroke-width="4"/>
+							</g>
+						</svg>
+					</span>
+					<p>Press a side when its handle glows yellow for the strongest push</p>
+
+					<span class="chip">
+						<svg class="mini-lever" viewBox="-54 -32 108 66" aria-hidden="true">
+							<rect x="-6" y="0" width="12" height="22" rx="3" fill="#223322"/>
+							<g transform="rotate(18)">
+								<rect x="-36" y="-5" width="72" height="10" rx="5" fill="#885533" stroke="#223322" stroke-width="3"/>
+								<circle cx="-36" cy="0" r="14" fill="#ffffff" stroke="#223322" stroke-width="4"/>
+								<circle cx="36" cy="0" r="14" fill="#ccccdd" stroke="#223322" stroke-width="4"/>
+							</g>
+						</svg>
+					</span>
+					<p>Pressing a grey handle (on its way up) brakes the car</p>
+
+					<span class="chip"><i class="r">!</i></span>
+					<p>When the monster roars, it is about to charge. Build up speed!</p>
+				</div>
+
+			</div>
+
+			<!-- GAME OVER -->
+			<div class="card" id="cardOver" hidden>
+				<h1>YOU LOSE!</h1>
+				<p class="muted">Distance escaped</p>
+				<div class="big"><span id="overDist">0</span>m</div>
+				<p id="overNewBest" hidden>New best!</p>
+				<p id="overBest">Best <span id="overBestN"></span>m</p>
+				<p class="muted" style="margin-bottom:18px">Timing accuracy <span id="overAcc">0</span>%</p>
+				<span class="go">Run again</span>
+			</div>
+
+			<!-- PAUSE -->
+			<div class="card" id="cardPause" hidden>
+				<h1>PAUSED</h1>
+				<button type="button" class="go" data-act="resume">▶ Resume</button>
+			</div>
+
+		</div>
+
+<script>
+/*
+ * Fury on the Rails
+ * One IIFE, sections marked with // ---------- NAME ----------,
+ * update(dt) runs the sim, animate(dt, time) the visuals.
+ * All markup lives in the HTML: the JS only toggles hidden / classList / textContent (numbers).
+ * Needs: three.min.js (r128)
+ * Chasers: 1 T-Rex, 2 Elephant, 3 Steam train, 4 Kong, 5 Rhino, 6 Bull.
+ * Each chaser picks one of 5 random palettes every time it is selected.
+ * Camera: Q/E orbit, Z/X zoom, W/C tilt.
+ */
+// Racchiude il gioco in uno scope isolato, senza aggiungere variabili globali.
+(() => {
+'use strict';
+// ---------- DOM ----------
+// Seleziona un elemento del DOM usando un selettore CSS.
+const $ = (selector) => document.querySelector(selector);
+
+const ui = {
+  distN: $('#distN'),
+  danger: $('#danger'),
+  dangerFill: $('#dangerFill'),
+  slope: $('#slope'),
+  charge: $('#charge'),
+  vignette: $('#vignette'),
+  spd: $('#spd'),
+  acc: $('#acc'),
+  grd: $('#grd'),
+  chg: $('#chg'),
+  dcl: $('#dcl'),
+  tri: $('#tri'),
+  geo: $('#geo'),
+  shd: $('#shd'),
+  padL: $('#padL'),
+  padR: $('#padR'),
+  judgeL: $('#judgeL'),
+  judgeR: $('#judgeR'),
+  beam: $('#beam'),
+  hL: $('#hL'),
+  hR: $('#hR'),
+  overlay: $('#overlay'),
+  muteBtn: $('#muteBtn'),
+  pauseBtn: $('#pauseBtn'),
+  pauseIcon: $('#pauseIcon'),
+  playIcon: $('#playIcon'),
+  muteOnIcon: $('#muteOnIcon'),
+  muteOffIcon: $('#muteOffIcon'),
+  nextBtn: $('#nextBtn'),
+  colorBtn: $('#colorBtn'),
+  debugBtn: $('#debugBtn'),
+};
+// Riferimenti e stato condiviso delle card.
+const cards = { title: $('#cardTitle'), over: $('#cardOver'), pause: $('#cardPause') };
+const cardUi = {
+  overDist: $('#overDist'),
+  overNewBest: $('#overNewBest'),
+  overBest: $('#overBest'),
+  overBestN: $('#overBestN'),
+  overAcc: $('#overAcc'),
+  muteOn: $('#muteOn'),
+  muteOff: $('#muteOff'),
+};
+let cardKind = '';
+let overData = null;
+const judgeTimers = { L: 0, R: 0 };
+const judgeSpans = { L: {}, R: {} };
+const BEST_KEY = 'fury-app';
+
+// Interroga una media query con fallback per i browser non compatibili.
+const mq = (query) => (window.matchMedia ? window.matchMedia(query) : { matches: false });
+
+const TOUCH = mq('(hover: none) and (pointer: coarse)').matches;   // phones and tablets: touch wording, smaller shadow map
+
+const REDUCED = mq('(prefers-reduced-motion: reduce)');           // read live each frame
+
+const SKY = 0xaaddff;
+const TAU = Math.PI * 2;
+const CAM_OFF = new THREE.Vector3(3.2, 14, -9);
+const CAM0 = {
+  yaw: Math.atan2(CAM_OFF.x, CAM_OFF.z),
+  elev: Math.asin(CAM_OFF.y / CAM_OFF.length()),
+  dist: CAM_OFF.length(),
+  zoom: 1,
+};
+const CAM = Object.assign({}, CAM0, { yaw: 0.4, elev: 0.5, zoom: 1.2 });
+const SHADOW = TOUCH ? 1024 : 2048;
+const SUN_OFF = new THREE.Vector3(7, 16, 6);
+const matCache = {};
+let canvas;
+let renderer;
+let scene;
+let camera;
+let sun;
+let unitBox;
+let camTarget;
+let camLead = 3;
+let needRender = true;
+
+// ---------- STATE ----------
+const TUNE = {
+  gear: 3.5,        // distance per full lever cycle
+  boost: 0.9,       // speed added by a perfect pump
+  lowAssist: 2,     // extra kick when slow
+  friction: 0.1, 
+  drag: 0.04, 
+  maxSpeed: 11,
+  brake: 0.78,      // speed multiplier when pumping the rising lever
+  perfectPre: 0.45, 
+  perfectPost: 0.7, 
+  goodPost: 1.9,   // timing windows in radians of lever cycle
+  rexBase: 3.0, 
+  rexAccel: 0.05, 
+  rexMax: 7.4, 
+  rubberBand: 12,	   // il mostro accelera quando viene distanziato di 12 z
+  gravity: 8,          // pull along the slope
+  flatUntil: 150,      // meters of pure flat at the start
+  mixFrom: 600,        // ups and downs start mixing more often
+  coasterFrom: 1000,   // roller coaster section
+  gradeMax: 0.3,
+  slopeMaxSpeed: 17,   // downhill can exceed pump max
+  downhillBoost: 1.7,  // extra pull when going down
+  downhillDrag: 0.55,  // less air drag on the way down
+  uphillWindow: 1.6,   // how much uphill shrinks the perfect window
+  rexSlope: 0.6,       // how much slopes affect the chaser (less than the car)
+  // Charge: a roar telegraph, then a short dash. Net effect is about 4-5 m of gap lost,
+  // which a player cruising near max speed (gap ~15, pinned by the rubber band) shrugs off and a slow player (gap < ~9) does not.
+  chargeFrom: 220,         // m: no charge before this (the opening flat and first hill are for learning the rhythm)
+  chargeFirst: [4, 8],     // s after passing chargeFrom until the first charge
+  chargeEvery: [14, 22],   // s from the end of one charge to the start of the next (random in range)
+  chargeWarn: 1.4,         // s of roar + wind-up before the dash: time for two or three more good pumps
+  chargeWindup: 0.85,      // chaser speed multiplier during the warning (it crouches to roar), gives back ~1 m
+  chargeDur: 1.5,          // s of dash
+  chargeBoost: 4.5,        // chaser speed added during the dash
+  chargeEaseIn: 0.2,       // s to reach full dash speed
+  chargeEaseOut: 0.35,     // s to drop back at the end of the dash
+  chargeUphill: 0.12,      // car on a steeper uphill than this when a charge would start: postpone it (fairness)
+  chargePostpone: 3        // s to postpone by
+};
+
+const GAME_STATUS = {
+  state: 'title', 
+  t: 0, 
+  best: 0, 
+  z: 0, 
+  speed: 0, 
+  phi: Math.PI / 2 + 0.15, 
+  grade: 0, 
+  pitch: 0, 
+  rexPitch: 0, 
+  camY: 0, 
+  slopeTag: '',
+  charged: { L: true, R: true }, 
+  qs: [], 
+  lastRow: 0, 
+  ready: { L: false, R: false }, 
+  paused: false,
+  rexZ: -12, 
+  rexPhase: 0, 
+  rexStep: 0, 
+  jaw: 0.15, 
+  shake: 0, 
+  caughtT: 0, 
+  restartAt: 0,
+  charge: { phase: 'idle', t: 0, next: 0 },   // phase: 'idle' | 'warn' | 'dash'
+  chargePose: 0, dashPose: 0                  // 0..1 eased pose weights for animate
+};
+
+// Configurazione del mondo e colori usati per generarlo.
+const HALF = 16;
+const COLS = HALF * 2 + 1;
+const ROWS = 64;
+const BEHIND = 24;
+const BED = 1;
+const N = ROWS * COLS;
+const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
+const WHITE = new THREE.Color(0xffffff);
+const COLORS = {
+  grassA: 0x99ee66,
+  grassB: 0x88dd66,
+  dirt: 0xeebb77,
+  gravel: 0xddccaa,
+  hillA: 0x77cc55,
+  hillB: 0x66cc55,
+  trunk: 0x885533,
+  rock: 0xbbbbcc,
+  rockTop: 0xccccdd,
+  tie: 0x886644,
+  rail: 0x889999,
+  leaves: [0x44bb55, 0x339944, 0x55cc55, 0x33aa66],
+  flowers: [0xffffaa, 0xff99cc, 0xffffff, 0xffcc66],
+  lever_wrong: '#ccccdd',
+  lever_ready: '#ffdd55',
+  lever_charged: '#99ee66',
+  lever_default: '#ffffff',
+};
+
+const car = {};
+const riders = { L: null, R: null };
+const BUILD = { 1: buildTRex, 2: buildElephant, 3: buildTrain, 4: buildKong, 5: buildRhino, 6: buildBull, 7: buildWolf };
+const RIGS = {};
+const lastPal = {};
+const CAR_BACK = 0.8;
+let creature = Math.floor(Math.random() * 7) + 1;
+let rx;
+let REX_REACH;
+let DEBUG = false;
+let last = 0;
+let snd;
+const held = new Set();
+let ground, trunks, leavesA, leavesB, rocksA, rocksB, flowers, ties, rails;
+let INST, OBJ, _m, _p, _q, _s, _e, _c, rows, HG, zMin;
+let frags, dusts, streaks;
+
+// Every storage access is wrapped: private mode or a sandboxed iframe can throw.
+
+// Recupera il record salvato, gestendo storage non disponibile.
+function loadBest() {
+  try {
+    const value = parseInt(localStorage.getItem(BEST_KEY), 10);
+    return value > 0 ? value : 0;
+  } catch (error) {
+    return 0;
+  }
+}
+
+// Salva il nuovo record quando localStorage è accessibile.
+function saveBest(value) {
+  try {
+    localStorage.setItem(BEST_KEY, String(value));
+  } catch (error) {}
+}
+
+// Aggiorna contenuto e visibilità della card attiva.
+function renderCard(){
+  for (const k in cards) cards[k].hidden = (k !== cardKind);
+  if (cardKind === 'over'){
+    const d = overData;
+    if (cardUi.overDist) cardUi.overDist.textContent = d.dist;
+    if (cardUi.overNewBest) cardUi.overNewBest.hidden = !d.isBest;
+    if (cardUi.overBest) cardUi.overBest.hidden = d.isBest;
+    if (cardUi.overBestN) cardUi.overBestN.textContent = d.best;
+    if (cardUi.overAcc) cardUi.overAcc.textContent = d.acc;
+  } else if (cardKind === 'pause'){
+    const m = snd.isMuted();
+    if (cardUi.muteOn) cardUi.muteOn.hidden = m;
+    if (cardUi.muteOff) cardUi.muteOff.hidden = !m;
+  }
+}
+
+// Mostra la card richiesta e aggiorna i relativi dati.
+function showCard(kind) {
+  cardKind = kind;
+  renderCard();
+  ui.overlay.classList.add('show');
+}
+
+// Nasconde tutte le card e libera l'overlay.
+function hideCard(){
+  cardKind = '';
+  for (const k in cards) cards[k].hidden = true;
+  ui.overlay.classList.remove('show');
+}
+// Prepara e mostra il riepilogo di fine partita.
+function showOver(dist, best, isBest, acc) {
+  overData = { dist, best, isBest, acc };
+  showCard('over');
+}
+
+// Judgement labels: four spans per side already in the HTML, one visible at a time.
+// Visualizza temporaneamente il giudizio ottenuto su un lato.
+function judgeText(side, key){
+  for (const k in judgeSpans[side]) judgeSpans[side][k].hidden = (k !== key);
+  (side === 'L' ? ui.judgeL : ui.judgeR).classList.add('show');
+  judgeTimers[side] = 0.45;
+}
+
+// Crea i controlli audio usando le tracce già presenti nel markup.
+function createSound() {
+  const clips = {};
+  // Indicizza le tracce audio tramite il nome dichiarato nell'attributo data-sfx.
+  document.querySelectorAll('audio[data-sfx]').forEach(a => { clips[a.dataset.sfx] = a; });
+  const windClip = clips.wind;
+  let muted = false;
+
+  // Riproduce un effetto, clonando la traccia per sovrapporre i suoni.
+  function play(name, opts = {}){
+    if (muted) return;
+    const clip = (name === 'pump' && clips['pump-' + opts.grade]) || clips[name];
+    if (!clip) return;
+    const a = clip.cloneNode();   // clone so rapid repeats can overlap
+    a.volume = Math.max(0, Math.min(1, opts.v ?? 1));
+    // Ignora il rifiuto di riproduzione, comune prima dell'interazione utente.
+    a.play().catch(() => {});
+  }
+  // Regola il suono del vento in base alla velocità e alla carica.
+  function wind(rush, speed){
+	  if (!windClip) return;
+	  if (muted || speed < 0.25){ if (!windClip.paused) windClip.pause(); return; }
+	  const sp = Math.min(1, speed / 11);                    // 0..1 sulla velocità di pompa
+	  windClip.volume = Math.min(1, 0.15 + 0.45 * sp + 0.35 * rush);
+	  windClip.playbackRate = 0.8 + sp * 0.6;
+	  if (windClip.paused) windClip.play().catch(e => console.warn('wind blocked:', e));
+	}
+  // Attiva o disattiva l'audio e interrompe il vento se necessario.
+  function toggleMute(){
+    muted = !muted;
+    if (muted) wind(0, 0);
+  }
+  return {
+    play,
+    wind,
+    toggleMute,
+    // Restituisce lo stato corrente del silenziamento.
+    isMuted: () => muted,
+    // Mantiene un punto d'ingresso compatibile per lo sblocco audio.
+    unlock() {
+	  if (!windClip || windClip._unlocked) return;
+	  windClip._unlocked = true;
+	  windClip.volume = 0;
+	  windClip.play().then(() => windClip.pause()).catch(() => { windClip._unlocked = false; });
+	},
+  };
+}
+
+
+// Inizializza renderer, scena, camera e luci prima di creare gli oggetti di gioco.
+function initThree() {
+  canvas = $('#canvas');
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(SKY);
+  camera = new THREE.OrthographicCamera(-16, 16, 16, -16, 0.1, 140);
+  camTarget = new THREE.Vector3(0, 0, camLead);
+
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x7788aa, 0.62));
+  sun = new THREE.DirectionalLight(0xffffee, 0.8);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(SHADOW, SHADOW);
+  Object.assign(sun.shadow.camera, { left: -24, right: 24, top: 24, bottom: -24, near: 1, far: 70 });
+  sun.shadow.bias = -0.0006;
+  sun.shadow.normalBias = 0.03;
+  scene.add(sun);
+  scene.add(sun.target);
+
+  unitBox = new THREE.BoxGeometry(1, 1, 1);
+}
+
+// Adatta renderer e camera alle dimensioni correnti della finestra.
+function resize(){
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const aspect = w / h;
+  renderer.setSize(w, h);
+  const viewH = Math.max(16, 12.5 / aspect);
+  const viewW = viewH * aspect;
+  camera.left = -viewW / 2; 
+  camera.right = viewW / 2; 
+  camera.top = viewH / 2; 
+  camera.bottom = -viewH / 2;
+  camera.updateProjectionMatrix();
+  camLead = aspect < 1 ? 3.5 : 1.2;
+  needRender = true;
+}
+
+// Riutilizza i materiali Lambert già creati per ciascun colore.
+const lam = c => matCache[c] || (matCache[c] = new THREE.MeshLambertMaterial({ color: c }));
+
+// Crea un parallelepipedo configurato e lo aggiunge al gruppo indicato.
+function box(w, h, d, color, x, y, z, parent, shadow = true){
+  const m = new THREE.Mesh(unitBox, lam(color));
+  m.scale.set(w, h, d); m.position.set(x, y, z); m.castShadow = shadow; m.receiveShadow = true;
+  parent.add(m); return m;
+}
+
+// Crea un gruppo Three.js posizionato e collegato al genitore.
+function group(x, y, z, parent) {
+  const meshGroup = new THREE.Group();
+  meshGroup.position.set(x, y, z);
+  parent.add(meshGroup);
+  return meshGroup;
+}
+
+// Limita un valore all'intervallo specificato.
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+// Calcola il resto positivo, utile per gli indici circolari.
+const mod = (a, n) => ((a % n) + n) % n;
+
+// ---------- WORLD ----------
+// Crea una mesh instanziata inizializzata e la aggiunge alla scena.
+function makeInst(count, cast){
+  const m = new THREE.InstancedMesh(unitBox, new THREE.MeshLambertMaterial({ color: 0xffffff }), count);
+  m.castShadow = cast; m.receiveShadow = true; m.frustumCulled = false;
+  for (let i = 0; i < count; i++){ m.setMatrixAt(i, ZERO); m.setColorAt(i, WHITE); }
+  scene.add(m); return m;
+}
+
+// Imposta trasformazione e colore di una singola istanza.
+function setInst(mesh, i, x, y, z, sx, sy, sz, ry, color, rxa){
+  _p.set(x, y, z); _e.set(rxa || 0, ry, 0); _q.setFromEuler(_e); _s.set(sx, sy, sz);
+  _m.compose(_p, _q, _s); mesh.setMatrixAt(i, _m); mesh.setColorAt(i, color);
+}
+
+// Varia leggermente la luminosità del colore per spezzare la ripetizione.
+function jitter(hex, amt){ 
+	_c.set(hex);
+	_c.offsetHSL(0, 0, (Math.random() - 0.5) * amt);
+	return _c;
+}
+
+// GPU upload: changed instances are collected as one [lo, hi] index range per mesh and flushed once per frame
+// through r128's attribute.updateRange (offset/count in array elements, three resets it after the upload).
+// Several rows in one frame just widen the range; a wrap-around (slot 63 then 0) becomes the whole buffer.
+// Estende l'intervallo di istanze da caricare sulla GPU.
+function markRange(mesh, lo, hi){ 
+	const d = mesh.userData.dirty; 
+	if (lo < d.lo) d.lo = lo; 
+	if (hi > d.hi) d.hi = hi; 
+}
+
+// Marca come modificate tutte le mesh che compongono una riga.
+function markRow(slot){
+  const lo = slot * COLS;
+  const hi = lo + COLS - 1;
+  markRange(ground, lo, hi); 
+  for (const m of OBJ) markRange(m, lo, hi);
+  markRange(ties, slot, slot); 
+  markRange(rails, slot * 2, slot * 2 + 1);
+}
+
+// Forza l'aggiornamento completo dei buffer delle istanze.
+function markDirty(){ 
+	for (const m of INST) m.userData.dirty.all = true; 
+}// full upload
+
+// Crea le mesh del mondo e inizializza i buffer circolari del terreno.
+function initWorldBuffers() {
+  ground = makeInst(N, true);
+  trunks = makeInst(N, true);
+  leavesA = makeInst(N, true);
+  leavesB = makeInst(N, true);
+  rocksA = makeInst(N, true);
+  rocksB = makeInst(N, true);
+  flowers = makeInst(N, false);
+  ties = makeInst(ROWS, true);
+  rails = makeInst(ROWS * 2, true);
+
+  INST = [ground, trunks, leavesA, leavesB, rocksA, rocksB, flowers, ties, rails];
+  OBJ = [trunks, leavesA, leavesB, rocksA, rocksB, flowers];
+  _m = new THREE.Matrix4();
+  _p = new THREE.Vector3();
+  _q = new THREE.Quaternion();
+  _s = new THREE.Vector3();
+  _e = new THREE.Euler();
+  _c = new THREE.Color();
+
+  for (const mesh of INST) {
+    mesh.userData.dirty = { lo: Infinity, hi: -1, all: false };
+  }
+
+  rows = [];
+  for (let i = 0; i < ROWS; i++) {
+    rows.push({ z: null, cells: new Int8Array(COLS), h: 0, g: 0 });
+  }
+
+  HG = { h: 0, cur: 0, target: 0, remain: 0, queue: [], nextBreather: 0 };
+  zMin = 0;
+}
+
+// Carica sulla GPU soltanto gli intervalli di istanze modificati.
+function flushDirty(){
+  for (const m of INST){
+    const d = m.userData.dirty;
+    if (!d.all && d.hi < 0) continue;
+    const mat = m.instanceMatrix;
+    const col = m.instanceColor;
+    if (d.all){
+      mat.updateRange.offset = 0; 
+	  mat.updateRange.count = -1;
+      col.updateRange.offset = 0; 
+	  col.updateRange.count = -1;
+    } else {
+      mat.updateRange.offset = d.lo * 16; 
+	  mat.updateRange.count = (d.hi - d.lo + 1) * 16;
+      col.updateRange.offset = d.lo * 3; 
+	  col.updateRange.count = (d.hi - d.lo + 1) * 3;
+    }
+    mat.needsUpdate = true; 
+	col.needsUpdate = true;
+    d.lo = Infinity; 
+	d.hi = -1; 
+	d.all = false;
+  }
+}
+
+// ---- track height profile: flat, climb, flat, descend... generated row by row ----
+// Reinizializza il profilo altimetrico e la prossima pausa pianeggiante.
+function resetHeights(){ Object.assign(HG, { h: 0, cur: 0, target: 0, remain: 0, queue: [], nextBreather: TUNE.coasterFrom + 250 }); }
+
+// Restituisce un numero casuale compreso tra i due estremi.
+const rnd = (a, b) => a + Math.random() * (b - a);
+
+// Restituisce un intero casuale compreso tra i due estremi inclusi.
+const rint = (a, b) => Math.floor(rnd(a, b + 1));
+
+// Plans the next stretch of track depending on how far along we are.
+function planTrack(z){
+  const Q = HG.queue;
+  const T = TUNE;
+  // Accoda una salita seguita da una breve discesa.
+  const hill = (g, len) => { Q.push({ g, len }, { g: 0, len: rint(2, 5) }, { g: -g, len }); };
+  // Accoda una discesa seguita da una breve salita.
+  const valley = (g, len) => { Q.push({ g: -g, len }, { g: 0, len: rint(2, 4) }, { g, len }); };
+  if (z < T.flatUntil){
+    Q.push({ g: 0, len: T.flatUntil - z });
+  } else if (z < T.mixFrom){
+    // calm stretch, then one gentle hill now and then
+    Q.push({ g: 0, len: rint(50, 100) });
+    hill(rnd(0.1, 0.18), rint(8, 14));
+  } else if (z < T.coasterFrom){
+    // shorter flats, ups and downs start mixing
+    Q.push({ g: 0, len: rint(15, 40) });
+    const r = Math.random();
+    if (r < 0.35) hill(rnd(0.14, 0.24), rint(8, 14));
+    else if (r < 0.6 && HG.h > 3) valley(rnd(0.14, 0.24), rint(8, 12));
+    else if (r < 0.8){ hill(rnd(0.14, 0.22), rint(6, 10)); Q.push({ g: 0, len: rint(3, 6) }); hill(rnd(0.14, 0.22), rint(6, 10)); }
+    else if (HG.h < 6) Q.push({ g: rnd(0.14, 0.2), len: rint(10, 16) });
+    else Q.push({ g: -rnd(0.14, 0.2), len: rint(10, 16) });
+  } else {
+    // roller coaster, with a breather every so often
+    if (z >= HG.nextBreather){ Q.push({ g: 0, len: rint(30, 50) }); HG.nextBreather = z + rint(220, 300); }
+    else Q.push({ g: 0, len: rint(3, 10) });
+    const n = rint(2, 4);
+    for (let k = 0; k < n; k++){
+      const g = rnd(0.18, TUNE.gradeMax);
+      const len = rint(6, 12);
+      if (HG.h > 4 && Math.random() < 0.5) valley(g, len); else hill(g, len);
+      Q.push({ g: 0, len: rint(1, 4) });
+    }
+  }
+}
+
+// Avanza il profilo altimetrico di una riga e restituisce la nuova quota.
+function nextHeight(z){
+  if (HG.remain <= 0){
+    if (!HG.queue.length) planTrack(z);
+    const seg = HG.queue.shift();
+    HG.target = seg.g; HG.remain = seg.len;
+  }
+  HG.cur += clamp(HG.target - HG.cur, -0.07, 0.07);
+  HG.h += HG.cur; HG.remain--;
+  if (HG.h < 0){ HG.h = 0; HG.cur = Math.max(0, HG.cur); if (HG.target < 0) HG.target = 0; }
+  if (HG.h > 10 && HG.target > 0) HG.target = 0;
+  return HG.h;
+}
+
+// Recupera la quota della riga se è ancora presente nel buffer del mondo.
+function rowH(zi){
+  zi = clamp(zi, zMin, zMin + ROWS - 1);
+  const r = rows[mod(zi, ROWS)];
+  return r.z === zi ? r.h : 0;
+}
+
+// Interpola l'altezza del terreno tra le due righe più vicine.
+function heightAt(z){ 
+	const z0 = Math.floor(z);
+	const f = z - z0;
+	return rowH(z0) * (1 - f) + rowH(z0 + 1) * f;
+}
+
+// Stima la pendenza del terreno intorno alla coordinata indicata.
+function gradeAt(z){
+	return heightAt(z + 0.5) - heightAt(z - 0.5);
+}
+
+// Genera una variazione deterministica per differenziare il terreno.
+const terrainNoise = (x, z) => (Math.sin(x * 1.7 + z * 0.31) * Math.sin(z * 0.23 - x * 0.6) + 1) / 2;
+
+// Posiziona un albero composto da tronco e chioma.
+function placeTree(i, x, top, z){
+  const s = 0.85 + Math.random() * 0.3;
+  const ry = (Math.random() - 0.5) * 0.5;
+  const leaf = COLORS.leaves[(Math.random() * COLORS.leaves.length) | 0];
+  setInst(trunks, i, x, top + 0.25 * s, z, 0.28, 0.5 * s, 0.28, ry, jitter(COLORS.trunk, 0.04));
+  setInst(leavesA, i, x, top + 0.86 * s, z, 0.86 * s, 0.72 * s, 0.86 * s, ry, jitter(leaf, 0.04));
+  _c.set(leaf); 
+  _c.offsetHSL(0, 0.02, 0.07);
+  setInst(leavesB, i, x, top + 1.44 * s, z, 0.52 * s, 0.44 * s, 0.52 * s, ry, _c);
+}
+
+// Posiziona una roccia composta da due blocchi sovrapposti.
+function placeRock(i, x, top, z){
+  const ry = (Math.random() - 0.5) * 0.6;
+  setInst(rocksA, i, x, top + 0.24, z, 0.86, 0.48, 0.8, ry, jitter(COLORS.rock, 0.05));
+  setInst(rocksB, i, x + 0.08, top + 0.6, z - 0.05, 0.46, 0.3, 0.44, -ry, jitter(COLORS.rockTop, 0.04));
+}
+
+// Nasconde tutte le istanze decorative associate a una cella.
+function hideObj(index) {
+  for (const mesh of OBJ) {
+    mesh.setMatrixAt(index, ZERO);
+  }
+}
+
+// Genera terreno, decorazioni e binari per una riga del mondo.
+function genRow(z){
+  const slot = mod(z, ROWS);
+  const row = rows[slot];
+  row.z = z;
+  const hPrev = HG.h;
+  row.h = nextHeight(z);
+  row.g = row.h - hPrev;
+  const base = Math.floor(row.h * 2) / 2;
+  const cells = row.cells; 
+  cells.fill(0);
+  for (let x = -HALF; x <= HALF; x++){
+    const ax = Math.abs(x);
+    if (ax <= BED) continue;
+    let p = ax === 2 ? 0.12 : ax <= 6 ? 0.1 : 0.22;
+    if (z < 6 && z > -16 && ax <= 3) p = 0;
+    if (Math.random() < p) cells[x + HALF] = Math.random() < 0.7 ? 1 : 2;
+  }
+  for (let ci = 0; ci < COLS; ci++){
+    const x = ci - HALF;
+	const ax = Math.abs(x);
+	const i = slot * COLS + ci;
+    let top, col;
+    if (ax <= BED){ 
+		top = row.h;
+		col = COLORS.gravel;
+	} else if (ax <= 6){
+		top = base;
+		col = terrainNoise(x, z) > 0.74 ? COLORS.dirt : (((x + z) & 1) ? COLORS.grassA : COLORS.grassB); 
+	} else {
+		top = (Math.sin(z * 0.21 + x * 0.9) + Math.sin(z * 0.07 - x * 0.5)) > 0.9 ? 2 : 1; 
+		top += base; 
+		col = ((x + z) & 1) ? COLORS.hillA : COLORS.hillB;
+	}
+    const h = top + 3;
+    setInst(ground, i, x, top - h / 2, z, 1, h, 1, 0, jitter(col, ax <= BED ? 0.06 : 0.035));
+    hideObj(i);
+    const t = cells[ci];
+    if (t === 1) placeTree(i, x, top, z);
+    else if (t === 2) placeRock(i, x, top, z);
+    else if (ax > BED && ax <= 8 && Math.random() < 0.07){
+      _c.set(COLORS.flowers[(Math.random() * COLORS.flowers.length) | 0]);
+      setInst(flowers, i, x + (Math.random() - 0.5) * 0.6, top + 0.07, z + (Math.random() - 0.5) * 0.6, 0.14, 0.14, 0.14, 0, _c);
+    }
+  }
+  
+  const pitch = -Math.atan(row.g);
+  const rl = Math.sqrt(1 + row.g * row.g) + 0.02;
+  
+  setInst(ties, slot, (Math.random() - 0.5) * 0.06, row.h + 0.05, z, 1.9, 0.1, 0.34, (Math.random() - 0.5) * 0.06, jitter(COLORS.tie, 0.06), pitch);
+  setInst(rails, slot * 2, 0.55, row.h + 0.15, z, 0.1, 0.12, rl, 0, jitter(COLORS.rail, 0.01), pitch);
+  setInst(rails, slot * 2 + 1, -0.55, row.h + 0.15, z, 0.1, 0.12, rl, 0, jitter(COLORS.rail, 0.01), pitch);
+  
+  markRow(slot);
+}
+
+// Ricostruisce il buffer del mondo attorno alla posizione iniziale.
+function buildWorld(){
+  zMin = -BEHIND + 4; 
+  resetHeights();
+  for (let z = zMin; z < zMin + ROWS; z++) genRow(z);
+  markDirty();
+}
+
+// ---------- PARTICLES ----------
+// Prepara i pool riutilizzabili per schegge, polvere e scie.
+function initParticles() {
+  frags = [];
+for (let i = 0; i < 90; i++){
+  const m = new THREE.Mesh(unitBox, new THREE.MeshLambertMaterial({ color: 0xffffff }));
+  m.visible = false; scene.add(m); frags.push({ m, v: new THREE.Vector3(), life: 0, s: 0.24 });
+}
+
+  dusts = [];
+
+for (let i = 0; i < 50; i++){
+  const m = new THREE.Mesh(unitBox, new THREE.MeshBasicMaterial({ color: 0xffffee, transparent: true, opacity: 0, depthWrite: false }));
+  m.visible = false; 
+  scene.add(m); 
+  dusts.push({ m, life: 0, max: 0.4, s: 0.2 });
+}
+
+  streaks = [];
+
+  for (let i = 0; i < 36; i++) {
+    const mesh = new THREE.Mesh(
+      unitBox,
+      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false }),
+    );
+    mesh.visible = false;
+    scene.add(mesh);
+    streaks.push({ m: mesh, life: 0, max: 0.3, len: 1 });
+  }
+}
+
+// Attiva una scheggia libera e le assegna colore, posizione e velocità.
+function spawnFrag(x, y, z, color, push){
+  // Cerca una scheggia inattiva da riutilizzare.
+  const f = frags.find(p => p.life <= 0); 
+  if (!f) return;
+  f.m.material.color.set(color); 
+  f.m.position.set(x, y, z); 
+  f.m.visible = true;
+  f.s = 0.16 + Math.random() * 0.18;
+  f.v.set((Math.random() - 0.5) * 7, 4 + Math.random() * 6, push + Math.random() * 4);
+  f.life = 1.1 + Math.random() * 0.4;
+}
+
+// Attiva particelle di polvere attorno al punto indicato.
+function spawnDust(x, y, z, n, size, color){
+  for (let k = 0; k < n; k++){
+    // Riutilizza una particella di polvere libera.
+    const d = dusts.find(p => p.life <= 0); 
+	if (!d) return;
+    d.m.material.color.set(color || 0xffffee);
+    d.m.position.set(x + (Math.random() - 0.5) * 0.4 * size, y + 0.1, z + (Math.random() - 0.5) * 0.4 * size);
+    d.max = d.life = 0.35 + Math.random() * 0.2; 
+	d.s = 0.18 * size; 
+	d.m.visible = true;
+  }
+}
+
+// Crea una scia luminosa casuale vicino al carrello.
+function spawnStreak(){
+  // Riutilizza una scia non visibile.
+  const st = streaks.find(p => p.life <= 0); 
+  if (!st) return;
+  const side = Math.random() < 0.5 ? 1 : -1;
+  const z = GAME_STATUS.z + 1 + Math.random() * 9;
+  st.m.position.set(side * (0.9 + Math.random() * 2.8), heightAt(z) + 0.3 + Math.random() * 2, z);
+  st.m.rotation.x = -Math.atan(gradeAt(z));
+  st.len = 0.6 + GAME_STATUS.speed * 0.14; 
+  st.max = st.life = 0.22 + Math.random() * 0.15; 
+  st.m.visible = true;
+}
+
+// Aggiorna movimento, dimensione e durata di tutte le particelle.
+function updateParticles(dt){
+  for (const st of streaks){
+    if (st.life <= 0) continue;
+    st.life -= dt; 
+	const k = st.life / st.max;
+    st.m.scale.set(0.05, 0.05, st.len * (0.4 + 0.6 * k));
+    st.m.material.opacity = 0.8 * Math.sin(k * Math.PI);
+    if (st.life <= 0) st.m.visible = false;
+  }
+  for (const f of frags){
+    if (f.life <= 0) continue;
+    f.life -= dt; f.v.y -= 24 * dt; 
+	f.m.position.addScaledVector(f.v, dt);
+    const fl = heightAt(f.m.position.z) + 0.1;
+    if (f.m.position.y < fl){ 
+		f.m.position.y = fl;
+		f.v.y *= -0.35;
+		f.v.x *= 0.6;
+		f.v.z *= 0.6;
+	}
+    f.m.rotation.x += dt * 8;
+	f.m.rotation.z += dt * 6;
+    const sc = f.s * Math.min(1, f.life * 2.5); 
+	f.m.scale.set(sc, sc, sc);
+    if (f.life <= 0) f.m.visible = false;
+  }
+  
+  for (const d of dusts){
+    if (d.life <= 0) continue;
+    d.life -= dt; 
+	const k = 1 - d.life / d.max;
+    const sc = d.s * (1 + k * 1.6); 
+	d.m.scale.set(sc, sc, sc);
+    d.m.position.y += dt * 0.6; 
+	d.m.material.opacity = 0.75 * (1 - k);
+    if (d.life <= 0) d.m.visible = false;
+  }
+}
+
+// ---------- HANDCAR + RIDERS ----------
+// Crea il carrello e il gruppo di ruote su cui si muoverà.
+function initCar() {
+car.root = new THREE.Group();
+scene.add(car.root);
+car.wheels = [];
+const wheelGeo = new THREE.CylinderGeometry(0.27, 0.27, 0.12, 10);
+for (const wx of [0.55, -0.55]){
+	for (const wz of [0.5, -0.5]){
+	  const holder = group(wx, 0.33, wz, car.root);
+	  const spin = group(0, 0, 0, holder);
+	  const w = new THREE.Mesh(wheelGeo, lam(0x444455));
+	  w.rotation.z = Math.PI / 2; w.castShadow = true; spin.add(w);
+	  box(0.13, 0.08, 0.3, 0xdddddd, 0, 0, 0, spin, false);
+	  car.wheels.push(spin);
+	}
+}
+box(2.4, 0.14, 1.6, 0xbb7744, 0, 0.6, 0, car.root);
+for (const bz of [-0.55, 0, 0.55]) box(2.42, 0.05, 0.1, 0x885533, 0, 0.68, bz, car.root, false);
+box(1.3, 0.14, 1.5, 0x664422, 0, 0.47, 0, car.root);
+box(0.2, 0.8, 0.2, 0x553322, 0, 1.05, 0, car.root);
+box(0.34, 0.14, 0.34, 0x553322, 0, 0.72, 0, car.root);
+car.beam = group(0, 1.45, 0, car.root);
+box(2.6, 0.1, 0.12, 0x664422, 0, 0, 0, car.beam);//lunghezza palo lever
+box(0.2, 0.2, 0.2, 0x332211, 1.05, 0, 0, car.beam);//cubo finale
+box(0.2, 0.2, 0.2, 0x332211, -1.05, 0, 0, car.beam);//cubo finale
+box(0.16, 0.16, 0.16, 0xdddddd, 0, 0, 0, car.beam, false);
+
+/*
+const lantern = new THREE.PointLight(0xffaa55, 1.6, 16, 2);
+lantern.position.set(0, 2.4, 1.4);
+car.root.add(lantern);
+box(0.22, 0.26, 0.22, 0xffcc66, 0, 2.4, 1.4, car.root, false);   // lanterna visibile
+*/
+}
+
+// Costruisce un rider usando la palette e la posizione laterale ricevute.
+function makeRider(cfg, x){
+  const r = {};
+  r.root = group(x, 0.67, -0.62, car.root);
+  r.body = group(0, 0, 0, r.root);
+  for (const sx of [1, -1]){
+    const leg = group(0.13 * sx, 0.45, 0, r.body);
+    box(0.18, 0.34, 0.2, cfg.pants, 0, -0.17, 0, leg); box(0.2, 0.12, 0.28, cfg.shoe, 0, -0.39, 0.04, leg);
+  }
+  box(0.48, 0.46, 0.3, cfg.shirt, 0, 0.68, 0, r.body);
+  box(0.5, 0.07, 0.32, 0x885533, 0, 0.47, 0, r.body);
+  box(0.36, 0.38, 0.16, cfg.pack, 0, 0.7, -0.22, r.body);
+  r.arms = [];
+  for (const sx of [1, -1]){
+    const arm = group(0.31 * sx, 0.86, 0, r.body);
+    box(0.14, 0.24, 0.14, cfg.shirt, 0, -0.1, 0, arm); box(0.12, 0.24, 0.12, 0xffccaa, 0, -0.32, 0, arm);
+    r.arms.push(arm);
+  }
+  r.head = group(0, 0.92, 0, r.body);
+  box(0.56, 0.5, 0.52, 0xffccaa, 0, 0.25, 0, r.head);
+  box(0.58, 0.22, 0.2, cfg.hair, 0, 0.36, -0.18, r.head);
+  for (const sx of [1, -1]){
+    box(0.08, 0.11, 0.03, 0x111111, 0.13 * sx, 0.28, 0.265, r.head, false);
+    box(0.08, 0.05, 0.02, 0xff9988, 0.2 * sx, 0.17, 0.262, r.head, false);
+  }
+  r.mouth = box(0.1, 0.06, 0.02, 0x772222, 0, 0.1, 0.263, r.head, false);
+  if (cfg.cap){
+    box(0.6, 0.18, 0.56, cfg.hat, 0, 0.56, -0.01, r.head);
+    box(0.5, 0.05, 0.3, cfg.hat, 0, 0.48, 0.38, r.head);
+  } else {
+    box(0.84, 0.05, 0.84, cfg.hat, 0, 0.53, 0, r.head);
+    box(0.5, 0.2, 0.5, cfg.hat, 0, 0.64, 0, r.head);
+    box(0.52, 0.06, 0.52, 0x885533, 0, 0.57, 0, r.head);
+  }
+  return r;
+}
+
+// Sceglie un elemento casuale da una palette.
+function pickRandom(items) {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+// Crea una palette casuale coordinata per un rider.
+function createHarmoniousRiderPalette() {
+  const SHIRTS = [0xff8833, 0x44bbbb, 0xee6655, 0x44aa55, 0x9955bb, 0xffcc00];
+  const PANTS  = [0x3366bb, 0x775533, 0x223355, 0x334455, 0x778888];
+  const SHOES  = [0x553322, 0x332211, 0x111111, 0x886666];
+  const HAIR   = [0x553322, 0x222222, 0xeecc88, 0x885522, 0xbbaaaa];
+  const PACKS  = [0x668844, 0xccaa66, 0xee7722, 0x11aa88];
+  const HATS   = [0xeecc88, 0xee6655, 0x2288bb, 0x22aa66, 0xdd5500, 0xffeecc];
+
+  return {
+    shirt: pickRandom(SHIRTS),
+    pants: pickRandom(PANTS),
+    shoe:  pickRandom(SHOES),
+    hair:  pickRandom(HAIR),
+    pack:  pickRandom(PACKS),
+    hat:   pickRandom(HATS),
+    cap:   (( Math.random() * 10 )|0) % 2
+  };
+}
+
+function updateRiders() {
+  if (riders.L?.root) car.root.remove(riders.L.root);
+  if (riders.R?.root) car.root.remove(riders.R.root);
+
+  riders.L = makeRider(createHarmoniousRiderPalette(), 0.80);
+  riders.R = makeRider(createHarmoniousRiderPalette(), -0.80);
+}
+
+// ---------- CHASERS ----------
+// Every rig exposes the same names used by animate(): root, torso, head, jaw, tail, t2, t3, legs[{hip,knee,sx,off}],
+// plus reach (distance from root to the front tip) and swing (leg/arm swing amplitude).
+// Optional parts: ears/tr1-3 (elephant), wheels/rods (train), arms (kong), charger (rhino, bull).
+// Each chaser has 5 complete palettes; pickPal draws one at random, never the same twice in a row.
+
+// Seleziona una palette evitando, quando possibile, quella appena usata.
+function pickPal(key, list){
+  let i;
+  do { i = (Math.random() * list.length) | 0; } while (list.length > 1 && i === lastPal[key]);
+  lastPal[key] = i;
+  return list[i];
+}
+
+// ----- T-Rex -----
+const TREX_PALETTE = [
+  { SKIN: 0x66aa44, DARK: 0x448833, BELLY: 0xddcc88, TOOTH: 0xffffee, MOUTH: 0x992222, TONGUE: 0xdd5544, PUPIL: 0x111111, CLAW: 0xffeedd },
+  { SKIN: 0xdd6633, DARK: 0xaa4422, BELLY: 0xffddaa, TOOTH: 0xffffee, MOUTH: 0x992222, TONGUE: 0xdd5544, PUPIL: 0x111111, CLAW: 0xffeedd },
+  { SKIN: 0x4488dd, DARK: 0x3366bb, BELLY: 0xcceeff, TOOTH: 0xffffee, MOUTH: 0x992222, TONGUE: 0xdd5544, PUPIL: 0x111111, CLAW: 0xffeedd },
+  { SKIN: 0x9966dd, DARK: 0x6644aa, BELLY: 0xeedeff, TOOTH: 0xffffee, MOUTH: 0x992222, TONGUE: 0xdd5544, PUPIL: 0x111111, CLAW: 0xffeedd },
+  { SKIN: 0xccaa66, DARK: 0x997744, BELLY: 0xffeecc, TOOTH: 0xffffee, MOUTH: 0x992222, TONGUE: 0xdd5544, PUPIL: 0x111111, CLAW: 0xffeedd }
+];
+
+// Costruisce il modello e le parti animate del T-Rex.
+function buildTRex(){
+  const R = pickPal('rex', TREX_PALETTE);
+  const rx = {};
+  rx.root = new THREE.Group(); scene.add(rx.root);
+  rx.legs = [];
+  for (const sx of [1, -1]){
+    const hip = group(0.8 * sx, 2.0, -0.3, rx.root);
+    box(0.85, 1.1, 1.1, R.SKIN, 0, -0.45, 0, hip);
+    const knee = group(0, -0.95, 0.1, hip);
+    box(0.6, 0.8, 0.6, R.SKIN, 0, -0.35, -0.05, knee);
+    box(0.85, 0.28, 1.15, R.DARK, 0, -0.84, 0.2, knee);
+    for (const cx of [-0.28, 0, 0.28]) box(0.16, 0.14, 0.2, R.CLAW, cx, -0.9, 0.85, knee, false);
+    rx.legs.push({ hip, knee, sx, off: sx > 0 ? 0 : Math.PI });
+  }
+  rx.torso = group(0, 0, 0, rx.root);
+  box(2.1, 1.8, 2.9, R.SKIN, 0, 2.85, 0, rx.torso);
+  box(1.7, 0.5, 2.3, R.BELLY, 0, 2.02, 0.1, rx.torso);
+  for (let k = 0; k < 5; k++) box(0.3, 0.28, 0.4, R.DARK, 0, 3.86, -1.1 + k * 0.55, rx.torso);
+  box(1.3, 1.3, 1.1, R.SKIN, 0, 3.55, 1.55, rx.torso);
+  for (const sx of [1, -1]){
+    box(0.26, 0.5, 0.26, R.SKIN, 0.98 * sx, 2.72, 1.25, rx.torso);
+    box(0.22, 0.22, 0.42, R.SKIN, 0.98 * sx, 2.45, 1.45, rx.torso);
+    ////box(0.1, 0.1, 0.14, R.CLAW, 0.98 * sx, 2.42, 1.72, rx.torso, false);//artiglio
+	for (const dx of [-0.06, 0.06]){                                  // 2 unghie rivolte verso il basso
+	  const claw = box(0.08, 0.16, 0.08, R.CLAW, 0.98 * sx + dx, 2.3, 1.6, rx.torso, false);
+	  claw.rotation.x = 0.25;                                        // leggermente curve indietro
+	}
+  }
+  rx.tail = group(0, 3.0, -1.45, rx.torso);
+  box(1.5, 1.3, 1.4, R.SKIN, 0, -0.05, -0.6, rx.tail);
+  box(0.26, 0.24, 0.4, R.DARK, 0, 0.72, -0.6, rx.tail);
+  rx.t2 = group(0, -0.12, -1.3, rx.tail);
+  box(1.0, 0.9, 1.4, R.SKIN, 0, -0.05, -0.6, rx.t2);
+  box(0.22, 0.2, 0.36, R.DARK, 0, 0.5, -0.6, rx.t2);
+  rx.t3 = group(0, -0.06, -1.3, rx.t2);
+  box(0.6, 0.55, 1.3, R.SKIN, 0, -0.05, -0.55, rx.t3);
+  rx.head = group(0, 4.05, 1.85, rx.torso);
+  box(1.7, 1.15, 2.1, R.SKIN, 0, 0.3, 0.95, rx.head);
+  //box(1.76, 0.24, 0.5, R.DARK, 0, 0.86, 0.55, rx.head);
+  box(0.3, 0.55, 0.6, R.DARK, 0, 0.86, 0.55, rx.head);
+  for (const sx of [1, -1]){
+    box(0.1, 0.34, 0.34, 0xffffff, 0.86 * sx, 0.5, 0.55, rx.head, false);
+    box(0.06, 0.2, 0.18, R.PUPIL, 0.91 * sx, 0.47, 0.62, rx.head, false);
+    box(0.14, 0.08, 0.1, R.PUPIL, 0.35 * sx, 0.88, 1.85, rx.head, false);
+    for (const tz of [0.55, 0.95, 1.35, 1.75]) box(0.14, 0.24, 0.14, R.TOOTH, 0.66 * sx, -0.36, tz, rx.head, false);
+    box(0.14, 0.24, 0.14, R.TOOTH, 0.3 * sx, -0.36, 1.92, rx.head, false);
+  }
+  box(1.5, 0.1, 1.9, R.MOUTH, 0, -0.24, 0.95, rx.head, false);
+  rx.jaw = group(0, -0.28, 0.05, rx.head);
+  box(1.5, 0.42, 1.95, R.SKIN, 0, -0.21, 0.97, rx.jaw);
+  box(1.3, 0.1, 1.7, R.BELLY, 0, -0.44, 0.9, rx.jaw, false);
+  box(0.9, 0.1, 1.2, R.TONGUE, 0, 0.03, 0.8, rx.jaw, false);
+  for (const sx of [1, -1]) for (const tz of [0.75, 1.15, 1.6]) box(0.12, 0.2, 0.12, R.TOOTH, 0.6 * sx, 0.1, tz, rx.jaw, false);
+  rx.reach = 3.85;
+  rx.swing = 0.55;//ampiezza oscillazione zampe in radianti
+  return rx;
+}
+
+// ----- Elephant -----
+const ELEPHANT_PALETTE = [
+  { SKIN: 0x99aaaa, DARK: 0x778888, BELLY: 0xbbcccc, EAR_IN: 0xeeaaaa, TUSK: 0xffffee, TOE: 0xeeeedd, PUPIL: 0x111111, MOUTH: 0x992222 },
+  { SKIN: 0xbb8866, DARK: 0x997744, BELLY: 0xddbb99, EAR_IN: 0xeeaaaa, TUSK: 0xffffee, TOE: 0xeeeedd, PUPIL: 0x111111, MOUTH: 0x992222 },
+  { SKIN: 0x77aacc, DARK: 0x5577aa, BELLY: 0xbbccee, EAR_IN: 0xeeaaaa, TUSK: 0xffffee, TOE: 0xeeeedd, PUPIL: 0x111111, MOUTH: 0x992222 },
+  { SKIN: 0xeeaaac, DARK: 0xcc8899, BELLY: 0xffccdd, EAR_IN: 0xffeeee, TUSK: 0xffffee, TOE: 0xeeeedd, PUPIL: 0x111111, MOUTH: 0x992222 },
+  { SKIN: 0xeeeedd, DARK: 0xccccaa, BELLY: 0xffffee, EAR_IN: 0xeeaaaa, TUSK: 0xffffee, TOE: 0xddccbb, PUPIL: 0x111111, MOUTH: 0x992222 }
+];
+
+// Costruisce il modello e le parti animate dell'elefante.
+function buildElephant(){
+  const R = pickPal('ele', ELEPHANT_PALETTE);
+  const rx = {};
+  rx.root = new THREE.Group(); scene.add(rx.root);
+  rx.legs = [];
+  for (const sx of [1, -1]) for (const lz of [0.95, -0.95]){
+    const hip = group(0.8 * sx, 2.0, lz, rx.root);
+    box(0.85, 1.1, 0.85, R.SKIN, 0, -0.45, 0, hip);
+    const knee = group(0, -0.95, 0, hip);
+    box(0.72, 0.8, 0.72, R.SKIN, 0, -0.35, 0, knee);
+    box(0.84, 0.26, 0.9, R.DARK, 0, -0.84, 0.05, knee);
+    for (const cx of [-0.27, 0, 0.27]) box(0.2, 0.14, 0.14, R.TOE, cx, -0.9, 0.5, knee, false);
+    rx.legs.push({ hip, knee, sx, off: (sx > 0) === (lz > 0) ? 0 : Math.PI });   // diagonal gait
+  }
+  rx.torso = group(0, 0, 0, rx.root);
+  box(2.3, 1.9, 3.2, R.SKIN, 0, 2.95, 0, rx.torso);
+  box(1.9, 0.5, 2.6, R.BELLY, 0, 2.1, 0, rx.torso);
+  box(1.6, 0.3, 1.8, R.DARK, 0, 3.98, -0.2, rx.torso);
+  rx.tail = group(0, 3.3, -1.6, rx.torso);
+  box(0.2, 0.2, 0.7, R.DARK, 0, -0.05, -0.35, rx.tail);
+  rx.t2 = group(0, -0.05, -0.7, rx.tail);
+  box(0.16, 0.16, 0.6, R.DARK, 0, -0.1, -0.3, rx.t2);
+  rx.t3 = group(0, -0.1, -0.6, rx.t2);
+  box(0.34, 0.5, 0.34, R.DARK, 0, -0.2, -0.1, rx.t3);
+  rx.head = group(0, 3.5, 1.7, rx.torso);
+  box(1.6, 1.8, 1.4, R.SKIN, 0, 0, 0.5, rx.head);
+  for (const sx of [1, -1]){
+    box(0.1, 0.18, 0.1, 0xffffff, 0.82 * sx, 0.35, 0.95, rx.head, false);
+    box(0.06, 0.1, 0.08, R.PUPIL, 0.86 * sx, 0.35, 1.0, rx.head, false);
+    const tusk = box(0.16, 0.16, 1.0, R.TUSK, 0.5 * sx, -0.55, 1.5, rx.head, false);
+    tusk.rotation.x = 0.25;
+  }
+  rx.ears = [];
+  for (const sx of [1, -1]){
+    const g = group(0.82 * sx, 0.6, 0.2, rx.head);//un po avanti
+    box(0.1, 1.9, 1.6, R.SKIN, 0, -0.5, -0.8, g);
+    box(0.04, 1.5, 1.2, R.EAR_IN, 0.06 * sx, -0.5, -0.8, g, false);
+    rx.ears.push({ g, sx });
+  }
+  
+  rx.tr1 = group(0, -0.3, 1.2, rx.head);
+  box(0.62, 1.0, 0.62, R.SKIN, 0, -0.5, 0, rx.tr1);
+  rx.tr2 = group(0, -1.0, 0, rx.tr1);
+  box(0.5, 0.9, 0.5, R.SKIN, 0, -0.45, 0, rx.tr2);
+  rx.tr3 = group(0, -0.9, 0, rx.tr2);
+  box(0.4, 0.7, 0.4, R.DARK, 0, -0.35, 0, rx.tr3);
+  rx.jaw = group(0, -0.75, 0.9, rx.head);
+  box(0.9, 0.2, 0.5, R.MOUTH, 0, -0.05, 0.2, rx.jaw, false);
+  rx.reach = 3.6;
+  rx.swing = 0.45;//ampiezza oscillazione zampe in radianti
+  return rx;
+}
+
+// ----- Steam train -----
+const TRAIN_PALETTE = [
+  { BODY: 0x222233, BODY2: 0x333344, RED: 0xbb3322, BRASS: 0xddaa44, WHEEL: 0x112222, STEEL: 0xaabbbb, COAL: 0x111111, LAMP: 0xffff33 },
+  { BODY: 0x115533, BODY2: 0x226644, RED: 0xeecc33, BRASS: 0xffdd77, WHEEL: 0x112222, STEEL: 0xaabbbb, COAL: 0x111111, LAMP: 0xffff33 },
+  { BODY: 0x224488, BODY2: 0x225599, RED: 0xddddcc, BRASS: 0xaabbbb, WHEEL: 0x112222, STEEL: 0xaabbbb, COAL: 0x111111, LAMP: 0xffff33 },
+  { BODY: 0x551122, BODY2: 0x662233, RED: 0x222233, BRASS: 0xddaa44, WHEEL: 0x112222, STEEL: 0xaabbbb, COAL: 0x111111, LAMP: 0xffff33 },
+  { BODY: 0x666677, BODY2: 0x888888, RED: 0xee7722, BRASS: 0xffdd77, WHEEL: 0x112222, STEEL: 0xaabbbb, COAL: 0x111111, LAMP: 0xffff33 }
+];
+
+// Costruisce la locomotiva inseguitrice e i suoi componenti mobili.
+function buildTrain(){
+  const R = pickPal('train', TRAIN_PALETTE);
+  const rx = {};
+  rx.root = new THREE.Group(); scene.add(rx.root);
+  rx.legs = [];                                   // niente zampe: lavorano le ruote
+  rx.torso = group(0, 0, 0, rx.root);
+
+  box(2.1, 0.4, 7.4, R.BODY2, 0, 0.95, -0.9, rx.torso);                       // telaio
+  box(1.8, 1.8, 3.4, R.BODY, 0, 2.1, 0.9, rx.torso);                          // caldaia
+  box(1.4, 0.15, 3.4, R.BRASS, 0, 3.05, 0.9, rx.torso, false);                // fascia d'ottone
+  box(1.9, 1.9, 0.6, R.WHEEL, 0, 2.1, 2.8, rx.torso);                         // camera a fumo
+  box(0.6, 0.4, 0.6, R.BRASS, 0, 3.15, 0.2, rx.torso);                        // duomo
+  box(0.5, 0.9, 0.5, R.BODY, 0, 3.4, 2.6, rx.torso);                          // fumaiolo
+  box(0.8, 0.2, 0.8, R.BODY, 0, 3.95, 2.6, rx.torso);
+  box(2.2, 2.3, 1.9, R.RED, 0, 2.3, -1.6, rx.torso);                          // cabina
+  box(2.5, 0.2, 2.3, R.BODY, 0, 3.55, -1.6, rx.torso);                        // tetto cabina
+  for (const sx of [1, -1]) box(0.06, 0.7, 0.7, R.LAMP, 1.12 * sx, 2.6, -1.6, rx.torso, false);   // finestrini
+  box(2.2, 1.5, 2.0, R.BODY, 0, 1.9, -3.6, rx.torso);                         // tender
+  box(1.8, 0.4, 1.6, R.COAL, 0, 2.75, -3.6, rx.torso, false);                 // carbone
+
+	
+
+
+// spazzabisonti: trave paraurti + cuneo a listelli + puntoni + gancio (compatto)
+box(2.4, 0.5, 0.45, R.BODY2, 0, 1.0, 3.1, rx.torso);                        // trave paraurti spessa
+for (let k = 0; k < 5; k++){                                                // listelli del cuneo
+  const wdt = 2.3 * (1 - k / 6);
+  box(wdt, 0.24, 0.45, k % 2 ? R.BRASS : R.RED, 0, 0.98 - k * 0.14, 3.4 + k * 0.17, rx.torso);
+}
+
+  rx.tail = group(0, 2.0, -5.4, rx.torso); rx.t2 = group(0, 0, -0.1, rx.tail); rx.t3 = group(0, 0, -0.1, rx.t2);
+  rx.head = group(0, 2.1, 3.15, rx.torso);
+  box(0.5, 0.5, 0.3, R.LAMP, 0, 0.6, 0.0, rx.head, false);                    // faro
+  rx.jaw = group(0, 0, 0, rx.head);
+
+  // ruote: 2 grandi motrici sotto la cabina, 2 piccole davanti
+  rx.wheels = [];
+  const wheelDefs = [
+    { z: -1.9, r: 1.0, x: 1.2, hasContrappeso:true },  { z: 0.1, r: 1.0, x: 1.2, hasContrappeso:true },    // grandi motrici
+    { z: 1.9,  r: 0.5, x: 1.12, hasContrappeso:false }, { z: 2.7, r: 0.5, x: 1.12, hasContrappeso:false }    // piccole anteriori
+  ];
+  for (const wd of wheelDefs) {
+	  for (const sx of [1, -1]){
+		const spin = group(wd.x * sx, wd.r, wd.z, rx.root);
+		const w = new THREE.Mesh(new THREE.CylinderGeometry(wd.r, wd.r, 0.16, 14), lam(R.WHEEL));
+		w.rotation.z = Math.PI / 2;
+		w.castShadow = true;
+		spin.add(w);
+		if(wd.hasContrappeso) {
+			box(0.2, 0.12, wd.r * 0.7, R.STEEL, 0, wd.r * 0.6, 0, spin, false);   // raggio / contrappeso
+		}
+		box(0.26, 0.3, 0.3, R.BRASS, 0, 0, 0, spin, false);                   // mozzo
+		spin.userData.k = 1 / wd.r;                                           // le piccole girano più veloci
+		rx.wheels.push(spin);
+	  }
+  }
+  rx.rods = [];
+  for (const sx of [1, -1]){
+    const rod = group(1.36 * sx, 1.0, -0.75, rx.root);                    // biella tra le due motrici
+    box(0.1, 0.1, 1.9, R.STEEL, 0, 0, 0, rod, false);
+    rx.rods.push(rod);
+  }
+
+  rx.reach = 4.5; 
+  rx.swing = 0;//ampiezza oscillazione zampe in radianti
+  rx.chimney = 4.2;
+  rx.chimneyZ = 2.6;
+  return rx;
+}
+
+// ----- Kong -----
+const KONG_PALETTE = [
+  { FUR: 0x222222, FUR2: 0x111111, SKIN: 0x443333, CHEST: 0x554444, BROW: 0x000000, EYE: 0xffff3322, TOOTH: 0xffffffee, MOUTH: 0x771111 },
+  { FUR: 0x664433, FUR2: 0x443322, SKIN: 0x886655, CHEST: 0x997766, BROW: 0x221111, EYE: 0xffff3322, TOOTH: 0xffffffee, MOUTH: 0x771111 },
+  { FUR: 0xeeeedd, FUR2: 0xbbbbaa, SKIN: 0xddaa99, CHEST: 0xffeeee, BROW: 0x666666, EYE: 0xffff3322, TOOTH: 0xffffffee, MOUTH: 0x771111 },
+  { FUR: 0x334466, FUR2: 0x223344, SKIN: 0x556688, CHEST: 0x7788aa, BROW: 0x000000, EYE: 0xffff3322, TOOTH: 0xffffffee, MOUTH: 0x771111 },
+  { FUR: 0x772222, FUR2: 0x551111, SKIN: 0x995544, CHEST: 0xbb7766, BROW: 0x000000, EYE: 0xffffdd33, TOOTH: 0xffffffee, MOUTH: 0x771111 }
+];
+
+// Costruisce il modello e le parti animate di Kong.
+function buildKong(){
+  const R = pickPal('kong', KONG_PALETTE);
+  const rx = {};
+  rx.root = new THREE.Group(); scene.add(rx.root);
+  rx.legs = []; rx.arms = [];
+  for (const sx of [1, -1]){                                      // short, stocky hind legs
+    const hip = group(0.9 * sx, 2.1, -1.2, rx.root);
+    box(1.2, 1.3, 1.3, R.FUR, 0, -0.5, 0, hip);
+    const knee = group(0, -1.0, 0.1, hip);
+    box(0.9, 1.0, 0.9, R.FUR, 0, -0.45, 0, knee);
+    box(1.0, 0.3, 1.3, R.FUR2, 0, -0.95, 0.25, knee);
+    rx.legs.push({ hip, knee, sx, off: sx > 0 ? 0 : Math.PI });
+  }
+  rx.torso = group(0, 0, 0, rx.root);
+  box(2.0, 1.6, 2.0, R.FUR, 0, 2.5, -0.7, rx.torso);              // abdomen
+  box(3.0, 2.0, 2.0, R.FUR, 0, 3.4, 0.6, rx.torso);               // huge chest
+  box(1.8, 1.4, 0.1, R.CHEST, 0, 3.3, 1.62, rx.torso, false);     // chest plate
+  for (const sx of [1, -1]) box(0.95, 0.8, 0.2, R.CHEST, 0.5 * sx, 3.7, 1.55, rx.torso, false);   // pecs
+  box(1.8, 0.9, 1.4, R.FUR, 0, 4.3, 0.8, rx.torso);               // traps / neck
+  //box(1.9, 0.2, 1.9, R.FUR2, 0, 4.5, -0.1, rx.torso, false);      // dark back
+  for (const sx of [1, -1]) box(1.1, 1.1, 1.1, R.FUR, 1.75 * sx, 3.9, 0.7, rx.torso);   // delts
+  for (const sx of [1, -1]){                                      // arms: knuckle-walking
+    const hip = group(1.75 * sx, 3.7, 0.7, rx.torso);
+    box(1.2, 1.8, 1.2, R.FUR, 0, -0.8, 0, hip);
+    box(1.35, 0.7, 1.3, R.FUR, 0, -0.4, 0.05, hip);               // biceps
+    const knee = group(0, -1.6, 0, hip);
+    box(1.1, 1.5, 1.1, R.FUR, 0, -0.7, 0, knee);
+    box(1.3, 0.8, 1.3, R.FUR2, 0, -1.55, 0.1, knee);              // fist
+    const arm = { hip, knee, sx, off: sx > 0 ? Math.PI : 0 };
+    rx.legs.push(arm); rx.arms.push(arm);
+  }
+  rx.tail = group(0, 2.5, -1.7, rx.torso); rx.t2 = group(0, 0, -0.1, rx.tail); rx.t3 = group(0, 0, -0.1, rx.t2);
+  rx.head = group(0, 4.1, 1.9, rx.torso);                         // angry head
+  box(1.6, 1.4, 1.5, R.FUR, 0, 0.4, 0.5, rx.head);
+  box(0.5, 0.4, 1.3, R.FUR2, 0, 1.15, 0.4, rx.head);              // crest
+  box(1.8, 0.34, 0.6, R.BROW, 0, 0.78, 1.15, rx.head);            // brow ridge
+  for (const sx of [1, -1]){
+    box(0.2, 0.14, 0.06, R.EYE, 0.38 * sx, 0.55, 1.27, rx.head, false);          // red eyes
+    const b = box(0.55, 0.14, 0.14, R.BROW, 0.4 * sx, 0.8, 1.32, rx.head, false);
+    b.rotation.z = 0.45 * sx;                                                     // furious eyebrows
+    box(0.12, 0.08, 0.05, R.BROW, 0.2 * sx, 0.2, 1.56, rx.head, false);          // nostrils
+    box(0.14, 0.3, 0.14, R.TOOTH, 0.38 * sx, -0.45, 1.4, rx.head, false);        // upper canines
+  }
+  box(1.1, 0.75, 0.5, R.SKIN, 0, 0.05, 1.3, rx.head);             // muzzle
+  box(1.0, 0.1, 1.0, R.MOUTH, 0, -0.3, 1.0, rx.head, false);
+  rx.jaw = group(0, -0.35, 0.55, rx.head);
+  box(1.0, 0.35, 0.95, R.SKIN, 0, -0.2, 0.5, rx.jaw);
+  for (const sx of [1, -1]) box(0.14, 0.3, 0.14, R.TOOTH, 0.38 * sx, 0.05, 0.9, rx.jaw, false);   // lower canines
+  rx.reach = 3.4;
+  rx.swing = 0.4;//ampiezza oscillazione zampe in radianti
+  return rx;
+}
+
+// ----- Rhino -----
+const RHINO_PALETTE = [
+  { SKIN: 0x889999, DARK: 0x667777, BELLY: 0xbbbbbb, HORN: 0xffeeee, EYE: 0xff3322, PUPIL: 0x111111, MOUTH: 0x771111 },
+  { SKIN: 0x997755, DARK: 0x775533, BELLY: 0xccaa88, HORN: 0xffeeee, EYE: 0xff3322, PUPIL: 0x111111, MOUTH: 0x771111 },
+  { SKIN: 0x667799, DARK: 0x445577, BELLY: 0xaabbcc, HORN: 0xeeeedd, EYE: 0xffdd33, PUPIL: 0x111111, MOUTH: 0x771111 },
+  { SKIN: 0xaa5544, DARK: 0x773333, BELLY: 0xdd8888, HORN: 0xffeeee, EYE: 0xffdd33, PUPIL: 0x111111, MOUTH: 0x551111 },
+  { SKIN: 0x558866, DARK: 0x446644, BELLY: 0x99ccaa, HORN: 0xffeeee, EYE: 0xff3322, PUPIL: 0x111111, MOUTH: 0x771111 }
+];
+
+// Costruisce il modello e le parti animate del rinoceronte.
+function buildRhino(){
+  const R = pickPal('rhino', RHINO_PALETTE);
+  const rx = {};
+  rx.root = new THREE.Group(); scene.add(rx.root);
+  rx.legs = [];
+  for (const sx of [1, -1]) {
+	  for (const lz of [1.0, -1.0]){
+		/*
+		const hip = group(0.85 * sx, 1.9, lz, rx.root);
+		box(0.95, 1.0, 0.95, R.SKIN, 0, -0.4, 0, hip);
+		const knee = group(0, -0.85, 0, hip);
+		box(0.8, 0.75, 0.8, R.SKIN, 0, -0.35, 0, knee);
+		box(0.95, 0.26, 1.0, R.DARK, 0, -0.8, 0.05, knee);
+		rx.legs.push({ hip, knee, sx, off: (sx > 0) === (lz > 0) ? 0 : Math.PI });   // diagonal gait
+		*/
+		const hip = group(1.05 * sx, 1.9, lz, rx.root);
+		box(1.1, 1.0, 0.95, R.SKIN, 0, -0.4, 0, hip);
+		const knee = group(0, -0.85, 0, hip);
+		box(0.9, 0.75, 0.8, R.SKIN, 0, -0.35, 0, knee);
+		box(1.1, 0.26, 1.0, R.DARK, 0, -0.8, 0.05, knee);
+		rx.legs.push({ hip, knee, sx, off: (sx > 0) === (lz > 0) ? 0 : Math.PI });   // diagonal gait
+	  }
+  }
+  rx.torso = group(0, 0, 0, rx.root);
+  /*
+  box(2.4, 2.0, 3.4, R.SKIN, 0, 2.9, 0, rx.torso);
+  box(2.0, 0.5, 2.8, R.BELLY, 0, 1.95, 0, rx.torso);
+  box(2.5, 0.35, 1.0, R.DARK, 0, 3.95, 0.6, rx.torso);        // armoured shoulders
+  box(2.5, 0.35, 1.0, R.DARK, 0, 3.7, -1.0, rx.torso);        // armoured flanks
+  */
+  box(3.0, 2.0, 3.4, R.SKIN, 0, 2.9, 0, rx.torso);
+  box(2.5, 0.5, 2.8, R.BELLY, 0, 1.95, 0, rx.torso);
+  box(3.1, 0.35, 1.0, R.DARK, 0, 3.95, 0.6, rx.torso);        // spalle corazzate
+  box(3.1, 0.35, 1.0, R.DARK, 0, 3.7, -1.0, rx.torso);        // fianchi corazzati
+  
+  rx.tail = group(0, 3.4, -1.7, rx.torso);
+  box(0.2, 0.2, 0.7, R.DARK, 0, -0.1, -0.35, rx.tail);
+  rx.t2 = group(0, -0.1, -0.7, rx.tail);
+  box(0.3, 0.3, 0.3, R.DARK, 0, -0.1, -0.15, rx.t2);
+  rx.t3 = group(0, 0, -0.3, rx.t2);
+  rx.head = group(0, 3.0, 1.8, rx.torso);
+  box(1.5, 1.4, 1.6, R.SKIN, 0, 0, 0.6, rx.head);
+  box(1.1, 0.8, 0.7, R.DARK, 0, -0.2, 1.6, rx.head);          // muzzle
+  
+  const horn1 = box(0.42, 0.42, 1.30, R.HORN, 0, 0.75, 1.50, rx.head, false); horn1.rotation.x = -0.55;   // corno anteriore
+  const horn2 = box(0.21, 0.21, 0.65, R.HORN, 0, 0.35, 2.00, rx.head, false); horn2.rotation.x = -0.45;   // secondo corno, ben visibile
+  
+  for (const sx of [1, -1]){
+    box(0.1, 0.14, 0.1, R.EYE, 0.78 * sx, 0.3, 0.7, rx.head, false);
+    box(0.06, 0.08, 0.06, R.PUPIL, 0.83 * sx, 0.3, 0.72, rx.head, false);
+    box(0.4, 0.4, 0.14, R.DARK, 0.55 * sx, 0.85, 0.0, rx.head, false);   // ears
+  }
+  rx.jaw = group(0, -0.5, 0.9, rx.head);
+  box(0.9, 0.2, 0.9, R.MOUTH, 0, 0, 0.3, rx.jaw, false);
+  rx.reach = 3.9;
+  rx.swing = 0.45;//ampiezza oscillazione zampe in radianti
+  rx.charger = true;
+  return rx;
+}
+
+// ----- Bull -----
+const BULL_PALETTE = [
+  { FUR: 0x332222, FUR2: 0x221100, BELLY: 0x554433, HORN: 0xffeedd, HORNTIP: 0xddccbb, NOSE: 0xddaaaa, EYE: 0xff3322, PUPIL: 0x111111 },
+  { FUR: 0x884422, FUR2: 0x663311, BELLY: 0xbb8866, HORN: 0xffeedd, HORNTIP: 0xddccbb, NOSE: 0xeeaaaa, EYE: 0xff3322, PUPIL: 0x111111 },
+  { FUR: 0xeeeedd, FUR2: 0xccbbaa, BELLY: 0xffffee, HORN: 0x665544, HORNTIP: 0x332222, NOSE: 0xeeaaaa, EYE: 0xff3322, PUPIL: 0x111111 },
+  { FUR: 0x111122, FUR2: 0x000011, BELLY: 0x333333, HORN: 0xeeeedd, HORNTIP: 0xbbbb99, NOSE: 0x664444, EYE: 0xffdd33, PUPIL: 0x111111 },
+  { FUR: 0xaa3322, FUR2: 0x772211, BELLY: 0xdd6644, HORN: 0xffeedd, HORNTIP: 0xddccbb, NOSE: 0xeeaaaa, EYE: 0xffdd33, PUPIL: 0x111111 }
+];
+
+// Costruisce il modello e le parti animate del toro.
+function buildBull(){
+  const R = pickPal('bull', BULL_PALETTE);
+  const rx = {};
+  rx.root = new THREE.Group(); scene.add(rx.root);
+  rx.legs = [];
+  for (const sx of [1, -1]) {
+	for (const lz of [0.95, -0.95]){
+		////const hip = group(0.75 * sx, 2.0, lz, rx.root);
+		////box(0.7, 1.1, 0.75, R.FUR, 0, -0.45, 0, hip);
+		const hip = group((lz > 0 ? 0.95 : 0.75) * sx, 2.0, lz, rx.root);   // anteriori (lz > 0) più esterne
+		box(lz > 0 ? 0.85 : 0.7, 1.1, 0.75, R.FUR, 0, -0.45, 0, hip);
+		const knee = group(0, -0.95, 0, hip);
+		box(0.5, 0.8, 0.5, R.FUR, 0, -0.35, 0, knee);
+		box(0.66, 0.26, 0.8, R.FUR2, 0, -0.84, 0.05, knee);
+		rx.legs.push({ hip, knee, sx, off: (sx > 0) === (lz > 0) ? 0 : Math.PI });   // diagonal gait
+	}
+  }
+  rx.torso = group(0, 0, 0, rx.root);
+  box(1.9, 1.7, 3.0, R.FUR, 0, 2.85, -0.2, rx.torso);
+
+  /*
+  box(2.1, 1.4, 1.4, R.FUR,  0, 3.4, 0.9, rx.torso);//garrese/groppa
+  box(1.3, 0.2, 0.9, R.FUR2, 0, 4.2, 0.8, rx.torso, false); // ciuffo scuro in cima
+  */
+  box(3.0, 1.5, 1.5, R.FUR,  0, 3.4, 0.9, rx.torso);//garrese/groppa, spalle larghe
+  box(1.8, 0.25, 1.0, R.FUR2, 0, 4.2, 0.8, rx.torso, false); // ciuffo scuro in cima
+  
+  box(1.6, 0.4, 2.4, R.BELLY, 0, 2.0, -0.1, rx.torso);
+  rx.tail = group(0, 3.5, -1.7, rx.torso);
+  box(0.16, 0.16, 0.8, R.FUR2, 0, -0.1, -0.4, rx.tail);
+  rx.t2 = group(0, -0.1, -0.8, rx.tail);
+  box(0.12, 0.12, 0.6, R.FUR2, 0, -0.1, -0.3, rx.t2);
+  rx.t3 = group(0, -0.1, -0.6, rx.t2);
+  box(0.3, 0.5, 0.3, R.FUR2, 0, -0.25, -0.1, rx.t3);
+  
+  //capoccia
+  rx.head = group(0, 3.1, 1.7, rx.torso);//3.4 troppo alta
+  box(1.2, 1.2, 1.3, R.FUR, 0, -0.1, 0.5, rx.head);
+  box(0.9, 0.7, 0.6, R.NOSE, 0, -0.45, 1.25, rx.head);// muzzle
+  
+  for (const sx of [1, -1]){
+    box(0.1, 0.1, 0.1, R.EYE, 0.62 * sx, 0.2, 0.7, rx.head, false);
+    box(0.1, 0.1, 0.06, R.PUPIL, 0.68 * sx, 0.2, 0.72, rx.head, false);
+    box(0.5, 0.18, 0.5, R.FUR2, 0.8 * sx, 0.3, 0.1, rx.head, false);      // ears
+    //corna very lunghe
+    const hb = group(0.6 * sx, 0.55, 0.3, rx.head);
+    box(0.4, 0.4, 0.4, R.HORN, 0.2 * sx, 0, 0, hb, false);
+    box(1.7, 0.3, 0.3, R.HORN, 1.05 * sx, 0.05, 0, hb, false);
+    //punta in avanti imbruttitissima
+	const h2 = box(0.28, 0.28, 1.25, R.HORN, 1.75 * sx, 0.28, 0.50, hb, false);
+	h2.rotation.x = -0.25;
+	h2.rotation.y = -0.25 * sx;//verso l'interno di ogni corno
+  }
+  rx.jaw = group(0, -0.55, 0.7, rx.head);
+  box(0.8, 0.2, 0.7, R.FUR2, 0, 0, 0.3, rx.jaw, false);
+  rx.reach = 3.6; 
+  rx.swing = 0.5;//ampiezza oscillazione zampe in radianti
+  rx.charger = true;
+  return rx;
+}
+
+
+// ----- Wolf (werewolf) -----
+const WOLF_PALETTE = [
+  { FUR: 0x4a4a55, FUR2: 0x25252e, BELLY: 0x8a8a96, NOSE: 0x0a0a0a, EYE: 0xff2200, TOOTH: 0xffffee, MOUTH: 0x6a0a14, TONGUE: 0xcc3344, CLAW: 0xeeeedd },
+  { FUR: 0x3a2a22, FUR2: 0x1a110c, BELLY: 0x7a6050, NOSE: 0x0a0a0a, EYE: 0xff2200, TOOTH: 0xffffee, MOUTH: 0x6a0a14, TONGUE: 0xcc3344, CLAW: 0xeeeedd },
+  { FUR: 0xc9ccd6, FUR2: 0x8e93a6, BELLY: 0xffffff, NOSE: 0x222222, EYE: 0xff1100, TOOTH: 0xffffee, MOUTH: 0x6a0a14, TONGUE: 0xcc3344, CLAW: 0xddddcc },
+  { FUR: 0x1c1c24, FUR2: 0x0a0a10, BELLY: 0x44444e, NOSE: 0x000000, EYE: 0xff3300, TOOTH: 0xffffee, MOUTH: 0x6a0a14, TONGUE: 0xcc3344, CLAW: 0xccccbb },
+  { FUR: 0x6a3a2a, FUR2: 0x3a1a10, BELLY: 0xaa7a5a, NOSE: 0x0a0a0a, EYE: 0xff2200, TOOTH: 0xffffee, MOUTH: 0x6a0a14, TONGUE: 0xcc3344, CLAW: 0xeeeedd }
+];
+
+// Costruisce il modello e le parti animate del lupo mannaro gigante.
+function buildWolf(){
+  const R = pickPal('wolf', WOLF_PALETTE);
+  const rx = {};
+  rx.root = new THREE.Group(); scene.add(rx.root);
+  rx.legs = [];
+
+  // zampe posteriori: lunghe, muscolose, bacino più basso
+  for (const sx of [1, -1]){
+    const hip = group(0.8 * sx, 2.2, -1.3, rx.root);
+    box(0.85, 1.2, 0.95, R.FUR, 0, -0.5, 0, hip);
+    const knee = group(0, -1.05, 0, hip);
+    box(0.6, 1.0, 0.65, R.FUR, 0, -0.45, 0, knee);
+    box(0.8, 0.26, 1.1, R.FUR2, 0, -0.98, 0.2, knee);
+    for (const cx of [-0.25, 0, 0.25]) box(0.12, 0.12, 0.3, R.CLAW, cx, -1.0, 0.82, knee, false);
+	//for (const cx of [-0.25, 0, 0.25]) box(0.12, 0.1, 0.2, R.CLAW, cx, -1.0, 0.78, knee, false);
+    rx.legs.push({ hip, knee, sx, off: sx > 0 ? 0 : Math.PI });
+  }
+  // zampe anteriori: braccia enormi con artigli, attaccate alle spalle larghe
+  for (const sx of [1, -1]){
+    const hip = group(1.5 * sx, 3.3, 1.2, rx.root);
+    box(1.0, 1.6, 1.0, R.FUR, 0, -0.65, 0, hip);
+    const knee = group(0, -1.4, 0, hip);
+    box(0.8, 1.3, 0.8, R.FUR, 0, -0.6, 0, knee);
+    box(1.0, 0.3, 1.2, R.FUR2, 0, -1.3, 0.2, knee);
+    ////for (const cx of [-0.3, 0, 0.3]) box(0.14, 0.14, 0.5, R.CLAW, cx, -1.35, 0.95, knee, false);
+	for (const cx of [-0.3, 0, 0.3]) box(0.14, 0.12, 0.4, R.CLAW, cx, -1.35, 0.90, knee, false);
+    rx.legs.push({ hip, knee, sx, off: sx > 0 ? Math.PI : 0 });
+  }
+
+  rx.torso = group(0, 0, 0, rx.root);
+  box(1.9, 1.7, 2.4, R.FUR, 0, 3.0, -1.0, rx.torso);              // bacino/dorso
+  box(3.0, 2.4, 2.0, R.FUR, 0, 3.6, 1.0, rx.torso);               // petto larghissimo
+  box(2.0, 0.9, 1.3, R.BELLY, 0, 3.05, 1.95, rx.torso, false);    // pettorale chiaro
+  for (const sx of [1, -1]){
+    box(1.2, 1.3, 1.7, R.FUR, 1.75 * sx, 4.3, 0.9, rx.torso);     // spalle enormi
+    box(0.8, 0.5, 1.2, R.FUR2, 1.9 * sx, 5.0, 0.8, rx.torso, false);   // pelo irto sulle spalle
+  }
+  box(2.4, 0.6, 2.2, R.FUR2, 0, 4.95, 0.7, rx.torso);             // criniera/gobba
+  //for (let k = 0; k < 6; k++) box(0.28, 0.45, 0.4, R.FUR2, 0, 4.35 - k * 0.07, -0.1 - k * 0.5, rx.torso, false);   // cresta spinosa
+  for (let k = 0; k < 4; k++) box(0.3, 0.5, 0.45, R.FUR2, 0, 3.95, -0.45 - k * 0.5, rx.torso, false);
+
+  rx.tail = group(0, 3.4, -2.2, rx.torso);
+  box(0.5, 0.5, 1.0, R.FUR, 0, -0.1, -0.5, rx.tail);
+  rx.t2 = group(0, -0.1, -1.0, rx.tail);
+  box(0.65, 0.65, 1.0, R.FUR, 0, -0.1, -0.4, rx.t2);
+  rx.t3 = group(0, -0.05, -0.9, rx.t2);
+  box(0.4, 0.4, 0.8, R.FUR2, 0, -0.05, -0.3, rx.t3);
+  
+  // scaglie sulla coda: figlie dei segmenti, quindi si muovono con la coda
+	box(0.24, 0.35, 0.4, R.FUR2, 0, 0.22, -0.5, rx.tail, false);
+	box(0.24, 0.35, 0.4, R.FUR2, 0, 0.27, -0.4, rx.t2, false);
+	box(0.2, 0.3, 0.35, R.FUR2, 0, 0.2, -0.3, rx.t3, false);
+
+  rx.head = group(0, 4.0, 2.2, rx.torso);
+  box(1.6, 1.4, 1.4, R.FUR, 0, 0.2, 0.4, rx.head);                // cranio massiccio
+  box(0.95, 0.5, 1.7, R.FUR, 0, 0.0, 1.55, rx.head);              // muso superiore (sottile: si vedono i denti)
+  box(0.34, 0.28, 0.3, R.NOSE, 0, 0.2, 2.45, rx.head, false);     // tartufo
+  box(0.9, 0.1, 1.7, R.MOUTH, 0, -0.28, 1.5, rx.head, false);     // palato
+  for (const sx of [1, -1]){
+    box(0.35, 0.7, 0.25, R.FUR2, 0.6 * sx, 1.15, 0.1, rx.head);   // orecchie a punta
+
+    //box(0.24, 0.17, 0.12, R.EYE, 0.5 * sx, 0.55, 1.02, rx.head, false);          // occhi rossi
+    //const b = box(0.7, 0.16, 0.2, R.FUR2, 0.45 * sx, 0.82, 1.0, rx.head, false); // sopracciglia furiose
+	// occhi: davanti alla faccia (z > 1.1), unlit così restano rossi anche in ombra
+	const eye = new THREE.Mesh(unitBox, new THREE.MeshBasicMaterial({ color: R.EYE }));
+	eye.scale.set(0.32, 0.2, 0.14); eye.position.set(0.48 * sx, 0.5, 1.17);
+	rx.head.add(eye);
+	box(0.1, 0.1, 0.05, 0xffee88, 0.5 * sx, 0.5, 1.26, rx.head, false);          // riflesso giallo al centro
+	// sopracciglia: sporgono sopra gli occhi, interno più basso = sguardo furioso
+	const b = box(0.8, 0.2, 0.2, R.FUR2, 0.46 * sx, 0.8, 1.2, rx.head, false);
+	
+	
+    b.rotation.z = 0.5 * sx;
+    box(0.16, 0.7, 0.16, R.TOOTH, 0.4 * sx, -0.65, 2.1, rx.head, false);         // zanne superiori giganti
+    box(0.1, 0.3, 0.1, R.TOOTH, 0.28 * sx, -0.4, 1.7, rx.head, false);
+    box(0.1, 0.3, 0.1, R.TOOTH, 0.28 * sx, -0.4, 1.3, rx.head, false);
+  }
+  rx.jaw = group(0, -0.35, 0.35, rx.head);
+  box(0.85, 0.3, 1.9, R.FUR, 0, -0.15, 0.95, rx.jaw);
+  box(0.6, 0.08, 1.3, R.TONGUE, 0, 0.04, 0.9, rx.jaw, false);
+  for (const sx of [1, -1]){
+    box(0.16, 0.65, 0.16, R.TOOTH, 0.36 * sx, 0.25, 1.75, rx.jaw, false);        // zanne inferiori giganti
+    box(0.1, 0.28, 0.1, R.TOOTH, 0.28 * sx, 0.1, 1.3, rx.jaw, false);
+  }
+  rx.reach = 4.7;
+  rx.swing = 0.6;//ampiezza oscillazione zampe in radianti
+  return rx;                                                      // niente rx.charger: la mascella si apre
+}
+
+
+
+
+
+// ---------- CHASER SELECTION ----------
+// Crea o ricrea il modello dell'inseguitore selezionato.
+function makeRig(n){
+  if (RIGS[n]) scene.remove(RIGS[n].root);
+  RIGS[n] = BUILD[n]();
+}
+
+// Cambia inseguitore mantenendo stabile la posizione della sua parte frontale.
+function selectCreature(n){
+  if (!BUILD[n] || GAME_STATUS.state === 'caught') return;   // only blocked during the bite animation
+  const oldReach = REX_REACH;
+  makeRig(n);                                  // new palette on every pick
+  creature = n; 
+  rx = RIGS[n]; 
+  REX_REACH = rx.reach;
+  if (GAME_STATUS.state === 'playing') GAME_STATUS.rexZ += oldReach - REX_REACH;   // front tip stays where it was
+  for (const k in RIGS) RIGS[k].root.visible = (+k === n);
+  if (cardKind && cardKind !== 'pause') renderCard();
+  needRender = true;
+}
+
+// Riporta stato, personaggi, particelle e mondo ai valori iniziali.
+function resetGame(){
+  Object.assign(GAME_STATUS, { t: 0, z: 0, speed: 0, phi: Math.PI / 2 + 0.15, qs: [], lastRow: 0, grade: 0, pitch: 0, rexPitch: 0, camY: 0,
+    rexZ: -14, //partenza mostro
+	rexPhase: 0, rexStep: 0, jaw: 0.15, shake: 0, caughtT: 0, paused: false, chargePose: 0, dashPose: 0 });
+  GAME_STATUS.charged.L = GAME_STATUS.charged.R = true;
+  GAME_STATUS.ready.L = GAME_STATUS.ready.R = false;
+  GAME_STATUS.charge = { phase: 'idle', t: 0, next: rnd(TUNE.chargeFirst[0], TUNE.chargeFirst[1]) };
+  for (const f of frags){ f.life = 0; f.m.visible = false; }
+  for (const d of dusts){ d.life = 0; d.m.visible = false; }
+  for (const st of streaks){ st.life = 0; st.m.visible = false; }
+  for (const k of ['L', 'R']){ const r = riders[k]; r.root.visible = true; r.root.position.y = 0.67; r.root.rotation.set(0, 0, 0); }
+  buildWorld();
+  camTarget.set(0, 0, camLead);
+}
+
+
+// Prepara personaggi e mondo, poi avvia una nuova partita.
+function startGame(){
+  // mostro diverso dal precedente (selectCreature rigenera il rig = nuovo colore)
+  creature = Math.floor(Math.random() * 7) + 1;
+  makeRig(creature);
+  rx = RIGS[creature]; 
+  REX_REACH = rx.reach;
+  for (const k in RIGS) RIGS[k].root.visible = (+k === creature);
+  
+  //riders casuali
+  updateRiders();
+
+  resetGame(); 
+  GAME_STATUS.state = 'playing';
+  hideCard();
+  snd.play('roar'); 
+  GAME_STATUS.shake = 0.5;
+}
+
+
+
+// Mette in pausa la partita attiva e mostra la relativa card.
+function pauseGame(){
+  if (GAME_STATUS.state !== 'playing' || GAME_STATUS.paused) return false;
+  GAME_STATUS.paused = true;
+  snd.wind(0, 0);
+  showCard('pause');
+  return true;
+}
+
+// Riprende la partita azzerando il delta del primo frame.
+function resumeGame(){
+  if (!GAME_STATUS.paused) return false;
+  GAME_STATUS.paused = false;
+  hideCard();
+  last = performance.now();   // no dt jump on the first frame back
+  return true;
+}
+
+// Inverte lo stato audio e aggiorna i controlli della pausa.
+function toggleMute(){
+  snd.toggleMute();
+  if (cardKind === 'pause') renderCard();
+}
+
+// ---------- PUMP LOGIC ----------
+// a: where this side's handle is in its cycle. 0 = top, (0, PI) = going down, (PI, TAU) = coming up.
+// Calcola l'angolo corrente della maniglia sul lato richiesto.
+function sideAngle(side){ return mod(GAME_STATUS.phi - (side === 'L' ? Math.PI / 2 : Math.PI * 1.5), TAU); }
+
+// Riduce la finestra di precisione quando il carrello affronta una salita.
+function perfectScale(){ return GAME_STATUS.grade > 0 ? 1 - clamp(GAME_STATUS.grade * TUNE.uphillWindow, 0, 0.45) : 1; }
+
+// Classifica il tempismo del gesto rispetto alla posizione della maniglia.
+function judge(a){
+  const k = perfectScale();
+  if (a >= TAU - TUNE.perfectPre * k || a <= TUNE.perfectPost * k) return 'perfect';
+  if (a <= TUNE.goodPost) return 'good';
+  if (a < Math.PI) return 'late';
+  return 'wrong';
+}
+
+// Evidenzia il pad premuto con un feedback positivo o negativo.
+function flashPad(side, bad){
+  const el = side === 'L' ? ui.padL : ui.padR;
+  el.classList.remove('hit', 'bad'); void el.offsetWidth; el.classList.add(bad ? 'bad' : 'hit');
+  // Rimuove il feedback visivo dopo una breve animazione.
+  setTimeout(() => el.classList.remove('hit', 'bad'), 110);
+}
+
+// Registra la qualità del gesto mantenendo una cronologia limitata.
+function pushQ(q){ 
+	GAME_STATUS.qs.push(q); 
+	if (GAME_STATUS.qs.length > 12) 
+	GAME_STATUS.qs.shift();
+}
+
+// Gestisce un tentativo sul lato scelto e applica il relativo effetto.
+function tap(side){
+  if (GAME_STATUS.paused) return;   // only Resume / Esc / P / Space / Enter leave the pause card, never as a lever press
+  if (GAME_STATUS.state === 'title'){ startGame(); return; }
+  if (GAME_STATUS.state === 'over'){ if (performance.now() > GAME_STATUS.restartAt) startGame(); return; }
+  if (GAME_STATUS.state !== 'playing') return;
+  const j = judge(sideAngle(side));
+  if (j === 'wrong'){
+    GAME_STATUS.speed *= TUNE.brake; pushQ(0);
+    judgeText(side, 'wrong'); 
+	////snd.play('wrong', { side }); 
+	flashPad(side, true);
+    GAME_STATUS.shake = Math.max(GAME_STATUS.shake, 0.08);
+    return;
+  }
+  if (!GAME_STATUS.charged[side]){ 
+	flashPad(side, false); 
+	////snd.play('empty', { side }); 
+	return; 
+  }
+  let q = j === 'perfect' ? 1 : j === 'good' ? 0.6 : 0.25;
+  if (GAME_STATUS.speed < 1.2) q = Math.max(q, 0.7);
+  GAME_STATUS.charged[side] = false;
+  GAME_STATUS.speed = Math.min(TUNE.maxSpeed, GAME_STATUS.speed + TUNE.boost * q * (1 + TUNE.lowAssist / (1 + GAME_STATUS.speed)));
+  pushQ(q);
+  judgeText(side, j);
+  ////snd.play('pump', { grade: j, side }); 
+  flashPad(side, false);
+  if (q >= 1) spawnDust(side === 'L' ? 0.95 : -0.95, heightAt(GAME_STATUS.z) + 1.4, GAME_STATUS.z - 0.15, 2, 0.8, 0xffee88);
+}
+
+// Taps on buttons (corner buttons, card buttons) are never lever presses.
+// Riconosce i controlli UI per non interpretarli come input di gioco.
+const isUi = el => el instanceof Element && !!el.closest('button, .ui-btn');
+
+let lastTouch = 0;
+
+// Converte il tocco sullo schermo in un input del lato corrispondente.
+window.addEventListener('touchstart', e => {
+  snd.unlock();
+  window.focus();
+  lastTouch = performance.now();
+  let onUi = false;
+  for (const t of e.changedTouches){
+    if (isUi(t.target)){ onUi = true; continue; }
+    tap(t.clientX < window.innerWidth / 2 ? 'L' : 'R');
+  }
+  if (!onUi) e.preventDefault();
+}, { passive: false });
+
+// Impedisce lo scorrimento della pagina durante il trascinamento touch.
+window.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+
+// Sblocca l'audio dopo il rilascio del tocco sui browser che lo richiedono.
+window.addEventListener('touchend', () => snd.unlock());   // iOS only unlocks audio on some gestures
+
+// Gestisce i clic del mouse ignorando quelli sui controlli e i tap recenti.
+window.addEventListener('mousedown', e => {
+  snd.unlock(); 
+  window.focus();   // focus: keyboard works inside the itch.io iframe
+  if (performance.now() - lastTouch < 700 || isUi(e.target) || e.button > 0) return;
+  tap(e.clientX < window.innerWidth / 2 ? 'L' : 'R');
+});
+
+// Keys by e.code: layout- and IME-independent (with a Korean IME, e.key is 'Process' for letters).
+const KEY_FALLBACK = { 
+	a: 'KeyA', A: 'KeyA',
+	d: 'KeyD', D: 'KeyD',
+	p: 'KeyP', P: 'KeyP',
+	m: 'KeyM', M: 'KeyM',
+	' ': 'Space', Spacebar: 'Space', 
+	Enter: 'Enter', 
+	Escape: 'Escape', Esc: 'Escape',
+	ArrowLeft: 'ArrowLeft', Left: 'ArrowLeft', 
+	ArrowRight: 'ArrowRight', Right: 'ArrowRight',
+	'1': 'Digit1', '2': 'Digit2', '3': 'Digit3', '4': 'Digit4', '5': 'Digit5', '6': 'Digit6', '7': 'Digit7',
+	z: 'KeyZ', Z: 'KeyZ',
+	x: 'KeyX', X: 'KeyX', 
+	c: 'KeyC', C: 'KeyC',
+	w: 'KeyW', W: 'KeyW',
+	q: 'KeyQ', Q: 'KeyQ',
+	e: 'KeyE', E: 'KeyE',
+};
+
+// Normalizza i codici dei tasti con fallback per browser o tastiere particolari.
+const keyCode = e => (e.code && e.code !== 'Unidentified' ? e.code : KEY_FALLBACK[e.key] || '');
+
+const NO_SCROLL = new Set(['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyA', 'KeyD', 'PageUp', 'PageDown']);
+
+// Verifica se il tasto può attivare un'azione di menu.
+const isMenuKey = c => c === 'Space' || c === 'Enter' || c === 'NumpadEnter';
+
+// Camera keys are held, not tapped: animate() reads this set every frame.
+// Q/E orbit left/right, Z/X zoom in/out, W/C tilt up/down.
+const CAM_KEYS = new Set(['KeyZ', 'KeyX', 'KeyC', 'KeyW', 'KeyQ', 'KeyE']);
+
+// On-screen camera buttons: each one simulates holding its key.
+// A click holds it for at least CAM_HOLD_MIN ms, so a short tap still moves the camera visibly.
+const CAM_HOLD_MIN = 160;
+
+// Collega i controlli touch, tastiera e pulsanti dell'interfaccia.
+function initInput() {
+document.querySelectorAll('[data-cam]').forEach(b => {
+  const code = b.dataset.cam;
+  let t0 = 0, timer = 0;
+  // Mantiene premuto il comando camera durante l'interazione.
+  const down = e => {
+    e.preventDefault();
+    clearTimeout(timer);
+    t0 = performance.now();
+    held.add(code);
+  };
+  // Rilascia il comando camera dopo la durata minima del tocco.
+  const up = () => {
+    if (!held.has(code)) return;
+    clearTimeout(timer);
+    // Rimuove il tasto dalla lista dei comandi premuti.
+    timer = setTimeout(() => held.delete(code), Math.max(0, CAM_HOLD_MIN - (performance.now() - t0)));
+  };
+  b.addEventListener('pointerdown', down);
+  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, up);
+});
+
+// Gestisce comandi da tastiera, input di gioco e scorciatoie della camera.
+window.addEventListener('keydown', e => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const c = keyCode(e);
+  snd.unlock();
+  if (CAM_KEYS.has(c)){ held.add(c); e.preventDefault(); return; }
+  if (isMenuKey(c) && isUi(e.target)) return;   // a focused button handles its own Enter / Space
+  if (NO_SCROLL.has(c)) e.preventDefault();      // keep the itch.io page from scrolling
+  if (e.repeat) return;
+  if (c === 'Escape' || c === 'KeyP'){
+    if (GAME_STATUS.paused ? resumeGame() : pauseGame()) {
+		////snd.play('ui');
+	}
+    e.preventDefault(); return;
+  }
+  if (c === 'KeyM'){ 
+	toggleMute(); 
+	////snd.play('ui');
+	return;
+  }
+  const pick = /^(?:Digit|Numpad)([1-7])$/.exec(c);
+  if (pick){
+	  if (!GAME_STATUS.paused && GAME_STATUS.state !== 'caught'){
+		selectCreature(+pick[1]);
+		////snd.play('ui');
+	  }
+	  return;
+	}
+  if (GAME_STATUS.paused){ 
+	if (isMenuKey(c)){ 
+		if (resumeGame()) {
+			////snd.play('ui'); 
+		}
+		e.preventDefault(); 
+	} 
+  return; 
+  }
+  if (c === 'KeyA' || c === 'ArrowLeft') tap('L');
+  else if (c === 'KeyD' || c === 'ArrowRight') tap('R');
+  else if (isMenuKey(c) && GAME_STATUS.state !== 'playing'){ tap('L'); e.preventDefault(); }
+});
+
+// Rimuove dalla lista ogni comando camera rilasciato.
+window.addEventListener('keyup', e => { held.delete(keyCode(e)); });
+
+// Rilascia tutti i comandi camera quando la finestra perde il focus.
+window.addEventListener('blur', () => held.clear());
+
+// Buttons
+// Esegue l'azione richiesta da un pulsante contenuto nell'overlay.
+ui.overlay.addEventListener('click', e => {
+  const b = e.target instanceof Element && e.target.closest('[data-act]'); if (!b) return;
+  snd.unlock();
+  const act = b.getAttribute('data-act');
+  if (act === 'resume') resumeGame();
+  else if (act === 'mute') toggleMute();
+  ////snd.play('ui');
+  if (e.detail > 0 && b.isConnected) b.blur();   // mouse click: don't leave focus on it, or Space would press it again
+});
+
+// Gestisce il pulsante audio e aggiorna lo stato di silenziamento.
+ui.muteBtn.addEventListener('click', e => {
+  snd.unlock(); 
+  toggleMute(); 
+  ////snd.play('ui');
+  if (e.detail > 0) ui.muteBtn.blur();
+});
+
+// Gestisce pausa e ripresa dal pulsante dedicato.
+ui.pauseBtn.addEventListener('click', e => {
+  snd.unlock();
+  if (GAME_STATUS.paused ? resumeGame() : pauseGame()) {
+	////snd.play('ui');
+  }
+  if (e.detail > 0) ui.pauseBtn.blur();
+});
+
+// Seleziona il prossimo inseguitore disponibile.
+ui.nextBtn.addEventListener('click', e => {
+  snd.unlock();
+  selectCreature(creature % Object.keys(BUILD).length + 1);   // 6 -> 1
+  ////snd.play('ui');
+  if (e.detail > 0) ui.nextBtn.blur();
+});
+
+// Rigenera la palette del personaggio attualmente selezionato.
+ui.colorBtn.addEventListener('click', e => {
+  snd.unlock();
+  selectCreature(creature);   // same monster, new random palette
+  ////snd.play('ui');
+  if (e.detail > 0) ui.colorBtn.blur();
+});
+
+// Attiva o disattiva le informazioni di debug.
+ui.debugBtn.addEventListener('click', e => {
+  DEBUG = !DEBUG;
+  document.documentElement.classList.toggle('debug', DEBUG);
+  if (e.detail > 0) ui.debugBtn.blur();
+});
+
+// Auto-pause when the tab is hidden or the (itch.io) iframe loses focus.
+// Mette in pausa automaticamente quando la scheda diventa nascosta.
+document.addEventListener('visibilitychange', () => { if (document.hidden) pauseGame(); });
+
+// Mette in pausa automaticamente quando la finestra perde il focus.
+window.addEventListener('blur', () => pauseGame());
+}
+
+
+// ---------- SIM ----------
+// Rimuove un ostacolo dalla cella e genera schegge e feedback d'impatto.
+function smashCell(x, z){
+  const slot = mod(z, ROWS);
+  const row = rows[slot];
+  const ci = x + HALF;
+  if (row.z !== z) return;
+  const c = row.cells[ci];
+  if (c !== 1 && c !== 2) return;
+  row.cells[ci] = 0;
+  const i = slot * COLS + ci;
+  hideObj(i);
+  for (const m of OBJ) markRange(m, i, i);
+  const cols = c === 1 ? [COLORS.trunk, COLORS.leaves[0], COLORS.leaves[2], COLORS.leaves[1]] : [COLORS.rock, COLORS.rockTop, COLORS.rock];
+  for (let k = 0; k < 7; k++) spawnFrag(x + (Math.random() - 0.5) * 0.6, heightAt(z) + 0.4 + Math.random() * 0.8, z, cols[k % cols.length], 3);
+  const v = clamp(1 - (GAME_STATUS.z - CAR_BACK - (GAME_STATUS.rexZ + REX_REACH)) / 18, 0.2, 1);
+  snd.play('smash', { v }); 
+  GAME_STATUS.shake = Math.max(GAME_STATUS.shake, 0.2 * v);
+}
+
+// Charge timeline: idle (count down) -> warn (roar, wind-up) -> dash -> idle.
+// Avanza le fasi di attesa, avviso e carica dell'inseguitore.
+function updateCharge(dt){
+  const ch = GAME_STATUS.charge;
+  if (ch.phase === 'idle'){
+    if (GAME_STATUS.z < TUNE.chargeFrom) return;
+    ch.next -= dt;
+    if (ch.next > 0) return;
+    if (GAME_STATUS.grade > TUNE.chargeUphill){ ch.next = TUNE.chargePostpone; return; }
+    ch.phase = 'warn'; ch.t = 0;
+    snd.play('charge');
+    GAME_STATUS.shake = Math.max(GAME_STATUS.shake, 0.45);
+    return;
+  }
+  ch.t += dt;
+  if (ch.phase === 'warn'){
+    GAME_STATUS.shake = Math.max(GAME_STATUS.shake, 0.07);   // low rumble while it winds up
+    if (ch.t >= TUNE.chargeWarn){ ch.phase = 'dash'; ch.t = 0; GAME_STATUS.shake = Math.max(GAME_STATUS.shake, 0.35); }
+  } else if (ch.phase === 'dash' && ch.t >= TUNE.chargeDur){
+    ch.phase = 'idle'; ch.t = 0; ch.next = rnd(TUNE.chargeEvery[0], TUNE.chargeEvery[1]);
+  }
+}
+
+// Aggiorna velocità, posizione, collisioni e animazione dell'inseguitore.
+function updateRex(dt){
+  let sp = Math.min(TUNE.rexMax, TUNE.rexBase + GAME_STATUS.t * TUNE.rexAccel);
+  const gap = GAME_STATUS.z - GAME_STATUS.rexZ;
+  sp *= clamp(1 - gradeAt(GAME_STATUS.rexZ) * TUNE.rexSlope, 0.7, 1.3);
+  updateCharge(dt);
+  const ch = GAME_STATUS.charge;
+  const dash = ch.phase === 'dash';
+  if (ch.phase === 'warn') sp *= TUNE.chargeWindup;
+  else if (dash) sp += TUNE.chargeBoost * clamp(ch.t / TUNE.chargeEaseIn, 0, 1) * clamp((TUNE.chargeDur - ch.t) / TUNE.chargeEaseOut, 0, 1);
+  if (gap > TUNE.rubberBand) sp += (gap - TUNE.rubberBand) * 0.9;
+  GAME_STATUS.rexZ += sp * dt;
+  const z0 = Math.floor(GAME_STATUS.rexZ - 1.2), z1 = Math.ceil(GAME_STATUS.rexZ + REX_REACH - 0.2);
+  for (let z = z0; z <= z1; z++) for (let x = -2; x <= 2; x++) smashCell(x, z);
+  if (dash && Math.random() < dt * 30) spawnDust((Math.random() - 0.5) * 2.4, heightAt(GAME_STATUS.rexZ), GAME_STATUS.rexZ - 0.3 - Math.random(), 1, 1.8);
+  GAME_STATUS.rexPhase += sp * dt * 1.15;
+  const step = Math.floor(GAME_STATUS.rexPhase / Math.PI);
+  if (step !== GAME_STATUS.rexStep){
+    GAME_STATUS.rexStep = step;
+    let v = clamp(1 - (GAME_STATUS.z - CAR_BACK - (GAME_STATUS.rexZ + REX_REACH)) / 16, 0.12, 1);
+    if (dash) v = Math.min(1, v * 1.5 + 0.2);   // dash steps land harder
+    snd.play('stomp', { v }); 
+	GAME_STATUS.shake = Math.max(GAME_STATUS.shake, 0.22 * v * v + 0.03 + (dash ? 0.08 : 0));
+    spawnDust(step % 2 ? 0.8 : -0.8, heightAt(GAME_STATUS.rexZ), GAME_STATUS.rexZ, dash ? 5 : 3, dash ? 2.8 : 2.2);
+  }
+}
+
+// Calcola la percentuale media dei giudizi recenti.
+function accuracy(){ 
+  // Somma i punteggi dei tentativi per ricavarne la media percentuale.
+  return GAME_STATUS.qs.length ? Math.round(GAME_STATUS.qs.reduce((a, b) => a + b, 0) / GAME_STATUS.qs.length * 100) : 0;
+}
+
+// Aggiorna lo stato della partita e la simulazione per il delta ricevuto.
+function update(dt){
+  if (GAME_STATUS.state === 'playing'){
+    GAME_STATUS.t += dt;
+    GAME_STATUS.grade = gradeAt(GAME_STATUS.z);
+    const down = GAME_STATUS.grade < 0;
+    const gEff = TUNE.gravity * (down ? TUNE.downhillBoost : 1);
+    const dEff = TUNE.drag * (down ? TUNE.downhillDrag : 1);
+    GAME_STATUS.speed -= (TUNE.friction * GAME_STATUS.speed + dEff * GAME_STATUS.speed * GAME_STATUS.speed + gEff * GAME_STATUS.grade) * dt;
+    GAME_STATUS.speed = Math.min(GAME_STATUS.speed, TUNE.slopeMaxSpeed);
+    if (GAME_STATUS.speed < 0.03){
+      GAME_STATUS.speed = 0;
+      // stalled: whichever handle is on its way down can be forced again
+      for (const sd of ['L', 'R']){ const a = sideAngle(sd); if (a < Math.PI) GAME_STATUS.charged[sd] = true; }
+    }
+    GAME_STATUS.z += GAME_STATUS.speed * dt;
+    GAME_STATUS.phi += GAME_STATUS.speed * dt * TAU / TUNE.gear;
+    for (const side of ['L', 'R']){
+      const a = sideAngle(side);
+      if (a >= Math.PI && a < TAU - TUNE.perfectPre * perfectScale()) GAME_STATUS.charged[side] = true;
+      // "ready" tick once each time a charged handle enters the perfect window
+      const ready = GAME_STATUS.charged[side] && judge(a) === 'perfect';
+      if (ready && !GAME_STATUS.ready[side]) {
+		////snd.play('ready', { side });
+	  }
+      GAME_STATUS.ready[side] = ready;
+    }
+    const row = Math.floor(GAME_STATUS.z);
+    if (row !== GAME_STATUS.lastRow){ 
+		GAME_STATUS.lastRow = row; 
+		if (GAME_STATUS.speed > 1) {
+			////snd.play('clack', { v: clamp(GAME_STATUS.speed / 11, 0, 1) }); 
+		}
+	}
+    const rush = clamp((GAME_STATUS.speed - 7) / 7, 0, 1);
+    if (rush > 0 && Math.random() < dt * 45 * rush) spawnStreak();
+    if (GAME_STATUS.speed > 7.5 && Math.random() < dt * 20) spawnDust(Math.random() < 0.5 ? 0.55 : -0.55, heightAt(GAME_STATUS.z - 0.5) + 0.1, GAME_STATUS.z - 0.5, 1, 0.5, 0xffdd55);
+    updateRex(dt);
+    if (GAME_STATUS.rexZ + REX_REACH - 0.25 >= GAME_STATUS.z - CAR_BACK){ 
+		GAME_STATUS.state = 'caught'; 
+		GAME_STATUS.caughtT = 0; 
+		snd.play('chomp'); 
+		GAME_STATUS.shake = 0.8; 
+	}
+    while (GAME_STATUS.z - BEHIND > zMin){ zMin++; genRow(zMin + ROWS - 1); }
+  } else if (GAME_STATUS.state === 'caught'){
+    GAME_STATUS.caughtT += dt;
+    if (GAME_STATUS.caughtT > 1.2){
+      GAME_STATUS.state = 'over';
+      GAME_STATUS.best = Math.max(GAME_STATUS.best, loadBest());   // another tab may have set a better one
+      const dist = Math.floor(GAME_STATUS.z), isBest = dist > GAME_STATUS.best;
+      if (isBest){ GAME_STATUS.best = dist; saveBest(dist); }
+      GAME_STATUS.restartAt = performance.now() + 650;
+      showOver(dist, GAME_STATUS.best, isBest, accuracy());
+      snd.play(isBest ? 'best' : 'over');
+    }
+  }
+  updateParticles(dt);
+}
+
+// ---------- ANIMATE ----------
+// Applica pose, HUD, camera e animazioni prima del rendering.
+function animate(dt, time){
+  // Limita il fattore di interpolazione al frame corrente.
+  const lerp = k => Math.min(1, dt * k);
+  const gap = GAME_STATUS.z - CAR_BACK - (GAME_STATUS.rexZ + REX_REACH);
+  const danger = GAME_STATUS.state === 'title' ? 0 : clamp(1 - gap / 12, 0, 1);
+  const playing = GAME_STATUS.state === 'playing', ch = GAME_STATUS.charge;
+  const charging = playing && ch.phase !== 'idle';
+
+  GAME_STATUS.pitch += (-Math.atan(gradeAt(GAME_STATUS.z)) - GAME_STATUS.pitch) * lerp(10);
+  car.root.position.set(0, heightAt(GAME_STATUS.z), GAME_STATUS.z);
+  car.root.rotation.x = GAME_STATUS.pitch;
+  
+  const tilt = Math.sin(GAME_STATUS.phi);
+  car.beam.rotation.z = tilt * 0.42;//////OCHO, la trave si muove troppo!
+  
+  for (const w of car.wheels) w.rotation.x += GAME_STATUS.speed * dt / 0.27;
+  car.root.rotation.z = Math.sin(time * 30) * 0.004 * Math.min(1, GAME_STATUS.speed / 6);
+  for (const side of ['L', 'R']){
+    const r = riders[side];
+    if (!r.root.visible) continue;
+    if (GAME_STATUS.state !== 'caught'){
+      const h = side === 'L' ? tilt : -tilt;
+      /*const hy = 1.45 + h * 0.4 - 0.67;
+      const dy = hy - 0.86 - r.body.position.y, dz = 0.47;
+      const armRot = -Math.atan2(dz, -dy);
+      for (const arm of r.arms) {
+	    const inner = Math.sign(arm.position.x) !== Math.sign(r.root.position.x);
+	    arm.rotation.x = inner ? armRot * 0.8 : armRot;///BRACCIO INTERNO SI DEVE MUOVERE DI MENO
+	  }*/
+		const hy = 1.45 + h * 0.4 - 0.67;
+		const base = 0.86 + r.body.position.y;// altezza della spalla
+		const dyOuter = hy - base;
+		const dz = 0.47;
+		for (const arm of r.arms){
+		  const inner = Math.sign(arm.position.x) !== Math.sign(r.root.position.x);
+		  // il braccio interno si muove la metà: interpola tra la posizione "a riposo" (trave a 1.45-0.67) e quella piena
+		  const rest = 1.45 - 0.67 - base;
+		  const dy = inner ? rest + (dyOuter - rest) * 0.5 : dyOuter;
+		  arm.rotation.x = -Math.atan2(dz, -dy);
+		}
+	  
+      r.body.position.y += (Math.min(0, h) * 0.12 - r.body.position.y) * lerp(14);
+      r.body.rotation.x += ((0.25 - h * 0.15 + Math.max(0, GAME_STATUS.grade) * 0.8) - r.body.rotation.x) * lerp(14);
+    }
+    const scared = danger > 0.5 || charging;
+    const look = scared && Math.sin(time * 1.6 + (side === 'L' ? 0 : 1.7)) > 0.6 ? (side === 'L' ? 1.5 : -1.5) : 0;
+    r.head.rotation.y += (look - r.head.rotation.y) * lerp(10);
+    /////r.mouth.scale.y += ((1 + Math.max(danger, charging ? 0.6 : 0) * 2.5) - r.mouth.scale.y) * lerp(8);
+	r.mouth.scale.y += ((0.06 * (1 + Math.max(danger, charging ? 0.6 : 0) * 2.5)) - r.mouth.scale.y) * lerp(8);
+  }
+  if (GAME_STATUS.state === 'caught'){
+    const k = Math.min(1, GAME_STATUS.caughtT / 0.25);
+    for (const side of ['L', 'R']){
+      const r = riders[side];
+      r.root.position.y += (3.4 - r.root.position.y) * k;
+      r.root.rotation.z += dt * (side === 'L' ? 10 : -10);
+      if (GAME_STATUS.caughtT > 0.3) r.root.visible = false;
+    }
+  }
+
+  // charge pose weights: warn = head up, jaw wide, crouch; dash = lean in
+  GAME_STATUS.chargePose += ((playing && ch.phase === 'warn' ? 1 : 0) - GAME_STATUS.chargePose) * lerp(8);
+  GAME_STATUS.dashPose += ((playing && ch.phase === 'dash' ? 1 : 0) - GAME_STATUS.dashPose) * lerp(8);
+  const cp = GAME_STATUS.chargePose;
+  const dp = GAME_STATUS.dashPose;
+  GAME_STATUS.rexPitch += (-Math.atan(gradeAt(GAME_STATUS.rexZ)) * 0.6 - GAME_STATUS.rexPitch) * lerp(8);
+  rx.root.position.set(0, heightAt(GAME_STATUS.rexZ), GAME_STATUS.rexZ);
+  rx.root.rotation.x = GAME_STATUS.rexPitch;
+  const ph = GAME_STATUS.rexPhase;
+  if (GAME_STATUS.state === 'title'){
+    const b = Math.sin(time * 2);
+    rx.torso.position.y = b * 0.06; rx.torso.rotation.x = 0; rx.head.rotation.x = -0.08 + b * 0.04;
+    for (const L of rx.legs){ L.hip.rotation.x = 0; L.knee.rotation.x = 0; }
+    rx.tail.rotation.y = Math.sin(time * 1.3) * 0.2;
+    GAME_STATUS.jaw = 0.2 + 0.1 * Math.sin(time * 1.5);
+  } else {
+    for (const L of rx.legs){
+      const p = ph + L.off;
+      L.hip.rotation.x = Math.sin(p) * rx.swing;
+      L.knee.rotation.x = Math.max(0, Math.cos(p)) * 0.6 + 0.3 * cp;
+    }
+    rx.torso.position.y = (-Math.abs(Math.sin(ph)) * 0.2 + 0.1) * (1 - cp) - 0.3 * cp;
+    rx.torso.rotation.x = 0.06 * dp - 0.06 * cp;
+    rx.root.rotation.z = Math.sin(ph) * 0.04;
+    rx.tail.rotation.y = Math.sin(ph) * 0.22;
+    rx.t2.rotation.y = Math.sin(ph - 0.7) * 0.3;
+    rx.t3.rotation.y = Math.sin(ph - 1.4) * 0.35;
+    rx.head.rotation.x = (Math.sin(ph * 2) * 0.05 - 0.06) * (1 - cp) + (-0.55 + Math.sin(time * 40) * 0.03) * cp + 0.1 * dp;
+    let jt;
+    if (GAME_STATUS.state === 'caught') jt = GAME_STATUS.caughtT < 0.22 ? 1.0 : 0.0;
+    else if (cp > 0.05) jt = 0.2 + 0.9 * cp + 0.05 * Math.sin(time * 30);
+    else if (danger > 0.5 || dp > 0.3) jt = 0.3 + 0.55 * Math.abs(Math.sin(time * 9));
+    else jt = 0.15 + 0.08 * Math.sin(time * 2);
+    GAME_STATUS.jaw += (jt - GAME_STATUS.jaw) * lerp(GAME_STATUS.state === 'caught' ? 30 : 12);
+  }
+  rx.jaw.rotation.x = GAME_STATUS.jaw;
+
+  // Rhino / bull: head up on the warning (snort), lowered into the dash (horns forward), almost closed mouth
+  if (rx.charger && GAME_STATUS.state !== 'title'){
+    rx.head.rotation.x = -0.15 * cp + 0.45 * dp;
+    rx.jaw.rotation.x = 0.05;
+  }
+
+  // Elephant: flapping ears (faster when charging) and a swaying trunk that rises when it trumpets
+  if (rx.ears){
+    const flap = Math.sin(time * (3 + 9 * cp + 4 * dp));
+    //for (const e of rx.ears) e.g.rotation.y = -e.sx * (0.45 + 0.25 * flap + 0.55 * cp + 0.3 * dp);
+	for (const e of rx.ears) e.g.rotation.y = -e.sx * (0.95 + 0.2 * flap + 0.3 * cp + 0.15 * dp);  
+    const ts = time * (2 + 5 * cp);
+    rx.tr1.rotation.x = -0.15 + Math.sin(ts) * 0.25 - 1.7 * cp;
+    rx.tr2.rotation.x = Math.sin(ts - 0.8) * 0.3 - 0.4 * cp;
+    rx.tr3.rotation.x = Math.sin(ts - 1.6) * 0.35 - 0.5 * cp;
+  }
+  
+  // Train: wheels roll with the distance, side rods follow the crank, chimney puffs more when charging
+  if (rx.wheels){
+    const a = ph * 1.25;
+    //for (const w of rx.wheels) w.rotation.x = a;
+    //for (const r of rx.rods){ r.position.y = 0.75 + Math.cos(a) * 0.45; r.position.z = 1.0 + Math.sin(a) * 0.45; }
+	for (const w of rx.wheels) w.rotation.x = a * w.userData.k;
+	for (const r of rx.rods){ r.position.y = 1.0 + Math.cos(a) * 0.6; r.position.z = -0.75 + Math.sin(a) * 0.6; }
+    if (GAME_STATUS.state !== 'title'){ rx.torso.position.y *= 0.15; rx.torso.rotation.x *= 0.2; }   // heavy, on rails
+    if (GAME_STATUS.state !== 'caught' && Math.random() < dt * (10 + 40 * cp + 25 * dp))
+      spawnDust((Math.random() - 0.5) * 0.3, heightAt(GAME_STATUS.rexZ) + rx.chimney, GAME_STATUS.rexZ + rx.chimneyZ, 1, 1.6, 0xdddddd);
+  }
+  // Kong: knuckle-walks; on the warning he rears up and pounds his chest, in the dash he runs hunched
+  if (rx.arms && GAME_STATUS.state !== 'title'){
+    rx.torso.rotation.x = -0.3 * cp + 0.15 * dp;
+    const beat = Math.sin(time * 26) * 0.3;
+    for (const a of rx.arms){
+      a.hip.rotation.x += (-1.2 + beat - a.hip.rotation.x) * cp;
+      a.knee.rotation.x += (-1.4 + beat * 0.5 - a.knee.rotation.x) * cp;
+      a.hip.rotation.z = -a.sx * 0.5 * cp;
+    }
+    if (cp > 0.8 && Math.sin(time * 26) > 0.95) GAME_STATUS.shake = Math.max(GAME_STATUS.shake, 0.12);   // fists shake the screen
+  }
+
+  // Camera keys: Q/E orbit, Z/X zoom in/out, W/C tilt up/down
+  if (held.size){
+    if (held.has('KeyQ')) CAM.yaw -= 1.4 * dt;
+    if (held.has('KeyE')) CAM.yaw += 1.4 * dt;
+    if (held.has('KeyW')) CAM.elev += 0.9 * dt;
+    if (held.has('KeyC')) CAM.elev -= 0.9 * dt;
+    if (held.has('KeyZ')) CAM.zoom *= Math.exp(0.9 * dt);
+    if (held.has('KeyX')) CAM.zoom *= Math.exp(-0.9 * dt);
+    CAM.elev = clamp(CAM.elev, 0.3, 1.5);
+    CAM.zoom = clamp(CAM.zoom, 0.5, 2.5);
+  }
+
+  const rushV = playing ? clamp((GAME_STATUS.speed - 7) / 8, 0, 1) : 0;
+  const zoomT = CAM.zoom * (1 - rushV * 0.14);
+  if (Math.abs(camera.zoom - zoomT) > 0.001){ camera.zoom += (zoomT - camera.zoom) * lerp(6); camera.updateProjectionMatrix(); }
+  snd.wind(rushV, playing ? GAME_STATUS.speed : 0);
+  const tzc = (GAME_STATUS.state === 'caught' || GAME_STATUS.state === 'over') ? camTarget.z : GAME_STATUS.z + camLead + rushV * 2.5;
+  camTarget.z += (tzc - camTarget.z) * lerp(6);
+  GAME_STATUS.shake *= Math.exp(-7 * dt);
+  const sh = GAME_STATUS.shake * (REDUCED.matches ? 0.3 : 1);
+  const ox = (Math.random() - 0.5) * sh;
+  const oy = (Math.random() - 0.5) * sh;
+  const oz = (Math.random() - 0.5) * sh;
+  GAME_STATUS.camY += (heightAt(camTarget.z) - GAME_STATUS.camY) * lerp(3);
+  const cy = GAME_STATUS.camY;
+  const horiz = CAM.dist * Math.cos(CAM.elev);
+  const offY = CAM.dist * Math.sin(CAM.elev);
+  const offX = horiz * Math.sin(CAM.yaw);
+  const offZ = horiz * Math.cos(CAM.yaw);
+  camera.position.set(camTarget.x + offX + ox, cy + offY + oy, camTarget.z + offZ + oz);
+  camera.lookAt(camTarget.x + ox, cy + oy, camTarget.z + oz);
+  sun.position.set(camTarget.x + SUN_OFF.x, cy + SUN_OFF.y, camTarget.z + SUN_OFF.z);
+  sun.target.position.set(camTarget.x, cy, camTarget.z);
+
+  // HUD lever mirrors the 3D lever: left handle up when tilt > 0
+  ui.beam.setAttribute('transform', `rotate(${(tilt * 24).toFixed(2)})`);
+  for (const side of ['L', 'R']){
+    const j = judge(sideAngle(side));
+    const ready = playing && GAME_STATUS.charged[side] && j === 'perfect';
+    (side === 'L' ? ui.padL : ui.padR).classList.toggle('ready', ready);
+    const fill = j === 'wrong' ? COLORS.lever_wrong
+				: ready ? COLORS.lever_ready
+				: GAME_STATUS.charged[side] ? COLORS.lever_charged 
+				: COLORS.lever_default;
+    (side === 'L' ? ui.hL : ui.hR).setAttribute('fill', fill);
+    if (judgeTimers[side] > 0){ judgeTimers[side] -= dt; if (judgeTimers[side] <= 0) (side === 'L' ? ui.judgeL : ui.judgeR).classList.remove('show'); }
+  }
+  ui.charge.classList.toggle('show', charging);
+  ui.danger.classList.toggle('flash', charging);
+  if (playing){
+    ui.distN.textContent = Math.max(0, Math.floor(GAME_STATUS.z));
+    ui.dangerFill.style.width = (danger * 100).toFixed(1) + '%';
+    ui.dangerFill.style.background = danger > 0.7 || charging ? 'var(--danger)' : 'var(--sun)';
+    ui.vignette.style.opacity = (danger * danger * 0.9).toFixed(3);
+    if (DEBUG){
+      ui.spd.textContent = GAME_STATUS.speed.toFixed(1);
+      ui.acc.textContent = accuracy();
+      ui.grd.textContent = Math.round(GAME_STATUS.grade * 100);
+      ui.chg.textContent = ch.phase === 'idle' ? (GAME_STATUS.z < TUNE.chargeFrom ? '-' : ch.next.toFixed(1) + 's') : ch.phase;
+    }
+    const tag = GAME_STATUS.grade > 0.07 ? 'up' : GAME_STATUS.grade < -0.07 ? 'down' : '';
+    if (tag !== GAME_STATUS.slopeTag){
+      GAME_STATUS.slopeTag = tag;
+      ui.slope.className = tag ? 'show ' + tag : '';
+    }
+  } else if (GAME_STATUS.state !== 'caught'){
+    ui.vignette.style.opacity = 0;
+    if (GAME_STATUS.slopeTag){ GAME_STATUS.slopeTag = ''; ui.slope.className = ''; }
+  }
+}
+
+// Corner buttons: pause only while playing, icons follow pause / mute state.
+let btnState = '';
+// Aggiorna icone e visibilità dei pulsanti quando cambia lo stato di gioco.
+function syncButtons(){
+  const muted = snd.isMuted();
+  const s = GAME_STATUS.state + GAME_STATUS.paused + muted;
+  if (s === btnState) return;
+  btnState = s;
+  //ui.pauseBtn.classList.toggle('hide', GAME_STATUS.state !== 'playing');
+  ui.pauseIcon.hidden = GAME_STATUS.paused;
+  ui.playIcon.hidden = !GAME_STATUS.paused;
+  ui.muteOnIcon.hidden = muted;
+  ui.muteOffIcon.hidden = !muted;
+}
+
+// Costruisce tutti gli inseguitori e attiva quello scelto per la schermata iniziale.
+function initChasers() {
+  for (const id in BUILD) makeRig(+id);
+  rx = RIGS[creature];
+  REX_REACH = rx.reach;
+
+  for (const id in RIGS) {
+    RIGS[id].root.visible = +id === creature;
+  }
+}
+
+// ---------- LOOP ----------
+
+// Prepara lo stato iniziale e avvia il primo frame.
+function init() {
+  document.documentElement.classList.toggle('touch', TOUCH);
+  document.documentElement.classList.toggle('debug', DEBUG);
+  GAME_STATUS.best = loadBest();
+  snd = createSound();
+  initThree();
+  resize();
+  window.addEventListener('resize', resize);
+  initWorldBuffers();
+  initParticles();
+  initChasers();
+  initCar();
+  updateRiders();
+  initInput();
+  for (const side of ['L', 'R']) {
+    // Collega ogni etichetta già presente nel markup al relativo giudizio.
+    (side === 'L' ? ui.judgeL : ui.judgeR).querySelectorAll('[data-j]').forEach((span) => {
+      judgeSpans[side][span.dataset.j] = span;
+    });
+  }
+  buildWorld();
+  showCard('title');
+  last = performance.now();
+  requestAnimationFrame(loop);
+}
+
+// Esegue un frame e pianifica il successivo.
+function loop(now) {
+	const dt = clamp((now - last) / 1000, 0, 0.05); 
+	last = now;
+	if (!GAME_STATUS.paused){
+		update(dt);
+		animate(dt, now / 1000);
+		flushDirty();
+		renderer.render(scene, camera);
+		if (DEBUG){
+			const inf = renderer.info;
+			ui.dcl.textContent = inf.render.calls;
+			ui.tri.textContent = inf.render.triangles;
+			ui.geo.textContent = inf.memory.geometries;
+			ui.shd.textContent = inf.programs ? inf.programs.length : 0;
+		}
+	} else if (needRender) {
+		renderer.render(scene, camera);
+	}
+	needRender = false;
+	syncButtons();
+  requestAnimationFrame(loop);
+}
+
+init();
+})();
+</script>
+	</body>
+</html>
