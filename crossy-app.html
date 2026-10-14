@@ -647,9 +647,16 @@
 	const dirLight = new THREE.DirectionalLight(currentSlot.color, currentSlot.intensity);
 	dirLight.position.set(15, 25, 10);
 	dirLight.castShadow = true;
-	dirLight.shadow.mapSize.width = 2048;
-	dirLight.shadow.mapSize.height = 2048;
-	const dShadow = 15;
+	
+	// rilevamento mobile (touch + schermo piccolo / UA)
+	const IS_MOBILE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) 
+		|| (navigator.maxTouchPoints > 1 && Math.min(screen.width, screen.height) < 900);
+	
+	const SHADOW_MAP_SIZE = IS_MOBILE ? 1024 : 2048;
+	dirLight.shadow.mapSize.width = SHADOW_MAP_SIZE;
+	dirLight.shadow.mapSize.height = SHADOW_MAP_SIZE;
+	
+	const dShadow = IS_MOBILE ? 12 : 15;
 	dirLight.shadow.camera.left = -dShadow;
 	dirLight.shadow.camera.right = dShadow;
 	dirLight.shadow.camera.top = dShadow;
@@ -8028,7 +8035,7 @@ walkSideLimbs = -walkSideLimbs;
 								mesh: vehicle,
 								speed: lane.speed,
 								z: lane.z,
-								width: isTruck ? 2.8 : 1.5,
+								width: isTruck ? 2.8 : isBus ? 3.0 : 1.5,
 								isPolice: !isTruck && isPolice
 							});
 						}
@@ -8162,6 +8169,7 @@ walkSideLimbs = -walkSideLimbs;
 						// Se siamo il T-Rex, distruggiamo l'auto invece di morire!
 						destroyCarAt(i, car);
 						playSound('smashSound');
+						continue;//l'auto non esiste piu!!!
 					} else {
 						handleDeath();
 					}
