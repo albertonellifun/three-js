@@ -739,13 +739,16 @@ button {
 	}
 
 	function initThree() {
+		const mobile = matchMedia('(hover: none) and (pointer: coarse)').matches;
+		
 		renderer = new THREE.WebGLRenderer({
 			canvas: $('#canvas'),
-			antialias: true
+			antialias: !mobile
 		});
-		renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+		renderer.setPixelRatio(mobile ? 1 : Math.min(devicePixelRatio || 1, 2));
 		renderer.shadowMap.enabled = true;
-		renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+		renderer.shadowMap.type = mobile ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+		
 		scene = new THREE.Scene();
 		scene.background = new THREE.Color(0xaaddff);
 		camera = new THREE.OrthographicCamera(-16, 16, 16, -16, 0.1, 140);
@@ -753,7 +756,8 @@ button {
 		scene.add(new THREE.HemisphereLight(0xffffff, 0x7788aa, 0.62));
 		sun = new THREE.DirectionalLight(0xffffee, 0.8);
 		sun.castShadow = true;
-		const sm = matchMedia('(hover: none) and (pointer: coarse)').matches ? 1024 : 2048;
+		
+		const sm = mobile ? 1024 : 2048;
 		sun.shadow.mapSize.set(sm, sm);
 		Object.assign(sun.shadow.camera, {
 			left: -24,
@@ -835,6 +839,8 @@ button {
 
 	function initWorld() {
 		ground = makeInst(N);
+		ground.castShadow = false;
+		
 		trunks = makeInst(N);
 		leavesA = makeInst(N);
 		leavesB = makeInst(N);
@@ -2863,6 +2869,8 @@ button {
 	}
 
 	// ============ ANIMAZIONE ============
+	const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+	
 	function animate(dt, time) {
 		const lerp = k => Math.min(1, dt * k);
 		const gap = S.z - CAR_BACK - (S.monsterZ + MONSTER_REACH);
@@ -3014,7 +3022,7 @@ button {
 		const tz = (S.state === 'caught' || S.state === 'over') ? camTarget.z : S.z + camLead + rushV * 2.5;
 		camTarget.z += (tz - camTarget.z) * lerp(6);
 		S.shake *= Math.exp(-7 * dt);
-		const sh = S.shake * (matchMedia('(prefers-reduced-motion: reduce)').matches ? 0.3 : 1);
+		const sh = S.shake * (REDUCED ? 0.3 : 1);
 		const ox = (Math.random() - 0.5) * sh;
 		const oy = (Math.random() - 0.5) * sh;
 		const oz = (Math.random() - 0.5) * sh;
