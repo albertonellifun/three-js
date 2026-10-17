@@ -591,7 +591,7 @@ button {
 		chargePostpone: 3,
 	};
 	
-	const BIOME_LEN = 50;   // meters per biome; the blend happens in the last 40% of each one
+	const BIOME_LEN = 80;   // meters per biome; the blend happens in the last 40% of each one
 	const BIOMES = [
 		// spring
 		{ sun: 0xffffee, grassA: 0x99ee66, grassB: 0x88dd66, dirt: 0xeebb77, hillA: 0x77cc55, hillB: 0x66cc55, leaves: [0x44bb55, 0x339944, 0x55cc55, 0x33aa66], rock: 0xbbbbcc, rockTop: 0xccccdd, sky: 0xaaddff, gravel: 0xddccaa, rail: 0x888888, tie: 0x442211, trunk: 0x885533 },
@@ -619,10 +619,10 @@ button {
 
 	const _ca = new THREE.Color(), _cb = new THREE.Color();
 	const mix = (a, b, t) => _ca.set(a).lerp(_cb.set(b), t).getHex();
-	const biomeStart = rint(0, BIOMES.length);
+	const biomeStart = rint(0, BIOMES.length * BIOME_LEN - 1);
 	
 	function paletteAt(z) {
-	  const f = biomeStart + Math.max(0, z) / BIOME_LEN;
+	  const f = biomeStart + Math.max(0, z + biomeStart) / BIOME_LEN;
 	  const i = Math.floor(f);
 	  const t = clamp((f - i - 0.6) / 0.4, 0, 1);
 	  const A = BIOMES[i % BIOMES.length];
@@ -645,7 +645,7 @@ button {
 	const CAM = {
 		yaw: 0.4,
 		elev: 0.5,
-		zoom: 1.2,
+		zoom: 1.1,
 		dist: Math.hypot(3.2, 14, 9)
 	};
 	const JUDGE_TXT = { perfect: 'Perfect!', good: 'Good', late: 'Late', wrong: 'Miss' };
@@ -1264,7 +1264,6 @@ button {
 		let i;
 		do {
 			i = rint(0, list.length - 1);
-			console.log(i + '>>>' + list.length);
 		} while (list.length > 1 && i === lastPal[key]);
 		lastPal[key] = i;
 		return list[i];
