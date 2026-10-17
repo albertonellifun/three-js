@@ -10,7 +10,7 @@
 	--ink: #232;
 	--sun: #fd5;
 	--danger: #f54;
-	--paper-white: #ffffff;
+	--paper-white: #ffffffcc;
 	--paper-green: #99ffbb;
 	--paper-yellow: #ffff88;
 	--paper-red: #ff5544;
@@ -619,9 +619,10 @@ button {
 
 	const _ca = new THREE.Color(), _cb = new THREE.Color();
 	const mix = (a, b, t) => _ca.set(a).lerp(_cb.set(b), t).getHex();
-
+	const biomeStart = rint(0, BIOMES.length);
+	
 	function paletteAt(z) {
-	  const f = Math.max(0, z) / BIOME_LEN;
+	  const f = biomeStart + Math.max(0, z) / BIOME_LEN;
 	  const i = Math.floor(f);
 	  const t = clamp((f - i - 0.6) / 0.4, 0, 1);
 	  const A = BIOMES[i % BIOMES.length];
@@ -895,9 +896,9 @@ button {
 			g: 0,
 			len: rint(45 - 35 * k, 90 - 70 * k)
 		});
-		const g = rnd(0.12, 0.12 + (TUNE.gradeMax - 0.12) * k),
-			len = rint(7, 13),
-			flat = {
+		const g = rnd(0.12, 0.12 + (TUNE.gradeMax - 0.12) * k);
+		const len = rint(7, 13);
+		const flat = {
 				g: 0,
 				len: rint(2, 4)
 			};
@@ -943,8 +944,8 @@ button {
 	}
 
 	function heightAt(z) {
-		const z0 = Math.floor(z),
-			f = z - z0;
+		const z0 = Math.floor(z);
+		const f = z - z0;
 		return rowH(z0) * (1 - f) + rowH(z0 + 1) * f;
 	}
 
@@ -1034,8 +1035,8 @@ button {
 		const hPrev = HG.h;
 		row.h = nextHeight(z);
 		row.g = row.h - hPrev;
-		const base = Math.floor(row.h * 2) / 2,
-			cells = row.cells;
+		const base = Math.floor(row.h * 2) / 2;
+		const cells = row.cells;
 		cells.fill(0);
 		for (let x = -HALF; x <= HALF; x++) {
 			const ax = Math.abs(x);
@@ -1194,7 +1195,7 @@ button {
 			hat: pick([0xeecc88, 0xee6655, 0x2288cc, 0x22cc66, 0xee5500]),
 			cap: Math.random() < 0.5,
 			hairStyle: pick(['short', 'long', 'mohawk']),
-			skin: pick([0xffccee, 0xeebb88, 0xbb8855, 0x884422]),
+			skin: pick([0xffccbb, 0xeebb88, 0xbb8855, 0x884422]),
 		};
 		const r = {
 			root: group(x, 0.67, -0.62, car.root)
@@ -1262,7 +1263,8 @@ button {
 	function pickPal(key, list) {
 		let i;
 		do {
-			i = (Math.random() * list.length) | 0;
+			i = rint(0, list.length - 1);
+			console.log(i + '>>>' + list.length);
 		} while (list.length > 1 && i === lastPal[key]);
 		lastPal[key] = i;
 		return list[i];
@@ -1333,7 +1335,8 @@ button {
 		rx.legs = [];
 		for (const sx of [1, -1]) {
 			const hip = group(0.8 * sx, 2.0, -0.3, rx.root);
-			box(0.85, 1.1, 1.1, R.SKIN, 0, -0.45, 0, hip);
+			box(0.85, 1.3, 1.1, R.SKIN, 0, -0.30, 0, hip);//y=1.1, -0.45
+			//box(0.85, 1.1, 1.1, R.SKIN, 0, -0.45, 0, hip);//y=1.1, -0.45
 			const knee = group(0, -0.95, 0.1, hip);
 			box(0.6, 0.8, 0.6, R.SKIN, 0, -0.35, -0.05, knee);
 			box(0.85, 0.28, 1.15, R.DARK, 0, -0.84, 0.2, knee);
@@ -1351,11 +1354,10 @@ button {
 		for (let k = 0; k < 5; k++) box(0.3, 0.28, 0.4, R.DARK, 0, 3.86, -1.1 + k * 0.55, rx.torso);
 		box(1.3, 1.3, 1.1, R.SKIN, 0, 3.55, 1.55, rx.torso);
 		for (const sx of [1, -1]) {
-			box(0.26, 0.5, 0.26, R.SKIN, 0.98 * sx, 2.72, 1.25, rx.torso);
-			box(0.22, 0.22, 0.42, R.SKIN, 0.98 * sx, 2.45, 1.45, rx.torso);
-			////box(0.1, 0.1, 0.14, R.CLAW, 0.98 * sx, 2.42, 1.72, rx.torso, false);//artiglio
+			box(0.26, 0.5, 0.26, R.SKIN, 0.98 * sx, 2.72, 1.25, rx.torso);//1.25
+			box(0.22, 0.22, 0.42, R.SKIN, 0.98 * sx, 2.45, 1.45, rx.torso);//1.45
 			for (const dx of [-0.06, 0.06]) { // 2 unghie rivolte verso il basso
-				const claw = box(0.08, 0.16, 0.08, R.CLAW, 0.98 * sx + dx, 2.3, 1.6, rx.torso, false);
+				const claw = box(0.08, 0.16, 0.08, R.CLAW, 0.98 * sx + dx, 2.3, 1.6, rx.torso, false);//1.6
 				claw.rotation.x = 0.25; // leggermente curve indietro
 			}
 		}
@@ -2819,8 +2821,8 @@ button {
 		else if (dash) sp += TUNE.chargeBoost * clamp(ch.t / TUNE.chargeEaseIn, 0, 1) * clamp((TUNE.chargeDur - ch.t) / TUNE.chargeEaseOut, 0, 1);
 		if (gap > TUNE.rubberBand) sp += (gap - TUNE.rubberBand) * 0.9;
 		S.monsterZ += sp * dt;
-		const z0 = Math.floor(S.monsterZ - 1.2),
-			z1 = Math.ceil(S.monsterZ + MONSTER_REACH - 0.2);
+		const z0 = Math.floor(S.monsterZ - 1.2);
+		const z1 = Math.ceil(S.monsterZ + MONSTER_REACH - 0.2);
 		for (let z = z0; z <= z1; z++)
 			for (let x = -2; x <= 2; x++) smashCell(x, z);
 		if (dash && Math.random() < dt * 30) dust((Math.random() - 0.5) * 2.4, heightAt(S.monsterZ), S.monsterZ - 0.3 - Math.random(), 1, 0.4);
