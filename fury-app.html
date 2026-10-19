@@ -426,10 +426,16 @@ button {
 }
 
 .card .left.big {
-	font-size: 64px;
+	font-size: 20px;
 	font-weight: 900;
 	line-height: 1;
-	margin-top: 24px;
+	margin-top: 12px;
+}
+
+.card[data-card="info"] {
+	pointer-events: auto;
+	touch-action: pan-y;
+	overscroll-behavior: contain;
 }
 </style>
 </head>
@@ -518,6 +524,7 @@ button {
 		<p class="left">Drive your rail cart through a 3D world and escape a relentless horde of creatures—including a Werewolf, T-Rex, charging Rhino, and giant Gorilla—while dodging an out-of-control steam train. Stay alert, avoid hazards, and survive as long as you can!</p>
 		<p class="left big">👉 Disclaimer, Credits & Licenses</p>
 		<p class="left">This mini-game is built with <a href="https://threejs.org/" target="_blank" rel="noopener">Three.js</a> (released under the <a href="https://github.com/mrdoob/three.js/blob/dev/LICENSE" target="_blank" rel="noopener">MIT License</a>) and uses simple stylized 3D visuals for a playful arcade experience. Performance and rendering quality may vary depending on your device and graphics support.</p>			
+		<button id="play-btn" data-action="info">✕ CLOSE</button>
 	</div>
 </div>
 
@@ -2384,6 +2391,7 @@ button {
 		const oldReach = MONSTER_REACH;
 		setCreature(n);
 		if (S.state === 'playing') S.monsterZ += oldReach - MONSTER_REACH; // la punta del muso resta dov'era
+		if (S.paused) animate(0, performance.now() / 1000);                // in pausa: posiziona subito il nuovo rig
 	}
 
 	// ============ UI ============
@@ -2640,7 +2648,8 @@ button {
 
 	addEventListener('pointerdown', e => {
 		if (e.button > 0) return;
-		if (e.target.closest && e.target.closest('a')) return;// lascia passare i link
+		const t = e.target.closest ? e.target : null;
+		if (t && t.closest('.card[data-card="info"]') && !t.closest('[data-action]')) return;   // scroll e link, ma non il pulsante close
 		e.preventDefault();
 		const b = e.target.closest && e.target.closest('[data-action],[data-hold]');
 		if (!b) {
@@ -2689,9 +2698,12 @@ button {
 	addEventListener('keyup', e => {
 		if (HOLD[e.code]) held.delete(HOLD[e.code]);
 	});
-	addEventListener('touchmove', e => e.preventDefault(), {
-		passive: false
-	});
+	
+	addEventListener('touchmove', e => {
+		if (e.target.closest && e.target.closest('.card[data-card="info"]')) return;
+		e.preventDefault();
+	}, { passive: false });
+	
 	addEventListener('contextmenu', e => e.preventDefault());
 	addEventListener('blur', () => {
 		held.clear();
