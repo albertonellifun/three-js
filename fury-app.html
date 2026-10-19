@@ -31,6 +31,7 @@
 html,body {
 	width: 100%;
 	height: 100%;
+	height: 100dvh;
 	overflow: hidden;
 	background: #adf;
 	font-family: 'Segoe UI',system-ui,sans-serif;
@@ -44,8 +45,8 @@ html,body {
 canvas {
 	position: fixed;
 	inset: 0;
-	width: 100vw;
-	height: 100vh;
+	width: 100%;
+	height: 100%;
 	display: block;
 }
 
@@ -774,6 +775,25 @@ button {
 		parent.add(m);
 		return m;
 	}
+	
+	// cuneo (prisma triangolare): origine al centro del bordo posteriore in basso,
+	// h = altezza dietro, d = lunghezza in avanti (z+), la rampa sale verso dietro
+	function wedgeGeo(w, h, d) {
+		const hw = w / 2;
+		const a0 = [-hw, 0, 0], b0 = [-hw, 0, d], c0 = [-hw, h, 0];
+		const a1 = [hw, 0, 0], b1 = [hw, 0, d], c1 = [hw, h, 0];
+		const tris = [
+			a0, b0, c0,          // lato sinistro
+			a1, c1, b1,          // lato destro
+			a0, a1, b1,  a0, b1, b0,   // fondo
+			a0, c0, c1,  a0, c1, a1,   // retro
+			b0, b1, c1,  b0, c1, c0    // rampa
+		];
+		const g = new THREE.BufferGeometry();
+		g.setAttribute('position', new THREE.Float32BufferAttribute(tris.flat(), 3));
+		g.computeVertexNormals(); // vertici non condivisi = facce piatte
+		return g;
+	}
 
 	function group(x, y, z, parent) {
 		const g = new THREE.Group();
@@ -817,13 +837,31 @@ button {
 		unitBox = new THREE.BoxGeometry(1, 1, 1);
 	}
 
-	function resize() {
+	function resizeOLD() {
 		const w = innerWidth,
 			h = innerHeight,
 			aspect = w / h;
 		renderer.setSize(w, h);
 		const vh = Math.max(16, 12.5 / aspect),
 			vw = vh * aspect;
+		Object.assign(camera, {
+			left: -vw / 2,
+			right: vw / 2,
+			top: vh / 2,
+			bottom: -vh / 2
+		});
+		camera.updateProjectionMatrix();
+		camLead = aspect < 1 ? 3.5 : 1.2;
+	}
+
+	function resize() {
+		const c = renderer.domElement;
+		const w = c.clientWidth || innerWidth;
+		const h = c.clientHeight || innerHeight;
+		const aspect = w / h;
+		renderer.setSize(w, h, false); // false: non toccare lo style, ci pensa il CSS
+		const vh = Math.max(16, 12.5 / aspect);
+		const vw = vh * aspect;
 		Object.assign(camera, {
 			left: -vw / 2,
 			right: vw / 2,
@@ -1243,6 +1281,7 @@ button {
 		const r = {
 			root: group(x, 0.67, -0.62, car.root)
 		};
+		r.root.rotation.order = 'YXZ'; // prima il ribaltamento, poi la direzione sul terreno
 		r.body = group(0, 0, 0, r.root);
 		for (const sx of [1, -1]) {
 			const leg = group(0.13 * sx, 0.45, 0, r.body);
@@ -1652,10 +1691,17 @@ button {
 
 		// spazzabisonti: trave paraurti + cuneo a listelli + puntoni + gancio (compatto)
 		box(2.4, 0.5, 0.45, R.BODY2, 0, 1.0, 3.1, rx.torso); // trave paraurti spessa
-		for (let k = 0; k < 5; k++) { // listelli del cuneo
+		/*for (let k = 0; k < 5; k++) { // listelli del cuneo
 			const wdt = 2.3 * (1 - k / 6);
 			box(wdt, 0.24, 0.45, k % 2 ? R.BRASS : R.RED, 0, 0.98 - k * 0.14, 3.4 + k * 0.17, rx.torso);
-		}
+		}*/
+		// punta a cuneo solida
+		const wedge = new THREE.Mesh(wedgeGeo(2.8, 1.0, 1.0), lam(R.RED));
+		wedge.position.set(0, 0.35, 3.3);
+		wedge.castShadow = wedge.receiveShadow = true;
+		rx.torso.add(wedge);
+		// bordo/punta in ottone
+		box(2.8, 0.12, 0.12, R.BRASS, 0, 0.41, 4.27, rx.torso, false);
 
 		rx.tail = group(0, 2.0, -5.4, rx.torso);
 		rx.t2 = group(0, 0, -0.1, rx.tail);
@@ -2501,7 +2547,8 @@ button {
 			shake: 0,
 			caughtT: 0,
 			chargePose: 0,
-			dashPose: 0
+			dashPose: 0,
+			land: null//i riders stramazzano casualmente al suolo, ghghgh!!!
 		});
 		S.charged.L = S.charged.R = true;
 		S.charge = {
@@ -2861,6 +2908,22 @@ button {
 	// ============ ANIMAZIONE ============
 	const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 	
+	function makeLanding() {
+		const land = {};
+		for (const side of ['L', 'R']) {
+			//const sg = Math.random() < 0.5 ? 1 : -1;
+			const sg = side === 'L' ? 1 : -1; // ognuno cade dal proprio lato
+			land[side] = {
+				x: sg * rnd(1.6, 3.0),
+				z: rnd(-0.8, 2.4),
+				face: Math.random() < 0.5 ? -Math.PI / 2 : Math.PI / 2,
+				yaw: rnd(0, TAU),
+				flip: sg * TAU * Math.random() * 0.5 //rint(1, 2)
+			};
+		}
+		return land;
+	}
+	
 	function animate(dt, time) {
 		const lerp = k => Math.min(1, dt * k);
 		const gap = S.z - CAR_BACK - (S.monsterZ + MONSTER_REACH);
@@ -2879,15 +2942,17 @@ button {
 		car.root.rotation.z = Math.sin(time * 30) * 0.004 * Math.min(1, S.speed / 6);
 
 		// rider
+		const down = S.state === 'caught' || S.state === 'over';
 		for (const side of ['L', 'R']) {
 			const r = riders[side];
 			if (!r.root.visible) continue;
-			if (S.state !== 'caught') {
+			//if (S.state !== 'caught') {
+			if (!down) {
 				const h = side === 'L' ? tilt : -tilt;
-				const hy = 1.45 + h * 0.4 - 0.67,
-					base = 0.86 + r.body.position.y,
-					dyOuter = hy - base,
-					rest = 1.45 - 0.67 - base;
+				const hy = 1.45 + h * 0.4 - 0.67;
+				const base = 0.86 + r.body.position.y;
+				const dyOuter = hy - base;
+				const rest = 1.45 - 0.67 - base;
 				for (const arm of r.arms) {
 					const inner = Math.sign(arm.position.x) !== Math.sign(r.root.position.x);
 					const dy = inner ? rest + (dyOuter - rest) * 0.5 : dyOuter;
@@ -2901,7 +2966,8 @@ button {
 			r.head.rotation.y += (look - r.head.rotation.y) * lerp(10);
 			r.mouth.scale.y += (0.06 * (1 + Math.max(danger, charging ? 0.6 : 0) * 2.5) - r.mouth.scale.y) * lerp(8);
 		}
-		if (S.state === 'caught') {
+		
+		/*if (S.state === 'caught') {
 			const k = Math.min(1, S.caughtT / 0.25);
 			for (const side of ['L', 'R']) {
 				const r = riders[side];
@@ -2909,14 +2975,35 @@ button {
 				r.root.rotation.z += dt * (side === 'L' ? 10 : -10);
 				if (S.caughtT > 0.3) r.root.visible = false;
 			}
+		}*/
+		if (down) {
+			//scaraventati a terra
+			if (!S.land) S.land = makeLanding();
+			
+			const k = Math.min(1, S.caughtT / 0.6);   // durata del volo === 0.6s
+			const e = 1 - (1 - k) * (1 - k);          // ease-out
+			const hh = heightAt(S.z);
+			const gy = Math.floor(hh * 2) / 2 - hh;   // quota del terreno accanto ai binari, in coordinate della car
+			
+			for (const side of ['L', 'R']) {
+				const r = riders[side];
+				const L = S.land[side];
+				const x0 = side === 'L' ? 0.8 : -0.8;
+				r.root.position.x = x0 + (L.x - x0) * e;
+				r.root.position.z = -0.62 + (L.z + 0.62) * e;
+				r.root.position.y = 0.67 + (gy + 0.1 - 0.67) * e + Math.sin(Math.PI * k) * 1.8;
+				r.root.rotation.x = L.face * e;
+				r.root.rotation.y = L.yaw * e;
+				r.root.rotation.z = L.flip * (1 - e) * 0 + L.flip * e; // giravolta in volo
+			}
 		}
 
 		// mostro
 		S.chargePose += ((playing && ch.phase === 'warn' ? 1 : 0) - S.chargePose) * lerp(8);
 		S.dashPose += ((playing && ch.phase === 'dash' ? 1 : 0) - S.dashPose) * lerp(8);
-		const cp = S.chargePose,
-			dp = S.dashPose,
-			ph = S.monsterPhase;
+		const cp = S.chargePose;
+		const dp = S.dashPose;
+		const ph = S.monsterPhase;
 		S.monsterPitch += (-Math.atan(gradeAt(S.monsterZ)) * 0.6 - S.monsterPitch) * lerp(8);
 		rx.root.position.set(0, heightAt(S.monsterZ), S.monsterZ);
 		rx.root.rotation.x = S.monsterPitch;
@@ -3114,6 +3201,8 @@ button {
 		initThree();
 		resize();
 		addEventListener('resize', resize);
+		addEventListener('orientationchange', () => setTimeout(resize, 200));
+		if (window.visualViewport) visualViewport.addEventListener('resize', resize);
 		initWorld();
 		initFx();
 		initCar();
