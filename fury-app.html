@@ -420,6 +420,17 @@ button {
 	color: inherit;
 	text-decoration: underline;
 }
+
+.card .left {
+	text-align: left;
+}
+
+.card .left.big {
+	font-size: 64px;
+	font-weight: 900;
+	line-height: 1;
+	margin-top: 24px;
+}
 </style>
 </head>
 <body>
@@ -491,11 +502,22 @@ button {
 		<button id="play-btn">▶ RESUME</button>
 	</div>
 	<div class="card" data-card="info" hidden>
-		<h1>Fury on the Rails</h1>
-		<p class="big">Info</p>
-		<p>Drive your rail cart through a 3D world and escape a relentless horde of creatures—including a Werewolf, T-Rex, charging Rhino, and giant Gorilla—while dodging an out-of-control steam train. Stay alert, avoid hazards, and survive as long as you can!</p>
-		<p class="big">Disclaimer, Credits & Licenses</p>
-		<p>This mini-game is built with <a href="https://threejs.org/" target="_blank" rel="noopener">Three.js</a> (released under the <a href="https://github.com/mrdoob/three.js/blob/dev/LICENSE" target="_blank" rel="noopener">MIT License</a>) and uses simple stylized 3D visuals for a playful arcade experience. Performance and rendering quality may vary depending on your device and graphics support.</p>			
+		<!--h1>Fury on the Rails</h1-->
+		<h1 class="logo" aria-label="Fury on the Rails">
+			<span class="l1" data-t="FURY">FURY</span>
+			<!--span class="l2" data-t="ON THE">ON THE</span-->
+			<b class="row2">
+				<i class="rail"></i>
+				<span class="l2" data-t="ON THE">ON THE</span>
+				<i class="rail r"></i>
+			</b>
+			<span class="l3" data-t="RAILS">RAILS</span>
+		</h1>
+		
+		<p class="left big">👉 Info</p>
+		<p class="left">Drive your rail cart through a 3D world and escape a relentless horde of creatures—including a Werewolf, T-Rex, charging Rhino, and giant Gorilla—while dodging an out-of-control steam train. Stay alert, avoid hazards, and survive as long as you can!</p>
+		<p class="left big">👉 Disclaimer, Credits & Licenses</p>
+		<p class="left">This mini-game is built with <a href="https://threejs.org/" target="_blank" rel="noopener">Three.js</a> (released under the <a href="https://github.com/mrdoob/three.js/blob/dev/LICENSE" target="_blank" rel="noopener">MIT License</a>) and uses simple stylized 3D visuals for a playful arcade experience. Performance and rendering quality may vary depending on your device and graphics support.</p>			
 	</div>
 </div>
 
