@@ -414,6 +414,12 @@ button {
 .rail.r {
 	transform: rotate(-5deg) scaleX(1.52);
 }
+
+.card a {
+	pointer-events: auto;
+	color: inherit;
+	text-decoration: underline;
+}
 </style>
 </head>
 <body>
@@ -446,6 +452,7 @@ button {
   <button class="tb" data-action="mute" id="muteBtn">🔊</button>
   <button class="tb" data-action="pause" id="pauseBtn">⏸</button>
   <button class="tb" data-action="fps" id="fpsBtn">🕵️</button>
+  <button class="tb" data-action="info" id="infoBtn">?</button>
 </div>
 
 <div id="fps" hidden></div>
@@ -482,6 +489,13 @@ button {
 	<div class="card" data-card="pause" hidden>
 		<h1>PAUSED</h1>
 		<button id="play-btn">▶ RESUME</button>
+	</div>
+	<div class="card" data-card="info" hidden>
+		<h1>Fury on the Rails</h1>
+		<p class="big">Info</p>
+		<p>Drive your rail cart through a 3D world and escape a relentless horde of creatures—including a Werewolf, T-Rex, charging Rhino, and giant Gorilla—while dodging an out-of-control steam train. Stay alert, avoid hazards, and survive as long as you can!</p>
+		<p class="big">Disclaimer, Credits & Licenses</p>
+		<p>This mini-game is built with <a href="https://threejs.org/" target="_blank" rel="noopener">Three.js</a> (released under the <a href="https://github.com/mrdoob/three.js/blob/dev/LICENSE" target="_blank" rel="noopener">MIT License</a>) and uses simple stylized 3D visuals for a playful arcade experience. Performance and rendering quality may vary depending on your device and graphics support.</p>			
 	</div>
 </div>
 
@@ -1270,62 +1284,155 @@ button {
 	}
 
 
+	// Costruisce il modello e le parti animate del Mega-Rex.
+	const MEGAREX_PALETTE = [
+		// nero carbone, creste rosso sangue
+		{ SKIN: 0x222222, DARK: 0x551111, BELLY: 0x554444, TOOTH: 0xffeedd, MOUTH: 0x771111, TONGUE: 0xaa2233, PUPIL: 0x000000, CLAW: 0xddccbb, EYE: 0xff3300 },
+		// nero viola, creste viola acceso
+		{ SKIN: 0x1a1426, DARK: 0x5522aa, BELLY: 0x4a3a66, TOOTH: 0xeeeeff, MOUTH: 0x550033, TONGUE: 0x992266, PUPIL: 0x000000, CLAW: 0xccbbee, EYE: 0xdd44ff },
+		// verde palude
+		{ SKIN: 0x445522, DARK: 0x223311, BELLY: 0x887744, TOOTH: 0xeeeebb, MOUTH: 0x661111, TONGUE: 0xaa4433, PUPIL: 0x111100, CLAW: 0xccccaa, EYE: 0xccff00 },
+		// grigio ardesia
+		{ SKIN: 0x555566, DARK: 0x333344, BELLY: 0x888899, TOOTH: 0xffffff, MOUTH: 0x771122, TONGUE: 0xbb4455, PUPIL: 0x000000, CLAW: 0xddddee, EYE: 0xffaa00 },
+		// bordeaux scuro
+		{ SKIN: 0x662222, DARK: 0x331111, BELLY: 0xaa7766, TOOTH: 0xffeedd, MOUTH: 0x440808, TONGUE: 0xcc3333, PUPIL: 0x000000, CLAW: 0xeeddcc, EYE: 0xffdd00 },
+		// blu notte
+		{ SKIN: 0x223355, DARK: 0x112244, BELLY: 0x667799, TOOTH: 0xeeffff, MOUTH: 0x551133, TONGUE: 0xaa3355, PUPIL: 0x000000, CLAW: 0xccddee, EYE: 0x44ddff },
+		// arancio vulcano
+		{ SKIN: 0xdd6633, DARK: 0x882211, BELLY: 0xffddaa, TOOTH: 0xffffee, MOUTH: 0x992222, TONGUE: 0xdd5544, PUPIL: 0x111111, CLAW: 0xffeedd, EYE: 0xffee00 },
+		// verde classico
+		{ SKIN: 0x66aa44, DARK: 0x336622, BELLY: 0xddcc88, TOOTH: 0xffffee, MOUTH: 0x992222, TONGUE: 0xdd5544, PUPIL: 0x111111, CLAW: 0xffeedd, EYE: 0xffaa00 }
+	];
+	
+	function buildMegaRex() {
+		const R = pickPal('megarex', MEGAREX_PALETTE);
+		const EYE = R.EYE;
+		const rx = {};
+		rx.root = new THREE.Group();
+		scene.add(rx.root);
+		rx.legs = [];
+
+		// zampe: coscia -> ginocchio -> stinco -> caviglia -> piede
+		for (const sx of [1, -1]) {
+			const hip = group(0.95 * sx, 2.7, -0.2, rx.root);
+			box(1.0, 1.7, 1.2, R.SKIN, 0, -0.55, 0.1, hip); // coscia massiccia
+			const knee = group(0, -1.25, 0.4, hip);
+			const sh = group(0, 0, 0, knee);
+			sh.rotation.x = 0.55; // stinco inclinato all'indietro
+			box(0.7, 1.4, 0.7, R.SKIN, 0, -0.6, 0, sh);
+			const ankle = group(0, -1.3, 0, sh);
+			const foot = group(0, 0, 0, ankle);
+			foot.rotation.x = -0.55; // compensa lo stinco: il piede resta piatto
+			/*box(1.0, 0.3, 1.4, R.DARK, 0, -0.19, 0.45, foot);
+			for (const cx of [-0.3, 0, 0.3]) {
+				box(0.26, 0.22, 0.5, R.DARK, cx, -0.2, 1.3, foot);
+				box(0.16, 0.14, 0.3, R.CLAW, cx, -0.22, 1.7, foot, false);
+			}*/
+			box(0.95, 0.34, 0.75, R.DARK, 0, -0.17, 0.05, foot);   // tallone
+			box(0.85, 0.26, 0.7, R.DARK, 0, -0.21, 0.7, foot);     // metatarso
+			for (const cx of [-0.32, 0, 0.32]) {
+				const toe = group(cx, -0.21, 1.0, foot);
+				toe.rotation.y = Math.sign(cx) * 0.35;              // dita divaricate
+				const len = cx === 0 ? 1.0 : 0.8;                   // la centrale è più lunga
+				box(0.3, 0.24, len, R.DARK, 0, 0, len / 2, toe);
+				const claw = box(0.2, 0.2, 0.45, R.CLAW, 0, -0.05, len + 0.1, toe, false);
+				claw.rotation.x = 0.4;                              // la punta punta verso il suolo
+			}
+			rx.legs.push({ hip, knee, ankle, sx, off: sx > 0 ? 0 : Math.PI });
+		}
+
+		// corpo
+		rx.torso = group(0, 0, 0, rx.root);
+		box(1.9, 1.9, 2.4, R.SKIN, 0, 3.4, -0.5, rx.torso); // bacino
+		box(1.9, 2.0, 2.0, R.SKIN, 0, 3.55, 1.1, rx.torso); // petto
+		box(1.6, 0.5, 3.6, R.BELLY, 0, 2.5, 0.3, rx.torso); // ventre
+		const neck = box(1.3, 1.5, 1.5, R.SKIN, 0, 4.2, 2.1, rx.torso);
+		neck.rotation.x = -0.35; // collo che sale in avanti
+		for (let k = 0; k < 7; k++) // cresta dorsale
+			box(0.3, 0.3 + (k % 2) * 0.12, 0.45, R.DARK, 0, k < 3 ? 4.5 : 4.7, -1.3 + k * 0.55, rx.torso, false);
+		for (const z of [-1.1, -0.4]) box(2.0, 0.95, 0.3, R.DARK, 0, 3.92, z, rx.torso, false); // strisce sul dorso
+		box(2.0, 1.04, 0.3, R.DARK, 0, 4.1, 1.2, rx.torso, false);
+
+		// braccia piccole con artigli
+		for (const sx of [1, -1]) {
+			const arm = group(0.95 * sx, 3.0, 2.0, rx.torso);
+			arm.rotation.x = -0.6;
+			box(0.3, 0.75, 0.3, R.SKIN, 0, -0.35, 0.05, arm);
+			const fore = group(0, -0.75, 0, arm);
+			fore.rotation.x = -0.9;
+			box(0.26, 0.6, 0.26, R.SKIN, 0, -0.25, 0, fore);
+			for (const dx of [-0.07, 0.07]) box(0.08, 0.4, 0.08, R.CLAW, dx, -0.65, 0.02, fore, false);
+		}
+
+		// coda affusolata
+		rx.tail = group(0, 3.3, -1.6, rx.torso);
+		rx.tail.rotation.x = 0.08;
+		box(1.5, 1.5, 1.8, R.SKIN, 0, 0, -0.8, rx.tail);
+		box(0.3, 0.3, 0.5, R.DARK, 0, 0.85, -0.5, rx.tail, false);//cresta
+		box(0.3, 0.3, 0.5, R.DARK, 0, 0.85, -1.3, rx.tail, false);//cresta
+		rx.t2 = group(0, -0.05, -1.6, rx.tail);
+		rx.t2.rotation.x = -0.05;
+		box(1.1, 1.1, 1.8, R.SKIN, 0, 0, -0.8, rx.t2);
+		box(0.24, 0.24, 0.4, R.DARK, 0, 0.65, -0.5, rx.t2, false);//cresta
+		box(0.24, 0.24, 0.4, R.DARK, 0, 0.65, -1.2, rx.t2, false);//cresta
+		rx.t3 = group(0, -0.05, -1.6, rx.t2);
+		rx.t3.rotation.x = -0.08;
+		box(0.7, 0.7, 1.6, R.SKIN, 0, 0, -0.8, rx.t3);
+		box(0.4, 0.4, 0.9, R.DARK, 0, 0, -1.8, rx.t3);
+		box(0.2, 0.34, 0.35, R.DARK, 0, 0.45, -0.5, rx.t3, false);//cresta
+		box(0.2, 0.34, 0.35, R.DARK, 0, 0.45, -1.2, rx.t3, false);//cresta
+
+		// testa
+		rx.head = group(0, 4.5, 2.3, rx.torso);
+		const head = rx.head;
+		box(1.6, 1.5, 1.5, R.SKIN, 0, 0.2, 0.5, head); // cranio
+		box(1.2, 0.85, 1.4, R.SKIN, 0, -0.1, 1.75, head); // muso
+		box(1.0, 0.2, 0.8, R.DARK, 0, 0.42, 1.9, head); // cresta sul muso
+		box(1.0, 0.08, 2.0, R.MOUTH, 0, -0.5, 1.3, head, false); // palato scuro
+		for (const sx of [1, -1]) {
+			box(0.14, 0.14, 0.1, R.PUPIL, 0.25 * sx, 0.2, 2.47, head, false); // narici
+			const brow = box(0.8, 0.28, 0.7, R.DARK, 0.45 * sx, 0.95, 0.65, head, false);
+			brow.rotation.z = 0.35 * sx; // sopracciglia furiose
+			box(0.3, 0.3, 0.3, R.DARK, 0.82 * sx, 0.1, 0.15, head, false); // gonfiore sullo zigomo
+			glow(0.14, 0.3, 0.3, EYE, 0.82 * sx, 0.5, 0.8, head, 'x'); // occhio luminoso
+			box(0.06, 0.28, 0.08, R.PUPIL, 0.93 * sx, 0.5, 0.8, head, false); // pupilla a fessura
+			box(0.14, 0.4, 0.14, R.TOOTH, 0.22 * sx, -0.7, 2.38, head, false); // incisivi
+		}
+		const tz = [0.55, 0.95, 1.3, 1.65, 2.0, 2.3];
+		const th = [0.3, 0.4, 0.5, 0.55, 0.45, 0.35];
+		for (const sx of [1, -1])
+			tz.forEach((z, k) => box(0.14, th[k], 0.16, R.TOOTH, 0.56 * sx, -0.475 - th[k] / 2, z, head, false));
+
+		rx.jaw = group(0, -0.55, 0.15, head);
+		box(1.15, 0.4, 2.2, R.SKIN, 0, -0.1, 1.15, rx.jaw);
+		box(0.7, 0.08, 1.4, R.TONGUE, 0, 0.12, 1.2, rx.jaw, false);
+		for (const sx of [1, -1])
+			for (const z of [0.9, 1.3, 1.7, 2.05]) box(0.12, 0.28, 0.14, R.TOOTH, 0.48 * sx, 0.24, z, rx.jaw, false);
+
+		rx.reach = 4.7;   // il muso ora arriva più avanti
+		rx.swing = 0.5;
+		rx.gaitFix = true; // usa la fase corretta del passo
+		return rx;
+	}
+	
+
+
 
 
 	// ----- T-Rex -----
-	const TREX_PALETTE = [{
-			SKIN: 0x66aa44,
-			DARK: 0x448833,
-			BELLY: 0xddcc88,
-			TOOTH: 0xffffee,
-			MOUTH: 0x992222,
-			TONGUE: 0xdd5544,
-			PUPIL: 0x111111,
-			CLAW: 0xffeedd
-		},
-		{
-			SKIN: 0xdd6633,
-			DARK: 0xaa4422,
-			BELLY: 0xffddaa,
-			TOOTH: 0xffffee,
-			MOUTH: 0x992222,
-			TONGUE: 0xdd5544,
-			PUPIL: 0x111111,
-			CLAW: 0xffeedd
-		},
-		{
-			SKIN: 0x4488dd,
-			DARK: 0x3366bb,
-			BELLY: 0xcceeff,
-			TOOTH: 0xffffee,
-			MOUTH: 0x992222,
-			TONGUE: 0xdd5544,
-			PUPIL: 0x111111,
-			CLAW: 0xffeedd
-		},
-		{
-			SKIN: 0x9966dd,
-			DARK: 0x6644aa,
-			BELLY: 0xeedeff,
-			TOOTH: 0xffffee,
-			MOUTH: 0x992222,
-			TONGUE: 0xdd5544,
-			PUPIL: 0x111111,
-			CLAW: 0xffeedd
-		},
-		{
-			SKIN: 0xccaa66,
-			DARK: 0x997744,
-			BELLY: 0xffeecc,
-			TOOTH: 0xffffee,
-			MOUTH: 0x992222,
-			TONGUE: 0xdd5544,
-			PUPIL: 0x111111,
-			CLAW: 0xffeedd
-		}
+	const TREX_PALETTE = [
+		//verde
+		{ SKIN: 0x66aa44, DARK: 0x448833, BELLY: 0xddcc88, TOOTH: 0xffffee, MOUTH: 0x992222, TONGUE: 0xdd5544, PUPIL: 0x111111, CLAW: 0xffeedd },
+		//arancio
+		{ SKIN: 0xdd6633, DARK: 0xaa4422, BELLY: 0xffddaa, TOOTH: 0xffffee, MOUTH: 0x992222, TONGUE: 0xdd5544, PUPIL: 0x111111, CLAW: 0xffeedd },
+		//blu
+		{ SKIN: 0x4488dd, DARK: 0x3366bb, BELLY: 0xcceeff, TOOTH: 0xffffee, MOUTH: 0x992222, TONGUE: 0xdd5544, PUPIL: 0x111111, CLAW: 0xffeedd },
+		//viola
+		{ SKIN: 0x9966dd, DARK: 0x6644aa, BELLY: 0xeedeff, TOOTH: 0xffffee, MOUTH: 0x992222, TONGUE: 0xdd5544, PUPIL: 0x111111, CLAW: 0xffeedd },
+		//marrone
+		{ SKIN: 0xccaa66, DARK: 0x997744, BELLY: 0xffeecc, TOOTH: 0xffffee, MOUTH: 0x992222, TONGUE: 0xdd5544, PUPIL: 0x111111, CLAW: 0xffeedd }
 	];
 
-	// Costruisce il modello e le parti animate del T-Rex.
 	function buildTRex() {
 		const R = pickPal('rex', TREX_PALETTE);
 		const rx = {};
@@ -1398,61 +1505,17 @@ button {
 	}
 
 	// ----- Elephant -----
-	const ELEPHANT_PALETTE = [{
-			SKIN: 0x99aaaa,
-			DARK: 0x778888,
-			BELLY: 0xbbcccc,
-			EAR_IN: 0xeeaaaa,
-			TUSK: 0xffffee,
-			TOE: 0xeeeedd,
-			PUPIL: 0x111111,
-			EYE: 0xffee66,
-			MOUTH: 0x992222
-		},
-		{
-			SKIN: 0xbb8866,
-			DARK: 0x997744,
-			BELLY: 0xddbb99,
-			EAR_IN: 0xeeaaaa,
-			TUSK: 0xffffee,
-			TOE: 0xeeeedd,
-			PUPIL: 0x111111,
-			EYE: 0xff3322,
-			MOUTH: 0x992222
-		},
-		{
-			SKIN: 0x77aacc,
-			DARK: 0x5577aa,
-			BELLY: 0xbbccee,
-			EAR_IN: 0xeeaaaa,
-			TUSK: 0xffffee,
-			TOE: 0xeeeedd,
-			PUPIL: 0x111111,
-			EYE: 0xff8800,
-			MOUTH: 0x992222
-		},
-		{
-			SKIN: 0xeeaaac,
-			DARK: 0xcc8899,
-			BELLY: 0xffccdd,
-			EAR_IN: 0xffeeee,
-			TUSK: 0xffffee,
-			TOE: 0xeeeedd,
-			PUPIL: 0x111111,
-			EYE: 0xffee66,
-			MOUTH: 0x992222
-		},
-		{
-			SKIN: 0xeeeedd,
-			DARK: 0xccccaa,
-			BELLY: 0xffffee,
-			EAR_IN: 0xeeaaaa,
-			TUSK: 0xffffee,
-			TOE: 0xddccbb,
-			PUPIL: 0x111111,
-			EYE: 0xff2200,
-			MOUTH: 0x992222
-		}
+	const ELEPHANT_PALETTE = [
+		//grigio
+		{ SKIN: 0x99aaaa, DARK: 0x778888, BELLY: 0xbbcccc, EAR_IN: 0xeeaaaa, TUSK: 0xffffee, TOE: 0xeeeedd, PUPIL: 0x111111, EYE: 0xffee66, MOUTH: 0x992222 },
+		//marrone
+		{ SKIN: 0xbb8866, DARK: 0x997744, BELLY: 0xddbb99, EAR_IN: 0xeeaaaa, TUSK: 0xffffee, TOE: 0xeeeedd, PUPIL: 0x111111, EYE: 0xff3322, MOUTH: 0x992222 },
+		//blu
+		{ SKIN: 0x77aacc, DARK: 0x5577aa, BELLY: 0xbbccee, EAR_IN: 0xeeaaaa, TUSK: 0xffffee, TOE: 0xeeeedd, PUPIL: 0x111111, EYE: 0xff8800, MOUTH: 0x992222 },
+		//rosa
+		{ SKIN: 0xeeaaac, DARK: 0xcc8899, BELLY: 0xffccdd, EAR_IN: 0xffeeee, TUSK: 0xffffee, TOE: 0xeeeedd, PUPIL: 0x111111, EYE: 0xffee66, MOUTH: 0x992222 },
+		//bianco
+		{ SKIN: 0xeeeedd, DARK: 0xccccaa, BELLY: 0xffffee, EAR_IN: 0xeeaaaa, TUSK: 0xffffee, TOE: 0xddccbb, PUPIL: 0x111111, EYE: 0xff2200, MOUTH: 0x992222 }
 	];
 
 	// Costruisce il modello e le parti animate dell'elefante.
@@ -1523,56 +1586,17 @@ button {
 	}
 
 	// ----- Steam train -----
-	const TRAIN_PALETTE = [{
-			BODY: 0x222233,
-			BODY2: 0x333344,
-			RED: 0xbb3322,
-			BRASS: 0xddaa44,
-			WHEEL: 0x112222,
-			STEEL: 0xaabbbb,
-			COAL: 0x111111,
-			LAMP: 0xffff33
-		},
-		{
-			BODY: 0x115533,
-			BODY2: 0x226644,
-			RED: 0xeecc33,
-			BRASS: 0xffdd77,
-			WHEEL: 0x112222,
-			STEEL: 0xaabbbb,
-			COAL: 0x111111,
-			LAMP: 0xffff33
-		},
-		{
-			BODY: 0x224488,
-			BODY2: 0x225599,
-			RED: 0xddddcc,
-			BRASS: 0xaabbbb,
-			WHEEL: 0x112222,
-			STEEL: 0xaabbbb,
-			COAL: 0x111111,
-			LAMP: 0xffff33
-		},
-		{
-			BODY: 0x551122,
-			BODY2: 0x662233,
-			RED: 0x222233,
-			BRASS: 0xddaa44,
-			WHEEL: 0x112222,
-			STEEL: 0xaabbbb,
-			COAL: 0x111111,
-			LAMP: 0xffff33
-		},
-		{
-			BODY: 0x666677,
-			BODY2: 0x888888,
-			RED: 0xee7722,
-			BRASS: 0xffdd77,
-			WHEEL: 0x112222,
-			STEEL: 0xaabbbb,
-			COAL: 0x111111,
-			LAMP: 0xffff33
-		}
+	const TRAIN_PALETTE = [
+		//nero-grigio
+		{ BODY: 0x222233, BODY2: 0x333344, RED: 0xbb3322, BRASS: 0xddaa44, WHEEL: 0x112222, STEEL: 0xaabbbb, COAL: 0x111111, LAMP: 0xffff33 },
+		//verdone
+		{ BODY: 0x115533, BODY2: 0x226644, RED: 0xeecc33, BRASS: 0xffdd77, WHEEL: 0x112222, STEEL: 0xaabbbb, COAL: 0x111111, LAMP: 0xffff33 },
+		//blu
+		{ BODY: 0x224488, BODY2: 0x225599, RED: 0xddddcc, BRASS: 0xaabbbb, WHEEL: 0x112222, STEEL: 0xaabbbb, COAL: 0x111111, LAMP: 0xffff33 },
+		//rosso
+		{ BODY: 0x551122, BODY2: 0x662233, RED: 0x222233, BRASS: 0xddaa44, WHEEL: 0x112222, STEEL: 0xaabbbb, COAL: 0x111111, LAMP: 0xffff33 },
+		//grigio
+		{ BODY: 0x666677, BODY2: 0x888888, RED: 0xee7722, BRASS: 0xffdd77, WHEEL: 0x112222, STEEL: 0xaabbbb, COAL: 0x111111, LAMP: 0xffff33 }
 	];
 
 	// Costruisce la locomotiva inseguitrice e i suoi componenti mobili.
@@ -1669,56 +1693,17 @@ button {
 	}
 
 	// ----- Kong -----
-	const KONG_PALETTE = [{
-			FUR: 0x222222,
-			FUR2: 0x111111,
-			SKIN: 0x443333,
-			CHEST: 0x554444,
-			BROW: 0x000000,
-			EYE: 0xff3322,
-			TOOTH: 0xffffee,
-			MOUTH: 0x771111
-		},
-		{
-			FUR: 0x664433,
-			FUR2: 0x443322,
-			SKIN: 0x886655,
-			CHEST: 0x997766,
-			BROW: 0x221111,
-			EYE: 0xff3322,
-			TOOTH: 0xffffee,
-			MOUTH: 0x771111
-		},
-		{
-			FUR: 0xeeeedd,
-			FUR2: 0xbbbbaa,
-			SKIN: 0xddaa99,
-			CHEST: 0xffeeee,
-			BROW: 0x666666,
-			EYE: 0xff3322,
-			TOOTH: 0xffffee,
-			MOUTH: 0x771111
-		},
-		{
-			FUR: 0x334466,
-			FUR2: 0x223344,
-			SKIN: 0x556688,
-			CHEST: 0x7788aa,
-			BROW: 0x000000,
-			EYE: 0xff3322,
-			TOOTH: 0xffffee,
-			MOUTH: 0x771111
-		},
-		{
-			FUR: 0x772222,
-			FUR2: 0x551111,
-			SKIN: 0x995544,
-			CHEST: 0xbb7766,
-			BROW: 0x000000,
-			EYE: 0xffdd33,
-			TOOTH: 0xffffee,
-			MOUTH: 0x771111
-		}
+	const KONG_PALETTE = [
+		//nero
+		{ FUR: 0x222222, FUR2: 0x111111, SKIN: 0x443333, CHEST: 0x554444, BROW: 0x000000, EYE: 0xff3322, TOOTH: 0xffffee, MOUTH: 0x771111 },
+		//marrone
+		{ FUR: 0x664433, FUR2: 0x443322, SKIN: 0x886655, CHEST: 0x997766, BROW: 0x221111, EYE: 0xff3322, TOOTH: 0xffffee, MOUTH: 0x771111 },
+		//argento
+		{ FUR: 0xeeeedd, FUR2: 0xbbbbaa, SKIN: 0xddaa99, CHEST: 0xffeeee, BROW: 0x666666, EYE: 0xff3322, TOOTH: 0xffffee, MOUTH: 0x771111 },
+		//blu
+		{ FUR: 0x334466, FUR2: 0x223344, SKIN: 0x556688, CHEST: 0x7788aa, BROW: 0x000000, EYE: 0xff3322, TOOTH: 0xffffee, MOUTH: 0x771111 },
+		//rosso
+		{ FUR: 0x772222, FUR2: 0x551111, SKIN: 0x995544, CHEST: 0xbb7766, BROW: 0x000000, EYE: 0xffdd33, TOOTH: 0xffffee, MOUTH: 0x771111 }
 	];
 
 	// Costruisce il modello e le parti animate di Kong.
@@ -1794,51 +1779,17 @@ button {
 	}
 
 	// ----- Rhino -----
-	const RHINO_PALETTE = [{
-			SKIN: 0x889999,
-			DARK: 0x667777,
-			BELLY: 0xbbbbbb,
-			HORN: 0xffeeee,
-			EYE: 0xff3322,
-			PUPIL: 0x111111,
-			MOUTH: 0x771111
-		},
-		{
-			SKIN: 0x997755,
-			DARK: 0x775533,
-			BELLY: 0xccaa88,
-			HORN: 0xffeeee,
-			EYE: 0xff3322,
-			PUPIL: 0x111111,
-			MOUTH: 0x771111
-		},
-		{
-			SKIN: 0x667799,
-			DARK: 0x445577,
-			BELLY: 0xaabbcc,
-			HORN: 0xeeeedd,
-			EYE: 0xffdd33,
-			PUPIL: 0x111111,
-			MOUTH: 0x771111
-		},
-		{
-			SKIN: 0xaa5544,
-			DARK: 0x773333,
-			BELLY: 0xdd8888,
-			HORN: 0xffeeee,
-			EYE: 0xffdd33,
-			PUPIL: 0x111111,
-			MOUTH: 0x551111
-		},
-		{
-			SKIN: 0x558866,
-			DARK: 0x446644,
-			BELLY: 0x99ccaa,
-			HORN: 0xffeeee,
-			EYE: 0xff3322,
-			PUPIL: 0x111111,
-			MOUTH: 0x771111
-		}
+	const RHINO_PALETTE = [
+		//grigio
+		{ SKIN: 0x889999, DARK: 0x667777, BELLY: 0xbbbbbb, HORN: 0xffeeee, EYE: 0xff3322, PUPIL: 0x111111, MOUTH: 0x771111 },
+		//marrone
+		{ SKIN: 0x997755, DARK: 0x775533, BELLY: 0xccaa88, HORN: 0xffeeee, EYE: 0xff3322, PUPIL: 0x111111, MOUTH: 0x771111 },
+		//blu
+		{ SKIN: 0x667799, DARK: 0x445577, BELLY: 0xaabbcc, HORN: 0xeeeedd, EYE: 0xffdd33, PUPIL: 0x111111, MOUTH: 0x771111 },
+		//rosso
+		{ SKIN: 0xaa5544, DARK: 0x773333, BELLY: 0xdd8888, HORN: 0xffeeee, EYE: 0xffdd33, PUPIL: 0x111111, MOUTH: 0x551111 },
+		//verde
+		{ SKIN: 0x558866, DARK: 0x446644, BELLY: 0x99ccaa, HORN: 0xffeeee, EYE: 0xff3322, PUPIL: 0x111111, MOUTH: 0x771111 }
 	];
 
 	// Costruisce il modello e le parti animate del rinoceronte.
@@ -1901,56 +1852,17 @@ button {
 	}
 
 	// ----- Bull -----
-	const BULL_PALETTE = [{
-			FUR: 0x332222,
-			FUR2: 0x221100,
-			BELLY: 0x554433,
-			HORN: 0xffeedd,
-			HORNTIP: 0xddccbb,
-			NOSE: 0xddaaaa,
-			EYE: 0xff3322,
-			PUPIL: 0x111111
-		},
-		{
-			FUR: 0x884422,
-			FUR2: 0x663311,
-			BELLY: 0xbb8866,
-			HORN: 0xffeedd,
-			HORNTIP: 0xddccbb,
-			NOSE: 0xeeaaaa,
-			EYE: 0xff3322,
-			PUPIL: 0x111111
-		},
-		{
-			FUR: 0xeeeedd,
-			FUR2: 0xccbbaa,
-			BELLY: 0xffffee,
-			HORN: 0x665544,
-			HORNTIP: 0x332222,
-			NOSE: 0xeeaaaa,
-			EYE: 0xff3322,
-			PUPIL: 0x111111
-		},
-		{
-			FUR: 0x111122,
-			FUR2: 0x000011,
-			BELLY: 0x333333,
-			HORN: 0xeeeedd,
-			HORNTIP: 0xbbbb99,
-			NOSE: 0x664444,
-			EYE: 0xffdd33,
-			PUPIL: 0x111111
-		},
-		{
-			FUR: 0xaa3322,
-			FUR2: 0x772211,
-			BELLY: 0xdd6644,
-			HORN: 0xffeedd,
-			HORNTIP: 0xddccbb,
-			NOSE: 0xeeaaaa,
-			EYE: 0xffdd33,
-			PUPIL: 0x111111
-		}
+	const BULL_PALETTE = [
+		//marrone
+		{ FUR: 0x332222, FUR2: 0x221100, BELLY: 0x554433, HORN: 0xffeedd, HORNTIP: 0xddccbb, NOSE: 0xddaaaa, EYE: 0xff3322, PUPIL: 0x111111 },
+		//rosso
+		{ FUR: 0x884422, FUR2: 0x663311, BELLY: 0xbb8866, HORN: 0xffeedd, HORNTIP: 0xddccbb, NOSE: 0xeeaaaa, EYE: 0xff3322, PUPIL: 0x111111 },
+		//bianco
+		{ FUR: 0xeeeedd, FUR2: 0xccbbaa, BELLY: 0xffffee, HORN: 0x665544, HORNTIP: 0x332222, NOSE: 0xeeaaaa, EYE: 0xff3322, PUPIL: 0x111111 },
+		//blu
+		{ FUR: 0x111122, FUR2: 0x000011, BELLY: 0x333333, HORN: 0xeeeedd, HORNTIP: 0xbbbb99, NOSE: 0x664444, EYE: 0xffdd33, PUPIL: 0x111111 },
+		//furia rossa
+		{ FUR: 0xaa3322, FUR2: 0x772211, BELLY: 0xdd6644, HORN: 0xffeedd, HORNTIP: 0xddccbb, NOSE: 0xeeaaaa, EYE: 0xffdd33, PUPIL: 0x111111 }
 	];
 
 	// Costruisce il modello e le parti animate del toro.
@@ -2026,61 +1938,17 @@ button {
 
 
 	// ----- Wolf (werewolf) -----
-	const WOLF_PALETTE = [{
-			FUR: 0x4a4a55,
-			FUR2: 0x25252e,
-			BELLY: 0x8a8a96,
-			NOSE: 0x0a0a0a,
-			EYE: 0xff2200,
-			TOOTH: 0xffffee,
-			MOUTH: 0x6a0a14,
-			TONGUE: 0xcc3344,
-			CLAW: 0xeeeedd
-		},
-		{
-			FUR: 0x3a2a22,
-			FUR2: 0x1a110c,
-			BELLY: 0x7a6050,
-			NOSE: 0x0a0a0a,
-			EYE: 0xff2200,
-			TOOTH: 0xffffee,
-			MOUTH: 0x6a0a14,
-			TONGUE: 0xcc3344,
-			CLAW: 0xeeeedd
-		},
-		{
-			FUR: 0xc9ccd6,
-			FUR2: 0x8e93a6,
-			BELLY: 0xffffff,
-			NOSE: 0x222222,
-			EYE: 0xff1100,
-			TOOTH: 0xffffee,
-			MOUTH: 0x6a0a14,
-			TONGUE: 0xcc3344,
-			CLAW: 0xddddcc
-		},
-		{
-			FUR: 0x1c1c24,
-			FUR2: 0x0a0a10,
-			BELLY: 0x44444e,
-			NOSE: 0x000000,
-			EYE: 0xff3300,
-			TOOTH: 0xffffee,
-			MOUTH: 0x6a0a14,
-			TONGUE: 0xcc3344,
-			CLAW: 0xccccbb
-		},
-		{
-			FUR: 0x6a3a2a,
-			FUR2: 0x3a1a10,
-			BELLY: 0xaa7a5a,
-			NOSE: 0x0a0a0a,
-			EYE: 0xff2200,
-			TOOTH: 0xffffee,
-			MOUTH: 0x6a0a14,
-			TONGUE: 0xcc3344,
-			CLAW: 0xeeeedd
-		}
+	const WOLF_PALETTE = [
+		//grigio
+		{ FUR: 0x4a4a55, FUR2: 0x25252e, BELLY: 0x8a8a96, NOSE: 0x0a0a0a, EYE: 0xff2200, TOOTH: 0xffffee, MOUTH: 0x6a0a14, TONGUE: 0xcc3344, CLAW: 0xeeeedd },
+		//marrone
+		{ FUR: 0x3a2a22, FUR2: 0x1a110c, BELLY: 0x7a6050, NOSE: 0x0a0a0a, EYE: 0xff2200, TOOTH: 0xffffee, MOUTH: 0x6a0a14, TONGUE: 0xcc3344, CLAW: 0xeeeedd },
+		//bianco
+		{ FUR: 0xc9ccd6, FUR2: 0x8e93a6, BELLY: 0xffffff, NOSE: 0x222222, EYE: 0xff1100, TOOTH: 0xffffee, MOUTH: 0x6a0a14, TONGUE: 0xcc3344, CLAW: 0xddddcc },
+		//nero
+		{ FUR: 0x1c1c24, FUR2: 0x0a0a10, BELLY: 0x44444e, NOSE: 0x000000, EYE: 0xff3300, TOOTH: 0xffffee, MOUTH: 0x6a0a14, TONGUE: 0xcc3344, CLAW: 0xccccbb },
+		//rosso
+		{ FUR: 0x6a3a2a, FUR2: 0x3a1a10, BELLY: 0xaa7a5a, NOSE: 0x0a0a0a, EYE: 0xff2200, TOOTH: 0xffffee, MOUTH: 0x6a0a14, TONGUE: 0xcc3344, CLAW: 0xeeeedd }
 	];
 
 	// Costruisce il modello e le parti animate del lupo mannaro gigante.
@@ -2197,9 +2065,13 @@ button {
 	
 		// ----- Deer -----
 	const DEER_PALETTE = [
+		//marrone chiaro
 		{ FUR: 0x885533, FUR2: 0x553322, BELLY: 0xddbb99, HORN: 0xeeddbb, HORNTIP: 0xffeedd, NOSE: 0x221111, EYE: 0xff8800, PUPIL: 0x111111, TOOTH: 0xffffee, MOUTH: 0x771111 },
+		//marrone scuro
 		{ FUR: 0x664433, FUR2: 0x332211, BELLY: 0xccaa88, HORN: 0xddccaa, HORNTIP: 0xffeecc, NOSE: 0x111111, EYE: 0xff8800, PUPIL: 0x111111, TOOTH: 0xffffee, MOUTH: 0x771111 },
+		//marrone daino
 		{ FUR: 0xbb9966, FUR2: 0x886644, BELLY: 0xffeedd, HORN: 0xeeddcc, HORNTIP: 0xffffee, NOSE: 0x332222, EYE: 0xff8800, PUPIL: 0x111111, TOOTH: 0xffffee, MOUTH: 0x771111 },
+		//grigio
 		{ FUR: 0x777788, FUR2: 0x444455, BELLY: 0xbbbbcc, HORN: 0xccccdd, HORNTIP: 0xffffff, NOSE: 0x111122, EYE: 0xff8800, PUPIL: 0x111111, TOOTH: 0xffffee, MOUTH: 0x771111 }
 	];
 
@@ -2266,12 +2138,17 @@ button {
 		return rx; // niente rx.charger: la mascella morde
 	}
 	
-		// ----- Demon Boar -----
+	// ----- Demon Boar -----
 	const BOAR_PALETTE = [
+		//marrone
 		{ FUR: 0x332222, FUR2: 0x1a1111, BELLY: 0x553333, TUSK: 0xeeddcc, SNOUT: 0x885566, EYE: 0xff2200, PUPIL: 0x111111, SPIKE: 0x221111, EMBER: 0xff4400, MOUTH: 0x660011 },
+		//rosso
 		{ FUR: 0x442233, FUR2: 0x220f1a, BELLY: 0x663344, TUSK: 0xffeedd, SNOUT: 0x996677, EYE: 0xff1100, PUPIL: 0x111111, SPIKE: 0x331122, EMBER: 0xff3300, MOUTH: 0x550011 },
+		//blu
 		{ FUR: 0x222233, FUR2: 0x111122, BELLY: 0x444455, TUSK: 0xddddcc, SNOUT: 0x776677, EYE: 0xff2200, PUPIL: 0x111111, SPIKE: 0x181826, EMBER: 0xff5500, MOUTH: 0x660011 },
+		//ruggine
 		{ FUR: 0x552211, FUR2: 0x331100, BELLY: 0x774433, TUSK: 0xffeecc, SNOUT: 0xaa7766, EYE: 0xff2200, PUPIL: 0x111111, SPIKE: 0x331100, EMBER: 0xff6600, MOUTH: 0x660011 },
+		//grigio
 		{ FUR: 0x443344, FUR2: 0x221122, BELLY: 0x665566, TUSK: 0xeeeeee, SNOUT: 0x886688, EYE: 0xff0000, PUPIL: 0x111111, SPIKE: 0x2a1a2a, EMBER: 0xff3300, MOUTH: 0x550011 }
 	];
 
@@ -2463,7 +2340,8 @@ button {
 		6: buildBull,
 		7: buildWolf,
 		8: buildDeer,
-		9: buildBoar
+		9: buildBoar,
+		0: buildMegaRex,
 	};
 	const RIGS = {};
 	let creature = 1;
@@ -2487,6 +2365,39 @@ button {
 	}
 
 	// ============ UI ============
+	let currentCard = 'title';
+	let infoOpen = false;
+	let infoWasPlaying = false;
+	let infoPrevCard = '';
+	
+	function showCard(kind) {
+		currentCard = kind;
+		document.querySelectorAll('[data-card]').forEach(c => {
+			c.hidden = c.dataset.card !== kind;
+		});
+		ui.overlay.classList.toggle('show', !!kind);
+	}
+
+	function openInfo() {
+		if (infoOpen) { closeInfo(); return; }
+		infoOpen = true;
+		infoPrevCard = currentCard;
+		infoWasPlaying = S.state === 'playing' && !S.paused;
+		if (infoWasPlaying) {
+			S.paused = true;
+			ui.pauseBtn.textContent = '▶';
+			setWind(0, 0);
+		}
+		showCard('info');
+	}
+
+	function closeInfo() {
+		if (!infoOpen) return;
+		infoOpen = false;
+		if (infoWasPlaying) setPaused(false);   // riprende e nasconde la card
+		else showCard(infoPrevCard);            // torna a title / over / pause
+	}
+	
 	const ui = {
 		distN: $('#distN'),
 		danger: $('#danger'),
@@ -2511,18 +2422,21 @@ button {
 			bestN: $('#overBestN')
 		},
 		fps: $('#fps'),
+		infoBtn: $('#infoBtn'),		
 	};
 	const judgeTimers = {
 		L: 0,
 		R: 0
 	};
 
+	/*
 	function showCard(kind) {
 		document.querySelectorAll('[data-card]').forEach(c => {
 			c.hidden = c.dataset.card !== kind;
 		});
 		ui.overlay.classList.toggle('show', !!kind);
 	}
+	*/
 
 	function showJudge(side, j) {
 		ui.judge[side].textContent = JUDGE_TXT[j];
@@ -2574,7 +2488,7 @@ button {
 	}
 
 	function startGame() {
-		setCreature(rint(1, 9));//TODO: change!
+		setCreature(rint(0, 9));//TODO: change!
 		newRiders();
 		resetGame();
 		S.state = 'playing';
@@ -2584,7 +2498,16 @@ button {
 		S.shake = 0.5;
 	}
 
+	/*
 	function setPaused(p) {
+		if (p && S.state !== 'playing') return;
+		S.paused = p;
+		ui.pauseBtn.textContent = p ? '▶' : '⏸';
+		showCard(p ? 'pause' : '');
+		if (p) setWind(0, 0);
+	}*/
+	function setPaused(p) {
+		if (infoOpen) { if (!p) closeInfo(); return; }
 		if (p && S.state !== 'playing') return;
 		S.paused = p;
 		ui.pauseBtn.textContent = p ? '▶' : '⏸';
@@ -2611,6 +2534,10 @@ button {
 	const accuracy = () => S.qs.length ? Math.round(S.qs.reduce((a, b) => a + b, 0) / S.qs.length * 100) : 0;
 
 	function tap(side) {
+		if (infoOpen) { 
+			closeInfo(); 
+			return; 
+		}
 		if (S.paused) {
 			setPaused(false);
 			return;
@@ -2663,6 +2590,7 @@ button {
 		next: () => selectCreature(creature % 7 + 1),
 		color: () => selectCreature(creature),
 		fps: () => { ui.fps.hidden = !ui.fps.hidden; },
+		info: openInfo,
 	};
 	const KEYS = {
 		KeyA: 'padL',
@@ -2690,6 +2618,7 @@ button {
 
 	addEventListener('pointerdown', e => {
 		if (e.button > 0) return;
+		if (e.target.closest && e.target.closest('a')) return;// lascia passare i link
 		e.preventDefault();
 		const b = e.target.closest && e.target.closest('[data-action],[data-hold]');
 		if (!b) {
@@ -2724,7 +2653,7 @@ button {
 			return;
 		}
 		if (e.repeat) return;
-		const d = /^(?:Digit|Numpad)([1-9])$/.exec(e.code);//TODO:change!
+		const d = /^(?:Digit|Numpad)([0-9])$/.exec(e.code);//TODO: change!
 		if (d) {
 			selectCreature(+d[1]);
 			return;
@@ -2965,15 +2894,26 @@ button {
 			for (const L of rx.legs) {
 				L.hip.rotation.x = 0;
 				L.knee.rotation.x = 0;
+				if (L.ankle) L.ankle.rotation.x = 0;//new trex
 			}
 			rx.tail.rotation.y = Math.sin(time * 1.3) * 0.2;
 			S.jaw = 0.2 + 0.1 * Math.sin(time * 1.5);
 		} else {
+			//new trex
+			for (const L of rx.legs) {
+				const p = ph + L.off;
+				L.hip.rotation.x = Math.sin(p) * rx.swing;
+				const lift = Math.max(0, rx.gaitFix ? -Math.cos(p) : Math.cos(p)); // si alza solo durante il passo in avanti
+				L.knee.rotation.x = lift * (L.ankle ? 0.9 : 0.6) + 0.3 * cp;
+				////if (L.ankle) L.ankle.rotation.x = -(L.hip.rotation.x + L.knee.rotation.x) * 0.9 + lift * 0.4;
+				if (L.ankle) L.ankle.rotation.x = -(L.hip.rotation.x + L.knee.rotation.x) + lift * 0.4;
+			}
+			/*
 			for (const L of rx.legs) {
 				const p = ph + L.off;
 				L.hip.rotation.x = Math.sin(p) * rx.swing;
 				L.knee.rotation.x = Math.max(0, Math.cos(p)) * 0.6 + 0.3 * cp;
-			}
+			}*/
 			rx.torso.position.y = (-Math.abs(Math.sin(ph)) * 0.2 + 0.1) * (1 - cp) - 0.3 * cp;
 			rx.torso.rotation.x = 0.06 * dp - 0.06 * cp;
 			rx.root.rotation.z = Math.sin(ph) * 0.04;
@@ -3143,7 +3083,7 @@ button {
 		initWorld();
 		initFx();
 		initCar();
-		setCreature(rint(1, 9));//TODO: change!
+		setCreature(rint(0, 9));//TODO: change!
 		newRiders();
 		buildWorld();
 		showCard('title');
