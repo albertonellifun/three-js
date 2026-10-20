@@ -2380,12 +2380,7 @@ button {
 				box(0.55, 0.65, 0.6, R.SKIN, 0, -0.3, 0, splay);
 				const knee = group(0, -0.6, 0, splay);
 				box(0.45, 0.55, 0.5, R.SKIN, 0, -0.25, 0, knee);
-				/*
-				const foot = group(0, -0.55, 0.1, knee);
-				foot.rotation.z = -sx * 0.6;                       // piede piatto a terra
-				box(0.8, 0.14, 0.9, R.DARK, 0, -0.05, 0.2, foot);
-				for (const cx of [-0.25, 0, 0.25]) box(0.12, 0.1, 0.25, R.TOOTH, cx, -0.05, 0.72, foot, false);
-				*/
+				
 				const foot = group(0, -0.45, 0.1, knee);           // alzato di 0.10 rispetto a prima
 				foot.rotation.order = 'ZXY';                       // prima la rotazione y, poi il raddrizzamento
 				foot.rotation.z = -sx * 0.6;                       // piede piatto a terra
@@ -2423,20 +2418,24 @@ button {
 		
 		box(0.3, 0.22, 0.8, R.DARK, 0, 0, -1.9, rx.t4);   // punta
 
-		// testa: cranio + muso lungo e piatto
 		rx.head = group(0, 1.25, 2.0, rx.torso);
+		// testa: cranio + muso lungo e piatto
 		box(1.7, 0.9, 1.5, R.SKIN, 0, 0.1, 0.5, rx.head);              // cranio
 		box(1.2, 0.55, 2.4, R.SKIN, 0, -0.05, 2.3, rx.head);           // muso
 		box(0.9, 0.3, 0.5, R.DARK, 0, 0.1, 3.4, rx.head);              // punta del muso
 		box(1.1, 0.08, 2.3, R.MOUTH, 0, -0.35, 2.2, rx.head, false);   // palato
+		
 		for (const sx of [1, -1]) {
-			box(0.5, 0.35, 0.5, R.DARK, 0.5 * sx, 0.7, 0.7, rx.head);  // bozze oculari
-			glow(0.16, 0.2, 0.3, R.EYE, 0.6 * sx, 0.78, 0.75, rx.head);
-			box(0.06, 0.2, 0.08, R.PUPIL, 0.68 * sx, 0.78, 0.8, rx.head, false);
+			//occhi davanti
+			box(0.42, 0.18, 0.45, R.DARK, 0.60 * sx, 0.6, 1.05, rx.head);        // arcata sopraccigliare
+			glow(0.4, 0.14, 0.1, R.EYE, 0.62 * sx, 0.35, 1.27, rx.head);           // occhio, rivolto in avanti
+			box(0.06, 0.12, 0.05, R.PUPIL, 0.62 * sx, 0.35, 1.33, rx.head, false); // pupilla a fessura
+			
 			box(0.14, 0.12, 0.12, R.PUPIL, 0.18 * sx, 0.28, 3.55, rx.head, false); // narici
 			for (let k = 0; k < 7; k++) // denti superiori irregolari
 				box(0.1, 0.22 + (k % 2) * 0.1, 0.12, R.TOOTH, 0.6 * sx, -0.45 - (k % 2) * 0.05, 1.2 + k * 0.35, rx.head, false);
 		}
+		
 		rx.jaw = group(0, -0.35, 0.2, rx.head);
 		box(1.1, 0.3, 3.0, R.BELLY, 0, -0.1, 1.7, rx.jaw);
 		box(0.7, 0.07, 2.0, R.TONGUE, 0, 0.1, 1.6, rx.jaw, false);
@@ -3107,21 +3106,29 @@ button {
 				////if (L.ankle) L.ankle.rotation.x = -(L.hip.rotation.x + L.knee.rotation.x) * 0.9 + lift * 0.4;
 				if (L.ankle) L.ankle.rotation.x = -(L.hip.rotation.x + L.knee.rotation.x) + lift * 0.4;
 			}
-			/*
-			for (const L of rx.legs) {
-				const p = ph + L.off;
-				L.hip.rotation.x = Math.sin(p) * rx.swing;
-				L.knee.rotation.x = Math.max(0, Math.cos(p)) * 0.6 + 0.3 * cp;
-			}*/
+			//torso
 			rx.torso.position.y = (-Math.abs(Math.sin(ph)) * 0.2 + 0.1) * (1 - cp) - 0.3 * cp;
 			rx.torso.rotation.x = 0.06 * dp - 0.06 * cp;
 			rx.root.rotation.z = Math.sin(ph) * 0.04;
+			
+			//coda
+			/*
 			rx.tail.rotation.y = Math.sin(ph) * 0.22;
 			rx.t2.rotation.y = Math.sin(ph - 0.7) * 0.3;
 			rx.t3.rotation.y = Math.sin(ph - 1.4) * 0.35;
 			//CROCO ha 4 segmenti :)
 			if (rx.t4) rx.t4.rotation.y = Math.sin(ph - 2.1) * 0.4;
+			*/
+			// a partita finita ph è fermo: la coda segue il tempo reale (scodinzola soddisfatto)
+			const tp = down ? time * 4 : ph;
+			const ta = down ? 1.3 : 1;   // ampiezza un po' maggiore
+			rx.tail.rotation.y = Math.sin(tp) * 0.22 * ta;
+			rx.t2.rotation.y = Math.sin(tp - 0.7) * 0.3 * ta;
+			rx.t3.rotation.y = Math.sin(tp - 1.4) * 0.35 * ta;
+			//CROCO ha 4 segmenti :)
+			if (rx.t4) rx.t4.rotation.y = Math.sin(tp - 2.1) * 0.4 * ta;
 			
+			//testone
 			rx.head.rotation.x = (Math.sin(ph * 2) * 0.05 - 0.06) * (1 - cp) + (-0.55 + Math.sin(time * 40) * 0.03) * cp + 0.1 * dp;
 			let jt;
 			if (S.state === 'caught') jt = S.caughtT < 0.22 ? 1 : 0;
@@ -3135,7 +3142,9 @@ button {
 		}
 		
 		///rx.jaw.rotation.x = S.jaw;//CROCO ha apertura limitata
-		rx.jaw.rotation.x = rx.jawMax ? Math.min(S.jaw, rx.jawMax) : S.jaw;
+		//rx.jaw.rotation.x = rx.jawMax ? Math.min(S.jaw, rx.jawMax) : S.jaw;
+		rx.jaw.rotation.x = rx.jawMax ? Math.min(1, S.jaw) * rx.jawMax : S.jaw;// croco: l'apertura va rimappata sul suo massimo, non tagliata
+		
 		if (rx.jawMax) rx.head.rotation.x = -0.12 - 0.25 * (rx.jaw.rotation.x / rx.jawMax);
 		
 		if (gp > 0.01) rx.head.rotation.x -= 0.35 * gp;
