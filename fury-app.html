@@ -2634,7 +2634,7 @@ button {
 	}
 
 	function startGame() {
-		setCreature(rint(0, Object.keys(BUILD).length));
+		setCreature(rint(0, Object.keys(BUILD).length - 1));
 		newRiders();
 		resetGame();
 		S.state = 'playing';
@@ -3297,7 +3297,7 @@ button {
 		initWorld();
 		initFx();
 		initCar();
-		setCreature(rint(0, Object.keys(BUILD).length));
+		setCreature(rint(0, Object.keys(BUILD).length - 1));
 		newRiders();
 		buildWorld();
 		showCard('title');
