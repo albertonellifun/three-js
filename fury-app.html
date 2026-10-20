@@ -11,11 +11,17 @@
 	--sun: #fd5;
 	--danger: #f54;
 	--paper-white: #ffffffcc;
+	--btn-bg: #ffffff44;
+	--btn-fg: #ffffff;
+	--btn-border: #ffffff;
+	--outline-fg: #000000;
+	--outline-bg: #ffffff;
 	--paper-green: #99ffbb;
 	--paper-yellow: #ffff88;
 	--paper-red: #ff5544;
 	--paper-black: #00000099;
 	--r: 8px;
+	--r-sm: 4px;
 }
 
 * {
@@ -59,10 +65,10 @@ button {
 }
 
 .outline {
-	color: #fff;
-	-webkit-text-stroke: 5px var(--ink);
+	color: var(--outline-fg);
+	-webkit-text-stroke: 4px var(--outline-bg);
 	paint-order: stroke fill;
-	font-weight: 900;
+	font-weight: 700;
 }
 
 #hud {
@@ -81,6 +87,7 @@ button {
 #dist {
 	font-size: 52px;
 	line-height: 1;
+	color: var(--outline-fg);
 }
 
 #dist small {
@@ -90,10 +97,10 @@ button {
 #danger {
 	position: relative;
 	width: min(260px,62vw);
-	height: 16px;
+	height: 24px;
 	border-radius: var(--r);
 	background: rgba(35,53,36,.35);
-	border: 2px solid var(--ink);
+	border: 2px solid var(--btn-border);
 }
 
 #danger.flash {
@@ -104,13 +111,13 @@ button {
 	position: absolute;
 	inset: 0 auto 0 0;
 	width: 0;
-	border-radius: var(--r);
-	background: var(--sun);
+	border-radius: var(--r-sm);
+	background: var(--ink);
 }
 
 #danger span {
 	position: absolute;
-	left: -35px;
+	left: -40px;
 	top: 50%;
 	transform: translateY(-50%);
 	font-size: 24px;
@@ -118,10 +125,10 @@ button {
 
 #slope {
 	font-size: 15px;
-	font-weight: 900;
+	font-weight: 700;
 	padding: 4px 12px;
 	border-radius: var(--r);
-	border: 2px solid var(--ink);
+	border: 2px solid var(--btn-border);
 	background: #fff;
 	opacity: 0;
 }
@@ -139,10 +146,10 @@ button {
 
 #charge {
 	font-size: 22px;
-	font-weight: 900;
+	font-weight: 700;
 	padding: 5px 16px;
 	border-radius: var(--r);
-	border: 2px solid var(--ink);
+	border: 2px solid var(--btn-border);
 	background: var(--danger);
 	color: #fff;
 	opacity: 0;
@@ -176,8 +183,8 @@ button {
 	width: 128px;
 	height: 128px;
 	border-radius: var(--r);
-	border: 2px solid var(--paper-black);
-	background: rgba(255,255,255,.25);
+	border: 2px solid var(--btn-bg);
+	background: var(--btn-bg);
 	display: grid;
 	place-items: center;
 	font-size: 64px;
@@ -185,7 +192,7 @@ button {
 }
 
 .pad.ready {
-	border-color: var(--ink);
+	border-color: var(--btn-border);
 	background: rgba(255,211,92,.6);
 }
 
@@ -216,7 +223,8 @@ button {
 	font-size: 24px;
 	white-space: nowrap;
 	opacity: 0;
-	transition: opacity .15s;
+	transition: opacity .08s;
+	letter-spacing: 1px;
 }
 
 .pad b.show {
@@ -238,17 +246,34 @@ button {
 	min-width: 44px;
 	height: 50px;
 	border-radius: var(--r);
-	border: 2px solid var(--ink);
-	background: var(--paper-white);
-	font-size: 18px;
-	font-weight: 900;
-	color: var(--ink);
+	border: 2px solid var(--btn-border);
+	background: var(--btn-bg);
+	font-size: 22px;
+	font-weight: 700;
+	color: var(--btn-fg);
 }
 
 .tb:active {
 	transform: translateY(2px);
 	box-shadow: none;
 }
+
+.tb.toggled-on {
+    background: rgba(40, 204, 120, 0.50);
+    border-color: #22cc77;
+}
+	
+.tb.toggled-blue {
+    background: rgba(70, 90, 255, 0.50);
+    border-color: #4455cc;
+}
+	
+.tb.toggled-red {
+    background: rgba(204, 0, 0, 0.50);
+    border-color: #cc0000;
+}
+	
+
 
 #overlay {
 	position: fixed;
@@ -266,7 +291,7 @@ button {
 
 .card {
 	background: var(--paper-white);
-	border: 2px solid var(--ink);
+	border: 2px solid var(--btn-border);
 	border-radius: var(--r);
 	padding: 48px 24px;
 	width: min(520px,92vw);
@@ -280,7 +305,7 @@ button {
 	font-size: 38px;
 	line-height: 1.05;
 	margin-bottom: 32px;
-	font-weight: 900;
+	font-weight: 800;
 }
 
 .card p {
@@ -292,7 +317,7 @@ button {
 
 .big {
 	font-size: 64px;
-	font-weight: 900;
+	font-weight: 700;
 	line-height: 1;
 }
 
@@ -310,12 +335,12 @@ button {
 	right: 8px;
 	padding: 3px 8px;
 	border-radius: var(--r);
-	border: 2px solid var(--ink);
+	border: 2px solid var(--btn-border);
 	background: rgba(255,251,232,.85);
 	color: var(--ink);
 	pointer-events: none;
 	font-size: 15px;
-	font-weight: 900;
+	font-weight: 700;
 	white-space: pre;
 }
 
@@ -326,7 +351,7 @@ button {
     border: none;
     padding: 16px 32px;
     font-size: 24px;
-    font-weight: 900;
+    font-weight: 700;
     border-radius: var(--r);
     cursor: pointer;
     box-shadow: 2px 2px 0 #1e8449, 0 12px 22px rgba(0,0,0,0.4);
@@ -428,7 +453,7 @@ button {
 
 .card .left.big {
 	font-size: 20px;
-	font-weight: 900;
+	font-weight: 700;
 	line-height: 1;
 	margin-top: 12px;
 }
@@ -452,19 +477,18 @@ button {
 </div>
 
 <div id="pads">
-  <!--div class="pad" id="padL">◀︎<b class="outline"></b></div>
-  <div class="pad" id="padR">▶︎<b class="outline"></b></div-->
-	<div class="pad" id="padL">👈<b class="outline"></b></div>
+  	<div class="pad" id="padL">👈<b class="outline"></b></div>
 	<div class="pad" id="padR">👉<b class="outline"></b></div>
 </div>
 
 <div id="toolbar">
-  <button class="tb" data-hold="zoomIn">+</button>
-  <button class="tb" data-hold="zoomOut">−</button>
-  <button class="tb" data-hold="up">▲</button>
-  <button class="tb" data-hold="down">▼</button>
-  <button class="tb" data-hold="cw">↻</button>
-  <button class="tb" data-hold="ccw">↺</button>
+  <button class="tb toggled-blue" data-hold="zoomIn">+</button>
+  <button class="tb toggled-blue" data-hold="zoomOut">−</button>
+  <button class="tb toggled-blue" data-hold="up">↑</button>
+  <button class="tb toggled-blue" data-hold="down">↓</button>
+  <button class="tb toggled-blue" data-hold="cw">↻</button>
+  <button class="tb toggled-blue" data-hold="ccw">↺</button>
+  <button class="tb toggled-on" data-action="shadows" id="shadowBtn">🌗</button>
   <button class="tb" data-action="next">😡</button>
   <button class="tb" data-action="color">🎨</button>
   <button class="tb" data-action="mute" id="muteBtn">🔊</button>
@@ -2730,6 +2754,7 @@ button {
 		color: () => selectCreature(creature),
 		fps: () => { ui.fps.hidden = !ui.fps.hidden; },
 		info: openInfo,
+		shadows: () => setShadows(!shadowsOn),
 	};
 	const KEYS = {
 		KeyA: 'padL',
@@ -3230,11 +3255,6 @@ button {
 		sun.color.setHex(PL.sun);//ocho, pure il colore della luce cambia!!!
 
 		// HUD
-		/*for (const side of ['L', 'R']) {
-			const ready = playing && S.charged[side] && judge(sideAngle(side)) === 'perfect';
-			ui.pad[side].classList.toggle('ready', ready);
-			if (judgeTimers[side] > 0 && (judgeTimers[side] -= dt) <= 0) ui.judge[side].classList.remove('show');
-		}*/
 		for (const side of ['L', 'R']) {
 			const j = judge(sideAngle(side));
 			const ready = playing && S.charged[side] && j === 'perfect';
@@ -3262,6 +3282,26 @@ button {
 				ui.slope.className = '';
 			}
 		}
+	}
+	
+	let shadowsOn = true;
+
+	function setShadows(on) {
+		shadowsOn = on;
+		renderer.shadowMap.enabled = on;
+		sun.castShadow = on;
+		if (!on && sun.shadow.map) {      // libera la shadow map in memoria
+			sun.shadow.map.dispose();
+			sun.shadow.map = null;
+		}
+		// i materiali vanno ricompilati: lo shader cambia con/senza ombre
+		scene.traverse(o => {
+			if (o.material) {
+				for (const m of [].concat(o.material)) m.needsUpdate = true;
+			}
+		});
+		$('#shadowBtn').style.opacity = on ? 1 : 0.5;
+		try { localStorage.setItem('fury-shadows', on ? '1' : '0'); } catch (e) {}
 	}
 
 	// ============ LOOP ============
