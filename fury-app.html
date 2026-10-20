@@ -603,6 +603,8 @@ button {
 		drag: 0.04,
 		maxSpeed: 11,
 		
+		startGrace: 3, 		//nei primi 3 secondi il mostro ti aspetta!
+		
 		brake: 0.8,
 		perfectPre: 0.9,    // was 0.45 (radians before the top)
 		perfectPost: 1.2,   // was 0.7  (radians after the top)
@@ -2354,7 +2356,99 @@ button {
 	
 	
 	
-	
+	// ----- Coccodrillo -----
+	const CROCO_PALETTE = [
+		{ SKIN: 0x4a6a2a, DARK: 0x2f4a1a, BELLY: 0xcfc58a, TOOTH: 0xffffee, MOUTH: 0x8a2222, TONGUE: 0xcc4455, EYE: 0xffdd00, PUPIL: 0x111100 },
+		{ SKIN: 0x5a5a3a, DARK: 0x3a3a22, BELLY: 0xddd5a8, TOOTH: 0xffffee, MOUTH: 0x7a1a1a, TONGUE: 0xcc4455, EYE: 0xff9900, PUPIL: 0x111100 },
+		{ SKIN: 0x2f5a4a, DARK: 0x1a3a2e, BELLY: 0xbbd5a8, TOOTH: 0xffffee, MOUTH: 0x7a1a2a, TONGUE: 0xcc4455, EYE: 0xff3322, PUPIL: 0x111100 },
+		{ SKIN: 0x6a4a2a, DARK: 0x3a2814, BELLY: 0xddc9a0, TOOTH: 0xffffee, MOUTH: 0x7a1a1a, TONGUE: 0xcc4455, EYE: 0xffee44, PUPIL: 0x111100 },
+	];
+
+	function buildCroco() {
+		const R = pickPal('croco', CROCO_PALETTE);
+		const rx = {};
+		rx.root = new THREE.Group();
+		scene.add(rx.root);
+		rx.legs = [];
+
+		// zampe corte e divaricate ai lati (il gruppo "splay" le inclina verso l'esterno)
+		for (const sx of [1, -1]) {
+			for (const lz of [1.3, -1.6]) {
+				const hip = group(1.0 * sx, 0.95, lz, rx.root);
+				const splay = group(0, 0, 0, hip);
+				splay.rotation.z = sx * 0.6;
+				box(0.55, 0.65, 0.6, R.SKIN, 0, -0.3, 0, splay);
+				const knee = group(0, -0.6, 0, splay);
+				box(0.45, 0.55, 0.5, R.SKIN, 0, -0.25, 0, knee);
+				/*
+				const foot = group(0, -0.55, 0.1, knee);
+				foot.rotation.z = -sx * 0.6;                       // piede piatto a terra
+				box(0.8, 0.14, 0.9, R.DARK, 0, -0.05, 0.2, foot);
+				for (const cx of [-0.25, 0, 0.25]) box(0.12, 0.1, 0.25, R.TOOTH, cx, -0.05, 0.72, foot, false);
+				*/
+				const foot = group(0, -0.45, 0.1, knee);           // alzato di 0.10 rispetto a prima
+				foot.rotation.order = 'ZXY';                       // prima la rotazione y, poi il raddrizzamento
+				foot.rotation.z = -sx * 0.6;                       // piede piatto a terra
+				foot.rotation.y = sx * 0.7;                        // punte rivolte verso l'esterno
+				box(0.8, 0.14, 0.9, R.DARK, 0, 0.07, 0.2, foot);   // fondo del piede a livello del suolo
+				for (const cx of [-0.25, 0, 0.25]) box(0.12, 0.1, 0.25, R.TOOTH, cx, 0.07, 0.72, foot, false);
+				
+				rx.legs.push({ hip, knee, sx, off: (sx > 0) === (lz > 0) ? 0 : Math.PI });
+			}
+		}
+
+		// corpo basso e lungo
+		rx.torso = group(0, 0, 0, rx.root);
+		box(2.2, 1.0, 4.4, R.SKIN, 0, 1.2, -0.2, rx.torso);
+		box(1.8, 0.35, 4.0, R.BELLY, 0, 0.6, -0.2, rx.torso);
+		for (let k = 0; k < 7; k++) // placche dorsali
+			for (const dx of [-0.5, 0.5]) box(0.5, 0.28, 0.45, R.DARK, dx, 1.8, -2.1 + k * 0.65, rx.torso, false);
+
+		// coda in 4 segmenti (animati in animate(): tail, t2, t3, t4), con 2 file di squame
+		rx.tail = group(0, 1.2, -2.4, rx.torso);
+		box(1.8, 0.9, 1.8, R.SKIN, 0, 0, -0.9, rx.tail);
+		for (const dx of [-0.4, 0.4]) for (const z of [-0.5, -1.3]) box(0.3, 0.3, 0.5, R.DARK, dx, 0.55, z, rx.tail, false);
+
+		rx.t2 = group(0, 0, -1.8, rx.tail);
+		box(1.35, 0.75, 1.8, R.SKIN, 0, 0, -0.9, rx.t2);
+		for (const dx of [-0.3, 0.3]) for (const z of [-0.5, -1.3]) box(0.26, 0.28, 0.45, R.DARK, dx, 0.5, z, rx.t2, false);
+
+		rx.t3 = group(0, 0, -1.8, rx.t2);
+		box(0.95, 0.58, 1.8, R.SKIN, 0, 0, -0.9, rx.t3);
+		for (const dx of [-0.22, 0.22]) for (const z of [-0.5, -1.3]) box(0.22, 0.24, 0.45, R.DARK, dx, 0.4, z, rx.t3, false);
+
+		rx.t4 = group(0, 0, -1.8, rx.t3);
+		box(0.6, 0.4, 1.7, R.SKIN, 0, 0, -0.85, rx.t4);
+		for (const dx of [-0.14, 0.14]) for (const z of [-0.5, -1.2]) box(0.16, 0.2, 0.4, R.DARK, dx, 0.28, z, rx.t4, false);
+		
+		box(0.3, 0.22, 0.8, R.DARK, 0, 0, -1.9, rx.t4);   // punta
+
+		// testa: cranio + muso lungo e piatto
+		rx.head = group(0, 1.25, 2.0, rx.torso);
+		box(1.7, 0.9, 1.5, R.SKIN, 0, 0.1, 0.5, rx.head);              // cranio
+		box(1.2, 0.55, 2.4, R.SKIN, 0, -0.05, 2.3, rx.head);           // muso
+		box(0.9, 0.3, 0.5, R.DARK, 0, 0.1, 3.4, rx.head);              // punta del muso
+		box(1.1, 0.08, 2.3, R.MOUTH, 0, -0.35, 2.2, rx.head, false);   // palato
+		for (const sx of [1, -1]) {
+			box(0.5, 0.35, 0.5, R.DARK, 0.5 * sx, 0.7, 0.7, rx.head);  // bozze oculari
+			glow(0.16, 0.2, 0.3, R.EYE, 0.6 * sx, 0.78, 0.75, rx.head);
+			box(0.06, 0.2, 0.08, R.PUPIL, 0.68 * sx, 0.78, 0.8, rx.head, false);
+			box(0.14, 0.12, 0.12, R.PUPIL, 0.18 * sx, 0.28, 3.55, rx.head, false); // narici
+			for (let k = 0; k < 7; k++) // denti superiori irregolari
+				box(0.1, 0.22 + (k % 2) * 0.1, 0.12, R.TOOTH, 0.6 * sx, -0.45 - (k % 2) * 0.05, 1.2 + k * 0.35, rx.head, false);
+		}
+		rx.jaw = group(0, -0.35, 0.2, rx.head);
+		box(1.1, 0.3, 3.0, R.BELLY, 0, -0.1, 1.7, rx.jaw);
+		box(0.7, 0.07, 2.0, R.TONGUE, 0, 0.1, 1.6, rx.jaw, false);
+		for (const sx of [1, -1])
+			for (let k = 0; k < 7; k++)
+				box(0.1, 0.22 + ((k + 1) % 2) * 0.1, 0.12, R.TOOTH, 0.5 * sx, 0.15, 0.9 + k * 0.38, rx.jaw, false);
+
+		rx.reach = 5.4;    // la punta del muso è a z≈5.4 dal centro del rig
+		rx.swing = 0.7;    // zampe che si muovono molto: striscia veloce
+		rx.jawMax = 0.45;   // apertura massima della mascella in radianti
+		return rx;         // niente rx.charger: la mascella morde
+	}
 	
 	
 	
@@ -2397,6 +2491,7 @@ button {
 		8: buildDeer,
 		9: buildBoar,
 		0: buildMegaRex,
+		10: buildCroco,
 	};
 	const RIGS = {};
 	let creature = 1;
@@ -2520,7 +2615,9 @@ button {
 			caughtT: 0,
 			chargePose: 0,
 			dashPose: 0,
-			land: null//i riders stramazzano casualmente al suolo, ghghgh!!!
+			land: null,//i riders stramazzano casualmente al suolo, ghghgh!!!
+			monsterGo: false,//il mostro e' in pausa
+			gracePose: 0,//il mostro ruggisce quando e' in pausa
 		});
 		S.charged.L = S.charged.R = true;
 		S.charge = {
@@ -2537,7 +2634,7 @@ button {
 	}
 
 	function startGame() {
-		setCreature(rint(0, 9));//TODO: change!
+		setCreature(rint(0, Object.keys(BUILD).length));
 		newRiders();
 		resetGame();
 		S.state = 'playing';
@@ -2610,6 +2707,8 @@ button {
 		let q = j === 'perfect' ? 1 : j === 'good' ? 0.6 : 0.25;
 		if (S.speed < 1.2) q = Math.max(q, 0.7);
 		S.charged[side] = false;
+		S.monsterGo = true;//ok il mostro puo partire
+		
 		S.speed = Math.min(TUNE.maxSpeed, S.speed + TUNE.boost * q * (1 + TUNE.lowAssist / (1 + S.speed)));
 		pushQ(q);
 		showJudge(side, j);
@@ -2628,7 +2727,7 @@ button {
 		},
 		pause: () => setPaused(!S.paused),
 		mute: () => setMuted(!muted),
-		next: () => selectCreature(creature % 7 + 1),
+		next: () => selectCreature((creature + 1) % 11),//cicla mostri
 		color: () => selectCreature(creature),
 		fps: () => { ui.fps.hidden = !ui.fps.hidden; },
 		info: openInfo,
@@ -2784,6 +2883,15 @@ button {
 	}
 
 	function updateMonster(dt) {
+		
+		// fermo: niente passo, niente rumore di stomp
+		if (!S.monsterGo && S.t < TUNE.startGrace) {
+			S.monsterPhase += 0;
+			updateCharge(0);
+			return;
+		}
+		S.monsterGo = true;
+	
 		let sp = Math.min(TUNE.monsterMax, TUNE.monsterBase + S.t * TUNE.monsterAccel);
 		const gap = S.z - S.monsterZ;
 		sp *= clamp(1 - gradeAt(S.monsterZ) * TUNE.monsterSlope, 0.7, 1.3);
@@ -2968,6 +3076,12 @@ button {
 		const cp = S.chargePose;
 		const dp = S.dashPose;
 		const ph = S.monsterPhase;
+		
+		//in grace, la bestia si imbufalisce!
+		const grace = playing && !S.monsterGo && S.t < TUNE.startGrace;
+		S.gracePose = (S.gracePose || 0) + ((grace ? 1 : 0) - (S.gracePose || 0)) * lerp(10);
+		const gp = S.gracePose;
+		
 		S.monsterPitch += (-Math.atan(gradeAt(S.monsterZ)) * 0.6 - S.monsterPitch) * lerp(8);
 		rx.root.position.set(0, heightAt(S.monsterZ), S.monsterZ);
 		rx.root.rotation.x = S.monsterPitch;
@@ -3005,15 +3119,28 @@ button {
 			rx.tail.rotation.y = Math.sin(ph) * 0.22;
 			rx.t2.rotation.y = Math.sin(ph - 0.7) * 0.3;
 			rx.t3.rotation.y = Math.sin(ph - 1.4) * 0.35;
+			//CROCO ha 4 segmenti :)
+			if (rx.t4) rx.t4.rotation.y = Math.sin(ph - 2.1) * 0.4;
+			
 			rx.head.rotation.x = (Math.sin(ph * 2) * 0.05 - 0.06) * (1 - cp) + (-0.55 + Math.sin(time * 40) * 0.03) * cp + 0.1 * dp;
 			let jt;
 			if (S.state === 'caught') jt = S.caughtT < 0.22 ? 1 : 0;
+			
+			else if (grace) jt = 0.95 + 0.08 * Math.sin(time * 28);   // bocca spalancata che vibra mentre ruggisce
+			
 			else if (cp > 0.05) jt = 0.2 + 0.9 * cp + 0.05 * Math.sin(time * 30);
 			else if (danger > 0.5 || dp > 0.3) jt = 0.3 + 0.55 * Math.abs(Math.sin(time * 9));
 			else jt = 0.15 + 0.08 * Math.sin(time * 2);
 			S.jaw += (jt - S.jaw) * lerp(S.state === 'caught' ? 30 : 12);
 		}
-		rx.jaw.rotation.x = S.jaw;
+		
+		///rx.jaw.rotation.x = S.jaw;//CROCO ha apertura limitata
+		rx.jaw.rotation.x = rx.jawMax ? Math.min(S.jaw, rx.jawMax) : S.jaw;
+		if (rx.jawMax) rx.head.rotation.x = -0.12 - 0.25 * (rx.jaw.rotation.x / rx.jawMax);
+		
+		if (gp > 0.01) rx.head.rotation.x -= 0.35 * gp;
+		
+		
 		if (rx.charger && S.state !== 'title') {
 			rx.head.rotation.x = -0.15 * cp + 0.45 * dp;
 			rx.jaw.rotation.x = 0.05;
@@ -3170,7 +3297,7 @@ button {
 		initWorld();
 		initFx();
 		initCar();
-		setCreature(rint(0, 9));//TODO: change!
+		setCreature(rint(0, Object.keys(BUILD).length));
 		newRiders();
 		buildWorld();
 		showCard('title');
