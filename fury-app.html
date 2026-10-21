@@ -672,46 +672,81 @@ button {
 		chargePostpone: 3,
 	};
 	
-	const BIOME_LEN = 80;   // meters per biome; the blend happens in the last 40% of each one
+	const BIOME_LEN = 100;   // meters per biome; the blend happens in the last 40% of each one
 	const BIOMES = [
 		// spring
-		{ sun: 0xffffee, grassA: 0x99ee66, grassB: 0x88dd66, dirt: 0xeebb77, hillA: 0x77cc55, hillB: 0x66cc55, leaves: [0x44bb55, 0x339944, 0x55cc55, 0x33aa66], rock: 0xbbbbcc, rockTop: 0xccccdd, sky: 0xaaddff, gravel: 0xddccaa, rail: 0x888888, tie: 0x442211, trunk: 0x885533 },
+		{ sun: 0xffffee, sunInt: 0.80, ambientInt: 0.60, grassA: 0x99ee66, grassB: 0x88dd66, dirt: 0xeebb77, hillA: 0x77cc55, hillB: 0x66cc55, leaves: [0x44bb55, 0x339944, 0x55cc55, 0x33aa66], rock: 0xbbbbcc, rockTop: 0xccccdd, sky: 0xaaddff, gravel: 0xddccaa, rail: 0x888888, tie: 0x442211, trunk: 0x885533 },
 		// spring -> autumn
-		{ sun: 0xffeebb, grassA: 0xbbcc55, grassB: 0xaabb55, dirt: 0xcc9955, hillA: 0x99aa44, hillB: 0x889944, leaves: [0x999933, 0x886633, 0xaabb33, 0x776633], rock: 0xbbaaaa, rockTop: 0xccbbbb, sky: 0xdddddd, gravel: 0xddbb99, rail: 0x887777, tie: 0x553322, trunk: 0x885533 },
+		{ sun: 0xffeebb, sunInt: 0.75, ambientInt: 0.55, grassA: 0xbbcc55, grassB: 0xaabb55, dirt: 0xcc9955, hillA: 0x99aa44, hillB: 0x889944, leaves: [0x999933, 0x886633, 0xaabb33, 0x776633], rock: 0xbbaaaa, rockTop: 0xccbbbb, sky: 0xdddddd, gravel: 0xddbb99, rail: 0x887777, tie: 0x553322, trunk: 0x885533 },
 		// autumn
-		{ sun: 0xffcc88, grassA: 0xcc9944, grassB: 0xbb8844, dirt: 0xaa6633, hillA: 0xaa7733, hillB: 0x996633, leaves: [0xdd6622, 0xcc4422, 0xeeaa22, 0xbb3311], rock: 0xaaaa99, rockTop: 0xbbbbaa, sky: 0xffddaa, gravel: 0xccbb88, rail: 0x776666, tie: 0x664433, trunk: 0x885533 },
+		{ sun: 0xffcc88, sunInt: 0.70, ambientInt: 0.55, grassA: 0xcc9944, grassB: 0xbb8844, dirt: 0xaa6633, hillA: 0xaa7733, hillB: 0x996633, leaves: [0xdd6622, 0xcc4422, 0xeeaa22, 0xbb3311], rock: 0xaaaa99, rockTop: 0xbbbbaa, sky: 0xffddaa, gravel: 0xccbb88, rail: 0x776666, tie: 0x664433, trunk: 0x885533 },
 		// autumn -> desert
-		{ sun: 0xffddaa, grassA: 0xddbb66, grassB: 0xccaa55, dirt: 0xbb8844, hillA: 0xcc9944, hillB: 0xbb8844, leaves: [0xbb8833, 0xaa6622, 0xccbb33, 0x996622], rock: 0xaa9977, rockTop: 0xccaa88, sky: 0xffeeaa, gravel: 0xddbb99, rail: 0x885555, tie: 0x775544, trunk: 0x885533 },
+		{ sun: 0xffddaa, sunInt: 0.75, ambientInt: 0.55, grassA: 0xddbb66, grassB: 0xccaa55, dirt: 0xbb8844, hillA: 0xcc9944, hillB: 0xbb8844, leaves: [0xbb8833, 0xaa6622, 0xccbb33, 0x996622], rock: 0xaa9977, rockTop: 0xccaa88, sky: 0xffeeaa, gravel: 0xddbb99, rail: 0x885555, tie: 0x775544, trunk: 0x885533 },
 		// desert
-		{ sun: 0xffeeaa, grassA: 0xeedd88, grassB: 0xeecc77, dirt: 0xcc9966, hillA: 0xddaa66, hillB: 0xcc9955, leaves: [0x88aa44, 0x779933, 0x99bb55, 0x669944], rock: 0xbb8866, rockTop: 0xcc9977, sky: 0xffeebb, gravel: 0xeeccaa, rail: 0x887777, tie: 0x886644, trunk: 0x885533 },
+		{ sun: 0xffeeaa, sunInt: 0.80, ambientInt: 0.60, grassA: 0xeedd88, grassB: 0xeecc77, dirt: 0xcc9966, hillA: 0xddaa66, hillB: 0xcc9955, leaves: [0x88aa44, 0x779933, 0x99bb55, 0x669944], rock: 0xbb8866, rockTop: 0xcc9977, sky: 0xffeebb, gravel: 0xeeccaa, rail: 0x887777, tie: 0x886644, trunk: 0x885533 },
 		// desert -> snow
-		{ sun: 0xeeeeee, grassA: 0xffeecc, grassB: 0xeeddbb, dirt: 0xccbbaa, hillA: 0xddccbb, hillB: 0xccbbaa, leaves: [0xbbddaa, 0xbbcc99, 0xbbddaa, 0xaaccaa], rock: 0x775555, rockTop: 0x887766, sky: 0xeeeedd, gravel: 0xddccbb, rail: 0x999999, tie: 0x887766, trunk: 0x885533 },
+		{ sun: 0xeeeeee, sunInt: 0.85, ambientInt: 0.60, grassA: 0xffeecc, grassB: 0xeeddbb, dirt: 0xccbbaa, hillA: 0xddccbb, hillB: 0xccbbaa, leaves: [0xbbddaa, 0xbbcc99, 0xbbddaa, 0xaaccaa], rock: 0x775555, rockTop: 0x887766, sky: 0xeeeedd, gravel: 0xddccbb, rail: 0x999999, tie: 0x887766, trunk: 0x885533 },
 		// snow: white trees, dark rocks
-		{ sun: 0xddeeff, grassA: 0xffffff, grassB: 0xeeeeff, dirt: 0xbbccdd, hillA: 0xddeeff, hillB: 0xccddee, leaves: [0xffffff, 0xeeeeff, 0xddeeff, 0xeeffff], rock: 0x333333, rockTop: 0x555566, sky: 0xcceeff, gravel: 0xccccdd, rail: 0xaaaabb, tie: 0x775544, trunk: 0x885533 },
+		{ sun: 0xddeeff, sunInt: 0.90, ambientInt: 0.65, grassA: 0xffffff, grassB: 0xeeeeff, dirt: 0xbbccdd, hillA: 0xddeeff, hillB: 0xccddee, leaves: [0xffffff, 0xeeeeff, 0xddeeff, 0xeeffff], rock: 0x333333, rockTop: 0x555566, sky: 0xcceeff, gravel: 0xccccdd, rail: 0xaaaabb, tie: 0x775544, trunk: 0x885533 },
 		// snow -> dark (crepuscolo gelido, blu-grigio violaceo)
-		{ sun: 0xaaaadd, grassA: 0x9999cc, grassB: 0x8899bb, dirt: 0x666688, hillA: 0x7788aa, hillB: 0x777799, leaves: [0x8888aa, 0x7777aa, 0x8888bb, 0x777799], rock: 0x333344, rockTop: 0x555566, sky: 0x8888aa, gravel: 0x8888aa, rail: 0x8888aa, tie: 0x554455, trunk: 0x554455 },
+		{ sun: 0xaaaadd, sunInt: 0.70, ambientInt: 0.50, grassA: 0x9999cc, grassB: 0x8899bb, dirt: 0x666688, hillA: 0x7788aa, hillB: 0x777799, leaves: [0x8888aa, 0x7777aa, 0x8888bb, 0x777799], rock: 0x333344, rockTop: 0x555566, sky: 0x8888aa, gravel: 0x8888aa, rail: 0x8888aa, tie: 0x554455, trunk: 0x554455 },
 		// dark: nero/viola tetro
-		{ sun: 0x9966dd, grassA: 0x221133, grassB: 0x221133, dirt: 0x111122, hillA: 0x111133, hillB: 0x111122, leaves: [0x442266, 0x331155, 0x552277, 0x221144], rock: 0x111111, rockTop: 0x222233, sky: 0x110022, gravel: 0x222244, rail: 0x665588, tie: 0x221122, trunk: 0x221122 },
+		{ sun: 0x442277, sunInt: 0.50, ambientInt: 0.40, grassA: 0x221133, grassB: 0x221133, dirt: 0x111122, hillA: 0x111133, hillB: 0x111122, leaves: [0x442266, 0x331155, 0x552277, 0x221144], rock: 0x111111, rockTop: 0x222233, sky: 0x110022, gravel: 0x222244, rail: 0x665588, tie: 0x221122, trunk: 0x221122 },
 		// dark -> spring (risveglio: viola sbiadito verso il verde)
-		{ sun: 0xccddcc, grassA: 0x779988, grassB: 0x668888, dirt: 0x776677, hillA: 0x668877, hillB: 0x557766, leaves: [0x669988, 0x558877, 0x77aa99, 0x668888], rock: 0x444455, rockTop: 0x666677, sky: 0x8899cc, gravel: 0x9999aa, rail: 0x8888aa, tie: 0x553344, trunk: 0x664444 },
+		{ sun: 0xccddcc, sunInt: 0.60, ambientInt: 0.45, grassA: 0x779988, grassB: 0x668888, dirt: 0x776677, hillA: 0x668877, hillB: 0x557766, leaves: [0x669988, 0x558877, 0x77aa99, 0x668888], rock: 0x444455, rockTop: 0x666677, sky: 0x8899cc, gravel: 0x9999aa, rail: 0x8888aa, tie: 0x553344, trunk: 0x664444 },
 		// snow -> spring
-		{ sun: 0xffffdd, grassA: 0xccffbb, grassB: 0xbbeeaa, dirt: 0xddccaa, hillA: 0xaaddaa, hillB: 0x99ddaa, leaves: [0x99ddaa, 0x88cc99, 0x99ddaa, 0x99ccbb], rock: 0x777788, rockTop: 0x999999, sky: 0xbbeeff, gravel: 0xddcccc, rail: 0x9999aa, tie: 0x664433, trunk: 0x885533 }
+		{ sun: 0xffffdd, sunInt: 0.70, ambientInt: 0.50, grassA: 0xccffbb, grassB: 0xbbeeaa, dirt: 0xddccaa, hillA: 0xaaddaa, hillB: 0x99ddaa, leaves: [0x99ddaa, 0x88cc99, 0x99ddaa, 0x99ccbb], rock: 0x777788, rockTop: 0x999999, sky: 0xbbeeff, gravel: 0xddcccc, rail: 0x9999aa, tie: 0x664433, trunk: 0x885533 }
 	];
 
-	const _ca = new THREE.Color(), _cb = new THREE.Color();
+	const _ca = new THREE.Color();
+	const _cb = new THREE.Color();
 	const mix = (a, b, t) => _ca.set(a).lerp(_cb.set(b), t).getHex();
+	const mixDouble = (a, b, t) => a + (b - a) * t;
 	const biomeStart = rint(0, BIOMES.length * BIOME_LEN - 1);
+	const PALETTE_KEYS = ['grassA', 'grassB', 'dirt', 'hillA', 'hillB', 'rock', 'rockTop', 'sky', 'gravel', 'tie', 'rail', 'trunk', 'sun', 'ambientInt'];
+	//ottimizzazione: oggetto riutilizzabile (Pre-allocazione) per azzerare il Garbage Collector
+	const sharedPalette = { 
+		leaves: new Array(BIOMES[0].leaves.length) // Assumendo che la lunghezza sia fissa
+	}; 
 	
-	function paletteAt(z) {
+	function paletteAtOLD(z) {
 	  const f = biomeStart + Math.max(0, z + biomeStart) / BIOME_LEN;
 	  const i = Math.floor(f);
 	  const t = clamp((f - i - 0.6) / 0.4, 0, 1);
 	  const A = BIOMES[i % BIOMES.length];
 	  const B = BIOMES[(i + 1) % BIOMES.length];
 	  const P = { leaves: A.leaves.map((c, k) => mix(c, B.leaves[k], t)) };
-	  for (const k of ['grassA', 'grassB', 'dirt', 'hillA', 'hillB', 'rock', 'rockTop', 'sky', 'gravel', 'tie', 'rail', 'trunk', 'sun'])
-		P[k] = mix(A[k], B[k], t);
+	  for (const k of ['grassA', 'grassB', 'dirt', 'hillA', 'hillB', 'rock', 'rockTop', 'sky', 'gravel', 'tie', 'rail', 'trunk', 'sun', 'sunInt']) {
+	  	if (k !== 'sunInt') P[k] = mix(A[k], B[k], t);
+		else P[k] = mixDouble(A[k], B[k], t);
+	  }
 	  return P;
+	}
+	
+	function paletteAt(z) {
+	  const f = biomeStart + Math.max(0, z + biomeStart) / BIOME_LEN;
+	  const i = Math.floor(f);
+	  const t = clamp((f - i - 0.6) / 0.4, 0, 1);	  
+	  const A = BIOMES[i % BIOMES.length];
+	  const B = BIOMES[(i + 1) % BIOMES.length];
+	  
+	  //ottimizzazione: in-place mapping per evitare l'allocazione di un nuovo array .map()
+	  const len = A.leaves.length;
+	  for (let k = 0; k < len; k++) {
+		sharedPalette.leaves[k] = mix(A.leaves[k], B.leaves[k], t);
+	  }
+	  
+	  //ottimizzazione: ciclo index-based tradizionale (molto più veloce del "for...of" con array al volo)
+	  for (let k = 0; k < PALETTE_KEYS.length; k++) {
+		const key = PALETTE_KEYS[k];
+		sharedPalette[key] = mix(A[key], B[key], t);
+	  }
+	  
+	  //gestione di sun + ambient light intensity
+	  sharedPalette.sunInt = mixDouble(A.sunInt, B.sunInt, t);
+	  sharedPalette.ambientInt = mixDouble(A.ambientInt, B.ambientInt, t);
+	  
+	  return sharedPalette; 
 	}
 	
 	
@@ -785,6 +820,7 @@ button {
 	let scene;
 	let camera;
 	let sun;
+	let ambientLight;
 	let unitBox;
 	let camTarget;
 	let camLead = 3;
@@ -855,7 +891,8 @@ button {
 		scene.background = new THREE.Color(0xaaddff);
 		camera = new THREE.OrthographicCamera(-16, 16, 16, -16, 0.1, 140);
 		camTarget = new THREE.Vector3(0, 0, camLead);
-		scene.add(new THREE.HemisphereLight(0xffffff, 0x7788aa, 0.62));
+		ambientLight = new THREE.HemisphereLight(0xffffff, 0x7788aa, 0.60);//0.62 di luce ambientale
+		scene.add(ambientLight);
 		sun = new THREE.DirectionalLight(0xffffee, 0.8);
 		sun.castShadow = true;
 		
@@ -3620,6 +3657,8 @@ button {
 		const PL = paletteAt(S.z + 30);
 		scene.background.setHex(PL.sky);// +30: the sky follows the terrain you are approaching
 		sun.color.setHex(PL.sun);//ocho, pure il colore della luce cambia!!!
+		sun.intensity = PL.sunInt;
+		ambientLight.intensity = PL.ambientInt;
 
 		// HUD
 		for (const side of ['L', 'R']) {
