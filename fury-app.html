@@ -2510,14 +2510,12 @@ button {
 		{ BODY: 0xffeecc, BODY2: 0xddccbb, POINT: 0x443322, POINT2: 0x554433, PINK: 0xdd9999, EYE: 0x33bbff, PUPIL: 0x111111, TOOTH: 0xffffee, MOUTH: 0x882233, TONGUE: 0xee7777, WHISK: 0xffffff },
 		// blue point: corpo bianco freddo, estremità grigio-blu
 		{ BODY: 0xeeffff, BODY2: 0xddddee, POINT: 0x556688, POINT2: 0x778899, PINK: 0xeeaaaa, EYE: 0x33bbff, PUPIL: 0x111111, TOOTH: 0xffffee, MOUTH: 0x882233, TONGUE: 0xee7777, WHISK: 0xffffff },
-		// 1. Infernal Red: Corpo antracite/nero, estremità rosso fuoco, occhi arancio brillante, zanne sanguigne
-		{ BODY: 0x221100, BODY2: 0x110000, POINT: 0xcc2200, POINT2: 0x991100, PINK: 0x882222, EYE: 0xff6600, PUPIL: 0x000000, TOOTH: 0xffe0e0, MOUTH: 0x550000, TONGUE: 0xaa1122, WHISK: 0xff4422 },
+		// 1. Infernal gray, occhi arancio brillante, zanne sanguigne
+		{ BODY: 0x666666, BODY2: 0x555555, POINT: 0x444444, POINT2: 0x333333, PINK: 0x882222, EYE: 0xff0022, PUPIL: 0x000000, TOOTH: 0xffffee, MOUTH: 0x550000, TONGUE: 0xaa1122, WHISK: 0xffffff },
 		// 2. Demon Blood: Corpo nero profondo, estremità nere, occhi rosso magma, baffi e zanne scuri
 		{ BODY: 0x222222, BODY2: 0x111111, POINT: 0x000000, POINT2: 0x110000, PINK: 0x661122, EYE: 0xff0022, PUPIL: 0x000000, TOOTH: 0xddcccc, MOUTH: 0x330005, TONGUE: 0x880011, WHISK: 0x882222 },
 		// 3. seal con occhi rossi
 		{ BODY: 0xffeecc, BODY2: 0xddccbb, POINT: 0x332211, POINT2: 0x221100, PINK: 0xdd9999, EYE: 0xff8800, PUPIL: 0xee0000, TOOTH: 0xffffee, MOUTH: 0x882233, TONGUE: 0xee7777, WHISK: 0xffffff },
-		// 4. Void Spirit: Demoniaco spettrale / viola scuro, estremità magenta-sangue, occhi rosso rubino intenso
-		{ BODY: 0x1a1221, BODY2: 0x100a18, POINT: 0x880044, POINT2: 0x55002d, PINK: 0x772255, EYE: 0xee0055, PUPIL: 0x05000b, TOOTH: 0xeeddee, MOUTH: 0x440022, TONGUE: 0x991155, WHISK: 0xcc66aa }
 	];
 	
 	// IK a 2 segmenti nel piano y-z; il metatarso resta verticale
@@ -2554,6 +2552,8 @@ button {
 		rx.root = new THREE.Group();
 		scene.add(rx.root);
 		rx.legs = [];
+		
+		const straightEars = Math.random() < 0.5;
 
 		// zampe feline: davanti (gomito indietro) e dietro (ginocchio avanti, garretto indietro)
 		for (const sx of [1, -1]) {//sinistra+destra
@@ -2627,6 +2627,7 @@ button {
 		for (const sx of [1, -1]) {
 			box(0.35, 0.55, 0.5, R.BODY, 0.75 * sx, -0.1, 0.85, hd);// guance
 			
+			/*
 			// occhio azzurro a mandorla: angolo esterno IN SU
 			const eyeG = glow(0.4, 0.28, 0.1, R.EYE, 0.42 * sx, 0.4, 1.28, hd);// era 1.24
 			eyeG.rotation.z = 0.25 * sx;
@@ -2634,6 +2635,7 @@ button {
 			// nucleo più chiaro, per dare luminosità
 			const core = glow(0.26, 0.16, 0.1, R.EYE, 0.42 * sx, 0.4, 1.33, hd);// era 1.27
 			core.rotation.z = 0.25 * sx;
+			*/
 
 			// alone luminoso (additivo, non proietta ombre, non scrive nello z-buffer)
 			const halo = new THREE.Mesh(unitBox, new THREE.MeshBasicMaterial({
@@ -2652,16 +2654,23 @@ button {
 			const slit = box(0.05, 0.25, 0.04, R.PUPIL, 0.42 * sx, 0.4, 1.40, hd, false);// era 1.33
 			slit.rotation.z = 0.25 * sx;
 
-			// sopracciglio severo: interno basso, esterno alto
-			const brow = box(0.5, 0.09, 0.12, R.POINT, 0.42 * sx, 0.68, 1.30, hd, false);// era 1.22
-			brow.rotation.z = 0.3 * sx;
+			if (straightEars) {
+				//orecchie a punta dritte
+				const ear = group(0.6 * sx, 0.85, 0.35, hd);
+				ear.rotation.z = -0.28 * sx;
+				box(0.65, 0.7, 0.16, R.POINT, 0, 0.3, 0, ear);
+				box(0.35, 0.4, 0.16, R.POINT, 0, 0.8, 0, ear, false);
+				box(0.36, 0.45, 0.04, R.PINK, 0, 0.3, 0.09, ear, false);
+			} else {
+				//orecchie all'indietro, infernali
+				const ear = group(0.6 * sx, 0.73, 0.25, hd);   // più bassa e un po' indietro
+				ear.rotation.set(0.90, 1.33 * sx, -1.90 * sx); // avanti (era indietro -0.45, 0.3, -1.23), lato piatto in fuori, schiacciata di lato
+				box(0.65, 0.7, 0.16, R.POINT, 0, 0.3, 0, ear);
+				box(0.35, 0.4, 0.16, R.POINT, 0, 0.8, 0, ear, false);
+				box(0.36, 0.45, 0.04, R.PINK, 0, 0.3, 0.09, ear, false);
+			}
 			
-			//orecchie a punta
-			const ear = group(0.6 * sx, 0.85, 0.35, hd);
-			ear.rotation.z = -0.28 * sx;
-			box(0.65, 0.7, 0.16, R.POINT, 0, 0.3, 0, ear);
-			box(0.35, 0.4, 0.16, R.POINT, 0, 0.8, 0, ear, false);
-			box(0.36, 0.45, 0.04, R.PINK, 0, 0.3, 0.09, ear, false);
+			//baffazzi
 			for (const dy of [-0.05, 0.1]) {
 				const w = box(1.0, 0.03, 0.03, R.WHISK, 0.85 * sx, dy - 0.1, 1.4, hd, false);
 				w.rotation.y = 0.25 * sx;
