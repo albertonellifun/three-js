@@ -71,6 +71,14 @@ button {
 	font-weight: 700;
 }
 
+.outline-inverted {
+	color: var(--outline-bg);
+	-webkit-text-stroke: 4px var(--outline-fg);
+	paint-order: stroke fill;
+	font-weight: 700;
+}
+
+
 #hud {
 	position: fixed;
 	top: 0;
@@ -394,6 +402,7 @@ button {
 
 .logo .l1 { font-size: clamp(64px, 21vw, 108px); }
 .logo .l3 { font-size: clamp(56px, 18vw, 96px); }
+.logo .l4 { z-index: 100; color: #ffc61f; margin-top: 6px; line-height: 0.8; font-size: 16px; text-transform: none; letter-spacing: -2px; }
 
 .logo .l2 {
 	display: table;
@@ -511,6 +520,7 @@ button {
 				<i class="rail r"></i>
 			</b>
 			<span class="l3" data-t="RAILS">RAILS</span>
+			<p class="l4 outline-inverted" data-t="feat. 🥊😼Rocky Graffietto from Hell!">feat. 🥊😼Rocky Graffietto from Hell!</p>
 		</h1>
 		
 		
@@ -543,6 +553,7 @@ button {
 				<i class="rail r"></i>
 			</b>
 			<span class="l3" data-t="RAILS">RAILS</span>
+			<p class="l4 outline-inverted" data-t="feat. 🥊😼Rocky Graffietto from Hell!">feat. 🥊😼Rocky Graffietto from Hell!</p>
 		</h1>
 		
 		<p class="left big">👉 Info</p>
@@ -2493,6 +2504,183 @@ button {
 	}
 	
 	
+	//oh no, di nuovo rocky graffietto!!! il gatto siamese piu bello del mondo!
+	const ROCKYGRAFFIETTO_PALETTE = [
+		// seal point: corpo crema, estremità marrone scuro
+		{ BODY: 0xffeecc, BODY2: 0xddccbb, POINT: 0x443322, POINT2: 0x554433, PINK: 0xdd9999, EYE: 0x33bbff, PUPIL: 0x111111, TOOTH: 0xffffee, MOUTH: 0x882233, TONGUE: 0xee7777, WHISK: 0xffffff },
+		// blue point: corpo bianco freddo, estremità grigio-blu
+		{ BODY: 0xeeffff, BODY2: 0xddddee, POINT: 0x556688, POINT2: 0x778899, PINK: 0xeeaaaa, EYE: 0x33bbff, PUPIL: 0x111111, TOOTH: 0xffffee, MOUTH: 0x882233, TONGUE: 0xee7777, WHISK: 0xffffff },
+		// 1. Infernal Red: Corpo antracite/nero, estremità rosso fuoco, occhi arancio brillante, zanne sanguigne
+		{ BODY: 0x221100, BODY2: 0x110000, POINT: 0xcc2200, POINT2: 0x991100, PINK: 0x882222, EYE: 0xff6600, PUPIL: 0x000000, TOOTH: 0xffe0e0, MOUTH: 0x550000, TONGUE: 0xaa1122, WHISK: 0xff4422 },
+		// 2. Demon Blood: Corpo nero profondo, estremità nere, occhi rosso magma, baffi e zanne scuri
+		{ BODY: 0x222222, BODY2: 0x111111, POINT: 0x000000, POINT2: 0x110000, PINK: 0x661122, EYE: 0xff0022, PUPIL: 0x000000, TOOTH: 0xddcccc, MOUTH: 0x330005, TONGUE: 0x880011, WHISK: 0x882222 },
+		// 3. seal con occhi rossi
+		{ BODY: 0xffeecc, BODY2: 0xddccbb, POINT: 0x332211, POINT2: 0x221100, PINK: 0xdd9999, EYE: 0xff8800, PUPIL: 0xee0000, TOOTH: 0xffffee, MOUTH: 0x882233, TONGUE: 0xee7777, WHISK: 0xffffff },
+		// 4. Void Spirit: Demoniaco spettrale / viola scuro, estremità magenta-sangue, occhi rosso rubino intenso
+		{ BODY: 0x1a1221, BODY2: 0x100a18, POINT: 0x880044, POINT2: 0x55002d, PINK: 0x772255, EYE: 0xee0055, PUPIL: 0x05000b, TOOTH: 0xeeddee, MOUTH: 0x440022, TONGUE: 0x991155, WHISK: 0xcc66aa }
+	];
+	
+	// IK a 2 segmenti nel piano y-z; il metatarso resta verticale
+	function catLeg(L, p, moving) {
+		const A = 0.7, H = 0.45, DUTY = 0.6;   // mezza falcata, altezza del passo, quota di appoggio
+			let z = 0, y = -L.dy;                  // bersaglio della caviglia rispetto all'anca
+		if (moving) {
+			const u = mod(p, TAU) / TAU;
+			if (u < DUTY) {
+				z = A * (1 - 2 * u / DUTY);                   // appoggio: il piede va indietro
+			} else {
+				const v = (u - DUTY) / (1 - DUTY);
+				const e = v * v * (3 - 2 * v);
+				z = -A + 2 * A * e;                           // recupero: va avanti
+				y += Math.sin(Math.PI * v) * H;               // e si solleva
+			}
+		}
+		const { l1, l2, bend } = L;
+		const d = clamp(Math.hypot(z, y), 0.05, l1 + l2 - 0.001);
+		const th = Math.atan2(z, -y);
+		const A1 = Math.acos(clamp((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d), -1, 1));
+		const a1 = th + bend * A1;
+		const kz = l1 * Math.sin(a1), ky = -l1 * Math.cos(a1);
+		const a2 = Math.atan2(z - kz, -(y - ky));
+		L.hip.rotation.x = -a1;
+		L.knee.rotation.x = a1 - a2;
+		L.ankle.rotation.x = a2;                              // piede verticale
+	}
+	
+
+	function buildRockyGraffietto() {
+		const R = pickPal('cat', ROCKYGRAFFIETTO_PALETTE);
+		const rx = {};
+		rx.root = new THREE.Group();
+		scene.add(rx.root);
+		rx.legs = [];
+
+		// zampe feline: davanti (gomito indietro) e dietro (ginocchio avanti, garretto indietro)
+		for (const sx of [1, -1]) {//sinistra+destra
+			for (const lz of [1.2, -1.75]) {//anteriori+posteriori
+				const front = lz > 0;
+				const l1  = front ? 0.8  : 1.2;     // omero / coscia
+				const l2  = front ? 0.8  : 1.2;     // avambraccio / stinco
+				const lf  = front ? 0.55 : 0.7;     // metatarso (dietro più alto)
+				const hy  = front ? 1.85 : 2.5;     // altezza anca: dietro dentro il corpo
+				const dy  = hy - lf;                // profondità della caviglia rispetto all'anca
+
+				const hip = group((front ? 0.7 : 0.8) * sx, hy, lz, rx.root);
+				// coscia: dietro è una massa muscolosa, larga
+				box(front ? 0.5 : 0.8, l1 + 0.1, front ? 0.55 : 0.95, R.BODY, 0, -l1 / 2, 0, hip);
+
+				const knee = group(0, -l1, 0, hip);
+				box(front ? 0.38 : 0.42, l2 + 0.1, front ? 0.38 : 0.45, R.POINT, 0, -l2 / 2, 0, knee);
+
+				const ankle = group(0, -l2, 0, knee);
+				box(0.3, lf, 0.3, R.POINT, 0, -lf / 2, 0, ankle);               // metatarso
+				box(0.5, 0.2, 0.75, R.POINT2, 0, -lf + 0.1, 0.2, ankle);        // zampa
+				for (const cx of [-0.15, 0.15]) box(0.1, 0.1, 0.12, R.TOOTH, cx, -lf + 0.05, 0.6, ankle, false);
+
+				rx.legs.push({
+					hip, knee, ankle, sx,
+					off: (sx > 0) === (lz > 0) ? 0 : Math.PI,
+					ik: true, l1, l2, dy,
+					bend: front ? -1 : 1
+				});
+			}
+		}
+
+		// corpo largo e basso
+		rx.torso = group(0, 0, 0, rx.root);
+		box(2.0, 1.6, 3.6, R.BODY, 0, 2.5, -0.1, rx.torso);
+		box(2.1, 1.8, 1.4, R.BODY, 0, 2.55, 1.2, rx.torso);                  // petto
+		box(1.7, 0.4, 3.2, R.BODY2, 0, 1.75, 0, rx.torso, false);            // ventre
+		box(1.8, 0.12, 2.4, R.BODY2, 0, 3.33, -0.5, rx.torso, false)         // sella dorsale
+		// retro in tinta col corpo + due palle sotto l'attaccatura della coda
+		box(1.6, 1.2, 0.5, R.BODY, 0, 2.55, -1.95, rx.torso);
+		for (const sx of [1, -1]) {
+			box(0.42, 0.46, 0.42, R.POINT2, 0.26 * sx, 1.95, -2.2, rx.torso);   // palla
+		}
+
+		// collo
+		const neck = box(1.3, 1.1, 1.1, R.BODY, 0, 3.05, 1.9, rx.torso);
+		neck.rotation.x = 0.4;
+
+		// coda grossa, tenuta alta, che si assottiglia
+		rx.tail = group(0, 2.95, -1.95, rx.torso);
+		rx.tail.rotation.x = 0.5;
+		box(0.6, 0.6, 1.4, R.POINT, 0, 0, -0.65, rx.tail);
+		rx.t2 = group(0, 0, -1.35, rx.tail);
+		rx.t2.rotation.x = 0.15;
+		box(0.54, 0.54, 1.4, R.POINT, 0, 0, -0.65, rx.t2);
+		rx.t3 = group(0, 0, -1.35, rx.t2);
+		rx.t3.rotation.x = -0.1;
+		box(0.48, 0.48, 1.4, R.POINT, 0, 0, -0.65, rx.t3);
+		rx.t4 = group(0, 0, -1.35, rx.t3);
+		rx.t4.rotation.x = -0.25;
+		box(0.4, 0.4, 1.2, R.POINT2, 0, 0, -0.55, rx.t4);
+
+		// testa a cuneo, più larga
+		rx.head = group(0, 3.4, 2.3, rx.torso);
+		const hd = rx.head;
+		box(1.8, 1.3, 1.3, R.BODY, 0, 0.2, 0.5, hd);               // cranio
+		box(1.25, 1.0, 0.12, R.POINT, 0, 0.05, 1.19, hd, false);   //maschera era 1.16
+		box(0.85, 0.55, 0.55, R.POINT, 0, -0.12, 1.3, hd);         // muso
+		box(0.26, 0.14, 0.1, R.PINK, 0, 0.1, 1.62, hd, false);     // tartufo
+		box(0.8, 0.07, 0.9, R.MOUTH, 0, -0.4, 1.2, hd, false);     // palato
+		for (const sx of [1, -1]) {
+			box(0.35, 0.55, 0.5, R.BODY, 0.75 * sx, -0.1, 0.85, hd);// guance
+			
+			// occhio azzurro a mandorla: angolo esterno IN SU
+			const eyeG = glow(0.4, 0.28, 0.1, R.EYE, 0.42 * sx, 0.4, 1.28, hd);// era 1.24
+			eyeG.rotation.z = 0.25 * sx;
+
+			// nucleo più chiaro, per dare luminosità
+			const core = glow(0.26, 0.16, 0.1, R.EYE, 0.42 * sx, 0.4, 1.33, hd);// era 1.27
+			core.rotation.z = 0.25 * sx;
+
+			// alone luminoso (additivo, non proietta ombre, non scrive nello z-buffer)
+			const halo = new THREE.Mesh(unitBox, new THREE.MeshBasicMaterial({
+				color: R.EYE,
+				transparent: true,
+				opacity: 0.95,
+				blending: THREE.AdditiveBlending,
+				depthWrite: false
+			}));
+			halo.scale.set(0.4, 0.28, 0.1);
+			halo.position.set(0.42 * sx, 0.4, 1.31);// era 1.26
+			halo.rotation.z = 0.25 * sx;
+			hd.add(halo);
+
+			// pupilla a fessura, davanti a tutto
+			const slit = box(0.05, 0.25, 0.04, R.PUPIL, 0.42 * sx, 0.4, 1.40, hd, false);// era 1.33
+			slit.rotation.z = 0.25 * sx;
+
+			// sopracciglio severo: interno basso, esterno alto
+			const brow = box(0.5, 0.09, 0.12, R.POINT, 0.42 * sx, 0.68, 1.30, hd, false);// era 1.22
+			brow.rotation.z = 0.3 * sx;
+			
+			//orecchie a punta
+			const ear = group(0.6 * sx, 0.85, 0.35, hd);
+			ear.rotation.z = -0.28 * sx;
+			box(0.65, 0.7, 0.16, R.POINT, 0, 0.3, 0, ear);
+			box(0.35, 0.4, 0.16, R.POINT, 0, 0.8, 0, ear, false);
+			box(0.36, 0.45, 0.04, R.PINK, 0, 0.3, 0.09, ear, false);
+			for (const dy of [-0.05, 0.1]) {
+				const w = box(1.0, 0.03, 0.03, R.WHISK, 0.85 * sx, dy - 0.1, 1.4, hd, false);
+				w.rotation.y = 0.25 * sx;
+				w.rotation.z = (dy > 0 ? 0.12 : -0.08) * sx;
+			}
+			box(0.09, 0.32, 0.09, R.TOOTH, 0.24 * sx, -0.58, 1.5, hd, false);
+		}
+
+		rx.jaw = group(0, -0.42, 0.55, hd);
+		box(0.8, 0.2, 1.0, R.POINT, 0, -0.05, 0.55, rx.jaw);
+		box(0.5, 0.05, 0.7, R.TONGUE, 0, 0.06, 0.55, rx.jaw, false);
+		for (const sx of [1, -1]) box(0.08, 0.26, 0.08, R.TOOTH, 0.22 * sx, 0.12, 0.95, rx.jaw, false);
+
+		rx.reach = 4.0;
+		rx.swing = 0.4;
+		rx.jawMax = 0.8;
+		return rx;
+	}
+	
 	
 	
 	// ----- Coccodrillo -----
@@ -2636,6 +2824,7 @@ button {
 		0: buildMegaRex,
 		10: buildCroco,
 		11: buildSnake,
+		12: buildRockyGraffietto,
 	};
 	const RIGS = {};
 	let creature = 1;
@@ -2873,7 +3062,7 @@ button {
 		},
 		pause: () => setPaused(!S.paused),
 		mute: () => setMuted(!muted),
-		next: () => selectCreature((creature + 1) % 12),//cicla mostri
+		next: () => selectCreature((creature + 1) % Object.keys(BUILD).length),//cicla mostri
 		color: () => selectCreature(creature),
 		fps: () => { ui.fps.hidden = !ui.fps.hidden; },
 		info: openInfo,
@@ -3262,6 +3451,7 @@ button {
 				L.hip.rotation.x = 0;
 				L.knee.rotation.x = 0;
 				if (L.ankle) L.ankle.rotation.x = 0;//new trex
+				if (L.ik) { catLeg(L, 0, false); continue; }//rocky graffietto
 			}
 			rx.tail.rotation.y = Math.sin(time * 1.3) * 0.2;
 			S.jaw = 0.2 + 0.1 * Math.sin(time * 1.5);
@@ -3274,6 +3464,7 @@ button {
 				L.knee.rotation.x = lift * (L.ankle ? 0.9 : 0.6) + 0.3 * cp;
 				////if (L.ankle) L.ankle.rotation.x = -(L.hip.rotation.x + L.knee.rotation.x) * 0.9 + lift * 0.4;
 				if (L.ankle) L.ankle.rotation.x = -(L.hip.rotation.x + L.knee.rotation.x) + lift * 0.4;
+				if (L.ik) { catLeg(L, ph + L.off, !(down || grace)); continue; }//rocky graffietto
 			}
 			//torso
 			rx.torso.position.y = (-Math.abs(Math.sin(ph)) * 0.2 + 0.1) * (1 - cp) - 0.3 * cp;
