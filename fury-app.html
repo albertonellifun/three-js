@@ -2623,20 +2623,10 @@ button {
 		box(1.25, 1.0, 0.12, R.POINT, 0, 0.05, 1.19, hd, false);   //maschera era 1.16
 		box(0.85, 0.55, 0.55, R.POINT, 0, -0.12, 1.3, hd);         // muso
 		box(0.26, 0.14, 0.1, R.PINK, 0, 0.1, 1.62, hd, false);     // tartufo
-		box(0.8, 0.07, 0.9, R.MOUTH, 0, -0.4, 1.2, hd, false);     // palato
+		box(0.8, 0.07, 0.7, R.MOUTH, 0, -0.4, 1.2, hd, false);     // palato
 		for (const sx of [1, -1]) {
 			box(0.35, 0.55, 0.5, R.BODY, 0.75 * sx, -0.1, 0.85, hd);// guance
 			
-			/*
-			// occhio azzurro a mandorla: angolo esterno IN SU
-			const eyeG = glow(0.4, 0.28, 0.1, R.EYE, 0.42 * sx, 0.4, 1.28, hd);// era 1.24
-			eyeG.rotation.z = 0.25 * sx;
-
-			// nucleo più chiaro, per dare luminosità
-			const core = glow(0.26, 0.16, 0.1, R.EYE, 0.42 * sx, 0.4, 1.33, hd);// era 1.27
-			core.rotation.z = 0.25 * sx;
-			*/
-
 			// alone luminoso (additivo, non proietta ombre, non scrive nello z-buffer)
 			const halo = new THREE.Mesh(unitBox, new THREE.MeshBasicMaterial({
 				color: R.EYE,
@@ -2676,13 +2666,31 @@ button {
 				w.rotation.y = 0.25 * sx;
 				w.rotation.z = (dy > 0 ? 0.12 : -0.08) * sx;
 			}
-			box(0.09, 0.32, 0.09, R.TOOTH, 0.24 * sx, -0.58, 1.5, hd, false);
+			
+			//denti superiori
+			//box(0.09, 0.2, 0.09, R.TOOTH, 0.3 * sx, -0.5, 1.5, hd, false);
+			box(0.09, 0.26, 0.09, R.TOOTH, 0.3 * sx, -0.53, 1.5, hd, false);
 		}
-
+		/*
+		//mandibola grossa
 		rx.jaw = group(0, -0.42, 0.55, hd);
 		box(0.8, 0.2, 1.0, R.POINT, 0, -0.05, 0.55, rx.jaw);
 		box(0.5, 0.05, 0.7, R.TONGUE, 0, 0.06, 0.55, rx.jaw, false);
-		for (const sx of [1, -1]) box(0.08, 0.26, 0.08, R.TOOTH, 0.22 * sx, 0.12, 0.95, rx.jaw, false);
+		
+		// denti inferiori: più interni (stanno "dentro" i canini quando la bocca è chiusa)
+		for (const sx of [1, -1]) {
+			box(0.08, 0.26, 0.08, R.TOOTH, 0.14 * sx, 0.12, 0.95, rx.jaw, false);
+		}
+		*/
+		//mandibola piccola
+		rx.jaw = group(0, -0.42, 0.55, hd);
+		box(0.8, 0.2, 0.8, R.POINT, 0, -0.05, 0.45, rx.jaw);          // mandibola: z 0.05–0.85
+		box(0.5, 0.05, 0.5, R.TONGUE, 0, 0.06, 0.4, rx.jaw, false);   // lingua: z 0.15–0.65
+
+		// denti inferiori: z 0.75 locale (prima 0.95, che ora sarebbe fuori dalla mandibola)
+		for (const sx of [1, -1]) {
+			box(0.08, 0.26, 0.08, R.TOOTH, 0.14 * sx, 0.12, 0.75, rx.jaw, false);
+		}
 
 		rx.reach = 4.0;
 		rx.swing = 0.4;
