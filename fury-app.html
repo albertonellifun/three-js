@@ -10,6 +10,7 @@
 	--ink: #232;
 	--sun: #fd5;
 	--danger: #f54;
+	--green:  #5f4;
 	--paper-white: #ffffffcc;
 	--btn-bg: #ffffff44;
 	--btn-fg: #ffffff;
@@ -89,7 +90,7 @@ button {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 8px;
+	gap: 4px;
 }
 
 #dist {
@@ -139,6 +140,7 @@ button {
 	border: 2px solid var(--btn-border);
 	background: #fff;
 	opacity: 0;
+	min-height: 32px;/* altrimenti fury scende e sale in modo brutto */
 }
 
 #slope.up {
@@ -149,11 +151,12 @@ button {
 
 #slope.down {
 	opacity: 1;
-	background: #7fd0ff;
+	background: var(--green);
+	color: #fff;
 }
 
 #charge {
-	font-size: 22px;
+	font-size: 36px;
 	font-weight: 700;
 	padding: 5px 16px;
 	border-radius: var(--r);
@@ -179,7 +182,7 @@ button {
 	position: fixed;
 	left: 0;
 	right: 0;
-	bottom: 120px;
+	bottom: 168px;
 	padding: 0 14px;
 	display: flex;
 	justify-content: space-between;
@@ -218,8 +221,6 @@ button {
 }
 
 .pad.gone {
-	xxxbackground:transparent;
-	xxxborder-color:transparent;
 	color:transparent;
 }
 
@@ -289,8 +290,9 @@ button {
 	display: none;
 	align-items: center;
 	justify-content: center;
-	pointer-events: none;
 	background: var(--paper-black);
+	z-index: 999;
+	pointer-events: none;
 }
 
 #overlay.show {
@@ -307,6 +309,7 @@ button {
 	overflow: auto;
 	text-align: center;
 	color: var(--ink);
+	pointer-events: auto;
 }
 
 .card h1 {
@@ -352,7 +355,7 @@ button {
 	white-space: pre;
 }
 
-#play-btn {
+.play-btn {
 	margin-top: 32px;
     background: linear-gradient(145deg, #2ecc71, #27ae60);
     color: #ffffff;
@@ -366,6 +369,9 @@ button {
     transition: transform 0.08s ease;
 }
 
+.play-btn:active {
+	transform: translateY(2px);
+}
 .card h1.logo {
 	font-size: 0;           /* la dimensione la decide ogni riga */
 	line-height: 1;
@@ -380,7 +386,6 @@ button {
 	display: block;
 	color: var(--ink);                    /* livello sotto: contorno scuro + ombra */
 	-webkit-text-stroke: 16px var(--ink);
-	xxxtext-shadow: 6px 6px 0 var(--ink);
 	line-height: .85;
 	letter-spacing: -4px;
 }
@@ -482,7 +487,7 @@ button {
   <div id="dist" class="outline"><span id="distN">0</span><small>m</small></div>
   <div id="danger"><div id="dangerFill"></div><span>😡</span></div>
   <div id="slope"></div>
-  <div id="charge">CHARGE!</div>
+  <div id="charge">FURY INCOMING!</div>
 </div>
 
 <div id="pads">
@@ -497,13 +502,16 @@ button {
   <button class="tb toggled-blue" data-hold="down">↓</button>
   <button class="tb toggled-blue" data-hold="cw">↻</button>
   <button class="tb toggled-blue" data-hold="ccw">↺</button>
-  <button class="tb toggled-on" data-action="shadows" id="shadowBtn">🌗</button>
-  <button class="tb" data-action="next">😡</button>
-  <button class="tb" data-action="color">🎨</button>
-  <button class="tb" data-action="mute" id="muteBtn">🔊</button>
-  <button class="tb" data-action="pause" id="pauseBtn">⏸</button>
-  <button class="tb" data-action="fps" id="fpsBtn">🕵️</button>
-  <button class="tb" data-action="info" id="infoBtn">?</button>
+  <button class="tb"              data-action="wire"    id="wireframeBtn">📐</button>
+  <button class="tb toggled-on"   data-action="shadows" id="shadowBtn">🌗</button>
+  <button class="tb toggled-on"   data-action="clouds"  id="cloudBtn">☁️</button>
+  <button class="tb"              data-action="auto"    id="autoBtn">🛡️</button>
+  <button class="tb"              data-action="next">😡</button>
+  <button class="tb"              data-action="color">🎨</button>
+  <button class="tb"              data-action="mute"    id="muteBtn">🔊</button>
+  <button class="tb"              data-action="pause"   id="pauseBtn">⏸</button>
+  <button class="tb"              data-action="fps"     id="fpsBtn">🕵️</button>
+  <button class="tb"              data-action="info"    id="infoBtn">?</button>
 </div>
 
 <div id="fps" hidden></div>
@@ -528,7 +536,7 @@ button {
 		<p>⚡ Boost: Tap on Yellow for full speed</p>
 		<p>⚠️ Stop: Avoid Grey or you’ll slow down</p>
 		<p>😡 Run: Monster roars? RUN!</p>
-		<button id="play-btn">▶ PLAY</button>
+		<button class="play-btn" data-action="play">▶ PLAY</button>
 	</div>
 	<div class="card" data-card="over" hidden>
 		<h1>YOU LOSE!</h1>
@@ -536,11 +544,11 @@ button {
 		<div class="big"><span id="overDist">0</span>m</div>
 		<p id="overNew" hidden>New best!</p>
 		<p id="overBest">Best <span id="overBestN">0</span>m</p>
-		<button id="play-btn">▶ PLAY AGAIN?</button>
+		<button class="play-btn" data-action="play">▶ PLAY AGAIN?</button>
 	</div>
 	<div class="card" data-card="pause" hidden>
 		<h1>PAUSED</h1>
-		<button id="play-btn">▶ RESUME</button>
+		<button class="play-btn" data-action="resume">▶ RESUME</button>
 	</div>
 	<div class="card" data-card="info" hidden>
 		<!--h1>Fury on the Rails</h1-->
@@ -560,7 +568,7 @@ button {
 		<p class="left">Drive your rail cart through a 3D world and escape a relentless horde of creatures—including a Werewolf, T-Rex, charging Rhino, and giant Gorilla—while dodging an out-of-control steam train. Stay alert, avoid hazards, and survive as long as you can!</p>
 		<p class="left big">👉 Disclaimer, Credits & Licenses</p>
 		<p class="left">This mini-game is built with <a href="https://threejs.org/" target="_blank" rel="noopener">Three.js</a> (released under the <a href="https://github.com/mrdoob/three.js/blob/dev/LICENSE" target="_blank" rel="noopener">MIT License</a>) and uses simple stylized 3D visuals for a playful arcade experience. Performance and rendering quality may vary depending on your device and graphics support.</p>			
-		<button id="play-btn" data-action="info">✕ CLOSE</button>
+		<button class="play-btn" data-action="closeInfo">✕ CLOSE</button>
 	</div>
 </div>
 
@@ -673,29 +681,30 @@ button {
 	};
 	
 	const BIOME_LEN = 100;   // meters per biome; the blend happens in the last 40% of each one
+	
 	const BIOMES = [
 		// spring
-		{ sun: 0xffffee, sunInt: 0.80, ambientInt: 0.60, grassA: 0x99ee66, grassB: 0x88dd66, dirt: 0xeebb77, hillA: 0x77cc55, hillB: 0x66cc55, leaves: [0x44bb55, 0x339944, 0x55cc55, 0x33aa66], rock: 0xbbbbcc, rockTop: 0xccccdd, sky: 0xaaddff, gravel: 0xddccaa, rail: 0x888888, tie: 0x442211, trunk: 0x885533 },
+		{ sun: 0xffffee, sunInt: 0.80, ambientInt: 0.60, grassA: 0x99ee66, grassB: 0x88dd66, dirt: 0x88cc55, hillA: 0x77cc55, hillB: 0x66cc55, leaves: [0x44bb55, 0x339944, 0x55cc55, 0x33aa66], rock: 0xbbbbcc, rockTop: 0xccccdd, sky: 0xaaddff, gravel: 0xddccaa, rail: 0x888888, tie: 0x442211, trunk: 0x885533 },
 		// spring -> autumn
-		{ sun: 0xffeebb, sunInt: 0.75, ambientInt: 0.55, grassA: 0xbbcc55, grassB: 0xaabb55, dirt: 0xcc9955, hillA: 0x99aa44, hillB: 0x889944, leaves: [0x999933, 0x886633, 0xaabb33, 0x776633], rock: 0xbbaaaa, rockTop: 0xccbbbb, sky: 0xdddddd, gravel: 0xddbb99, rail: 0x887777, tie: 0x553322, trunk: 0x885533 },
+		{ sun: 0xffeebb, sunInt: 0.75, ambientInt: 0.55, grassA: 0xbbcc55, grassB: 0xaabb55, dirt: 0x99aa44, hillA: 0x99aa44, hillB: 0x889944, leaves: [0x999933, 0x886633, 0xaabb33, 0x776633], rock: 0xbbaaaa, rockTop: 0xccbbbb, sky: 0xdddddd, gravel: 0xddbb99, rail: 0x887777, tie: 0x553322, trunk: 0x885533 },
 		// autumn
-		{ sun: 0xffcc88, sunInt: 0.70, ambientInt: 0.55, grassA: 0xcc9944, grassB: 0xbb8844, dirt: 0xaa6633, hillA: 0xaa7733, hillB: 0x996633, leaves: [0xdd6622, 0xcc4422, 0xeeaa22, 0xbb3311], rock: 0xaaaa99, rockTop: 0xbbbbaa, sky: 0xffddaa, gravel: 0xccbb88, rail: 0x776666, tie: 0x664433, trunk: 0x885533 },
+		{ sun: 0xffcc88, sunInt: 0.70, ambientInt: 0.55, grassA: 0xcc9944, grassB: 0xbb8844, dirt: 0xaa7733, hillA: 0xaa7733, hillB: 0x996633, leaves: [0xdd6622, 0xcc4422, 0xeeaa22, 0xbb3311], rock: 0xaaaa99, rockTop: 0xbbbbaa, sky: 0xffddaa, gravel: 0xccbb88, rail: 0x776666, tie: 0x664433, trunk: 0x885533 },
 		// autumn -> desert
-		{ sun: 0xffddaa, sunInt: 0.75, ambientInt: 0.55, grassA: 0xddbb66, grassB: 0xccaa55, dirt: 0xbb8844, hillA: 0xcc9944, hillB: 0xbb8844, leaves: [0xbb8833, 0xaa6622, 0xccbb33, 0x996622], rock: 0xaa9977, rockTop: 0xccaa88, sky: 0xffeeaa, gravel: 0xddbb99, rail: 0x885555, tie: 0x775544, trunk: 0x885533 },
+		{ sun: 0xffddaa, sunInt: 0.75, ambientInt: 0.55, grassA: 0xddbb66, grassB: 0xccaa55, dirt: 0xbb9955, hillA: 0xcc9944, hillB: 0xbb8844, leaves: [0xbb8833, 0xaa6622, 0xccbb33, 0x996622], rock: 0xaa9977, rockTop: 0xccaa88, sky: 0xffeeaa, gravel: 0xddbb99, rail: 0x885555, tie: 0x775544, trunk: 0x885533 },
 		// desert
-		{ sun: 0xffeeaa, sunInt: 0.80, ambientInt: 0.60, grassA: 0xeedd88, grassB: 0xeecc77, dirt: 0xcc9966, hillA: 0xddaa66, hillB: 0xcc9955, leaves: [0x88aa44, 0x779933, 0x99bb55, 0x669944], rock: 0xbb8866, rockTop: 0xcc9977, sky: 0xffeebb, gravel: 0xeeccaa, rail: 0x887777, tie: 0x886644, trunk: 0x885533 },
+		{ sun: 0xffeeaa, sunInt: 0.80, ambientInt: 0.60, grassA: 0xeedd88, grassB: 0xeecc77, dirt: 0xddbb66, hillA: 0xddaa66, hillB: 0xcc9955, leaves: [0x88aa44, 0x779933, 0x99bb55, 0x669944], rock: 0xbb8866, rockTop: 0xcc9977, sky: 0xffeebb, gravel: 0xeeccaa, rail: 0x887777, tie: 0x886644, trunk: 0x885533 },
 		// desert -> snow
-		{ sun: 0xeeeeee, sunInt: 0.85, ambientInt: 0.60, grassA: 0xffeecc, grassB: 0xeeddbb, dirt: 0xccbbaa, hillA: 0xddccbb, hillB: 0xccbbaa, leaves: [0xbbddaa, 0xbbcc99, 0xbbddaa, 0xaaccaa], rock: 0x775555, rockTop: 0x887766, sky: 0xeeeedd, gravel: 0xddccbb, rail: 0x999999, tie: 0x887766, trunk: 0x885533 },
+		{ sun: 0xeeeeee, sunInt: 0.85, ambientInt: 0.60, grassA: 0xffeecc, grassB: 0xeeddbb, dirt: 0xddccaa, hillA: 0xddccbb, hillB: 0xccbbaa, leaves: [0xbbddaa, 0xbbcc99, 0xbbddaa, 0xaaccaa], rock: 0x775555, rockTop: 0x887766, sky: 0xeeeedd, gravel: 0xddccbb, rail: 0x999999, tie: 0x887766, trunk: 0x885533 },
 		// snow: white trees, dark rocks
-		{ sun: 0xddeeff, sunInt: 0.90, ambientInt: 0.65, grassA: 0xffffff, grassB: 0xeeeeff, dirt: 0xbbccdd, hillA: 0xddeeff, hillB: 0xccddee, leaves: [0xffffff, 0xeeeeff, 0xddeeff, 0xeeffff], rock: 0x333333, rockTop: 0x555566, sky: 0xcceeff, gravel: 0xccccdd, rail: 0xaaaabb, tie: 0x775544, trunk: 0x885533 },
+		{ sun: 0xddeeff, sunInt: 0.90, ambientInt: 0.65, grassA: 0xffffff, grassB: 0xeeeeff, dirt: 0xddddee, hillA: 0xddeeff, hillB: 0xccddee, leaves: [0xffffff, 0xeeeeff, 0xddeeff, 0xeeffff], rock: 0x333333, rockTop: 0x555566, sky: 0xcceeff, gravel: 0xccccdd, rail: 0xaaaabb, tie: 0x775544, trunk: 0x885533 },
 		// snow -> dark (crepuscolo gelido, blu-grigio violaceo)
-		{ sun: 0xaaaadd, sunInt: 0.70, ambientInt: 0.50, grassA: 0x9999cc, grassB: 0x8899bb, dirt: 0x666688, hillA: 0x7788aa, hillB: 0x777799, leaves: [0x8888aa, 0x7777aa, 0x8888bb, 0x777799], rock: 0x333344, rockTop: 0x555566, sky: 0x8888aa, gravel: 0x8888aa, rail: 0x8888aa, tie: 0x554455, trunk: 0x554455 },
+		{ sun: 0xaaaadd, sunInt: 0.70, ambientInt: 0.50, grassA: 0x9999cc, grassB: 0x8899bb, dirt: 0x7777aa, hillA: 0x7788aa, hillB: 0x777799, leaves: [0x8888aa, 0x7777aa, 0x8888bb, 0x777799], rock: 0x333344, rockTop: 0x555566, sky: 0x8888aa, gravel: 0x8888aa, rail: 0x8888aa, tie: 0x554455, trunk: 0x554455 },
 		// dark: nero/viola tetro
-		{ sun: 0x442277, sunInt: 0.50, ambientInt: 0.40, grassA: 0x221133, grassB: 0x221133, dirt: 0x111122, hillA: 0x111133, hillB: 0x111122, leaves: [0x442266, 0x331155, 0x552277, 0x221144], rock: 0x111111, rockTop: 0x222233, sky: 0x110022, gravel: 0x222244, rail: 0x665588, tie: 0x221122, trunk: 0x221122 },
+		{ sun: 0x442277, sunInt: 0.50, ambientInt: 0.40, grassA: 0x221133, grassB: 0x221133, dirt: 0x110022, hillA: 0x111133, hillB: 0x111122, leaves: [0x442266, 0x331155, 0x552277, 0x221144], rock: 0x111111, rockTop: 0x222233, sky: 0x110022, gravel: 0x222244, rail: 0x665588, tie: 0x221122, trunk: 0x221122 },
 		// dark -> spring (risveglio: viola sbiadito verso il verde)
-		{ sun: 0xccddcc, sunInt: 0.60, ambientInt: 0.45, grassA: 0x779988, grassB: 0x668888, dirt: 0x776677, hillA: 0x668877, hillB: 0x557766, leaves: [0x669988, 0x558877, 0x77aa99, 0x668888], rock: 0x444455, rockTop: 0x666677, sky: 0x8899cc, gravel: 0x9999aa, rail: 0x8888aa, tie: 0x553344, trunk: 0x664444 },
+		{ sun: 0xccddcc, sunInt: 0.60, ambientInt: 0.45, grassA: 0x779988, grassB: 0x668888, dirt: 0x668877, hillA: 0x668877, hillB: 0x557766, leaves: [0x669988, 0x558877, 0x77aa99, 0x668888], rock: 0x444455, rockTop: 0x666677, sky: 0x8899cc, gravel: 0x9999aa, rail: 0x8888aa, tie: 0x553344, trunk: 0x664444 },
 		// snow -> spring
-		{ sun: 0xffffdd, sunInt: 0.70, ambientInt: 0.50, grassA: 0xccffbb, grassB: 0xbbeeaa, dirt: 0xddccaa, hillA: 0xaaddaa, hillB: 0x99ddaa, leaves: [0x99ddaa, 0x88cc99, 0x99ddaa, 0x99ccbb], rock: 0x777788, rockTop: 0x999999, sky: 0xbbeeff, gravel: 0xddcccc, rail: 0x9999aa, tie: 0x664433, trunk: 0x885533 }
+		{ sun: 0xffffdd, sunInt: 0.70, ambientInt: 0.50, grassA: 0xccffbb, grassB: 0xbbeeaa, dirt: 0xbbee99, hillA: 0xaaddaa, hillB: 0x99ddaa, leaves: [0x99ddaa, 0x88cc99, 0x99ddaa, 0x99ccbb], rock: 0x777788, rockTop: 0x999999, sky: 0xbbeeff, gravel: 0xddcccc, rail: 0x9999aa, tie: 0x664433, trunk: 0x885533 }
 	];
 
 	const _ca = new THREE.Color();
@@ -704,24 +713,11 @@ button {
 	const mixDouble = (a, b, t) => a + (b - a) * t;
 	const biomeStart = rint(0, BIOMES.length * BIOME_LEN - 1);
 	const PALETTE_KEYS = ['grassA', 'grassB', 'dirt', 'hillA', 'hillB', 'rock', 'rockTop', 'sky', 'gravel', 'tie', 'rail', 'trunk', 'sun', 'ambientInt'];
+	
 	//ottimizzazione: oggetto riutilizzabile (Pre-allocazione) per azzerare il Garbage Collector
 	const sharedPalette = { 
 		leaves: new Array(BIOMES[0].leaves.length) // Assumendo che la lunghezza sia fissa
 	}; 
-	
-	function paletteAtOLD(z) {
-	  const f = biomeStart + Math.max(0, z + biomeStart) / BIOME_LEN;
-	  const i = Math.floor(f);
-	  const t = clamp((f - i - 0.6) / 0.4, 0, 1);
-	  const A = BIOMES[i % BIOMES.length];
-	  const B = BIOMES[(i + 1) % BIOMES.length];
-	  const P = { leaves: A.leaves.map((c, k) => mix(c, B.leaves[k], t)) };
-	  for (const k of ['grassA', 'grassB', 'dirt', 'hillA', 'hillB', 'rock', 'rockTop', 'sky', 'gravel', 'tie', 'rail', 'trunk', 'sun', 'sunInt']) {
-	  	if (k !== 'sunInt') P[k] = mix(A[k], B[k], t);
-		else P[k] = mixDouble(A[k], B[k], t);
-	  }
-	  return P;
-	}
 	
 	function paletteAt(z) {
 	  const f = biomeStart + Math.max(0, z + biomeStart) / BIOME_LEN;
@@ -824,8 +820,17 @@ button {
 	let unitBox;
 	let camTarget;
 	let camLead = 3;
+	let isWireframe = false;
+	let autoRun = false;//cheat
+	
+	// Materiali standard senza flag wireframe
 	const matCache = {};
 	const lam = c => matCache[c] || (matCache[c] = new THREE.MeshLambertMaterial({
+		color: c
+	}));
+
+	const basicCache = {};
+	const bas = c => basicCache[c] || (basicCache[c] = new THREE.MeshBasicMaterial({
 		color: c
 	}));
 
@@ -840,8 +845,6 @@ button {
 	}
 	
 	//occhi luminosi (ed iniettati di sangue)
-	const basicCache = {};
-	const bas = c => basicCache[c] || (basicCache[c] = new THREE.MeshBasicMaterial({ color: c }));
 	function glow(w, h, d, color, x, y, z, parent) {
 		const m = new THREE.Mesh(unitBox, bas(color));
 		m.scale.set(w, h, d);
@@ -906,28 +909,12 @@ button {
 			near: 1,
 			far: 70
 		});
-		sun.shadow.bias = -0.0006;
-		sun.shadow.normalBias = 0.03;
+		sun.shadow.bias = -0.0006;//riduzione "acne" ombre
+		sun.shadow.normalBias = 0.03;//riduzione "panning" ombre
 		scene.add(sun, sun.target);
 		unitBox = new THREE.BoxGeometry(1, 1, 1);
 	}
 
-	function resizeOLD() {
-		const w = innerWidth,
-			h = innerHeight,
-			aspect = w / h;
-		renderer.setSize(w, h);
-		const vh = Math.max(16, 12.5 / aspect),
-			vw = vh * aspect;
-		Object.assign(camera, {
-			left: -vw / 2,
-			right: vw / 2,
-			top: vh / 2,
-			bottom: -vh / 2
-		});
-		camera.updateProjectionMatrix();
-		camLead = aspect < 1 ? 3.5 : 1.2;
-	}
 
 	function resize() {
 		const c = renderer.domElement;
@@ -938,10 +925,10 @@ button {
 		const vh = Math.max(16, 12.5 / aspect);
 		const vw = vh * aspect;
 		Object.assign(camera, {
-			left: -vw / 2,
-			right: vw / 2,
-			top: vh / 2,
-			bottom: -vh / 2
+			left: -vw * 0.5,
+			right: vw * 0.5,
+			top: vh * 0.5,
+			bottom: -vh * 0.5
 		});
 		camera.updateProjectionMatrix();
 		camLead = aspect < 1 ? 3.5 : 1.2;
@@ -950,12 +937,12 @@ button {
 	// ============ WORLD (alberi, rocce, binari) ============
 	const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
 	const WHITE = new THREE.Color(1, 1, 1);
-	const _m = new THREE.Matrix4(),
-		_p = new THREE.Vector3(),
-		_q = new THREE.Quaternion(),
-		_s = new THREE.Vector3(),
-		_e = new THREE.Euler(),
-		_c = new THREE.Color();
+	const _m = new THREE.Matrix4();
+	const _p = new THREE.Vector3();
+	const _q = new THREE.Quaternion();
+	const _s = new THREE.Vector3();
+	const _e = new THREE.Euler();
+	const _c = new THREE.Color();
 	let ground;
 	let trunks;
 	let leavesA, leavesB, leavesC;//alberi gradinati
@@ -1110,7 +1097,18 @@ button {
 	}
 	
 	//sporco dirt sul terreno
-	const terrainNoise = (x, z) => (Math.sin(x * 1.7 + z * 0.31) * Math.sin(z * 0.23 - x * 0.6) + 1) * 0.5;
+	const terrainNoiseOLD = (x, z) => (Math.sin(x * 1.7 + z * 0.31) * Math.sin(z * 0.23 - x * 0.6) + 1) * 0.5;
+	
+	function terrainNoise(x, z) {
+		// 1. Prima onda base
+		const n1 = Math.sin(x * 0.5 + z * 0.7);
+   
+		// 2. Seconda onda distorta dalla prima (costa poco ma crea variazioni naturali)
+		const n2 = Math.cos(x * 0.8 - z * 0.6 + n1 * 1.5);
+    
+		// Combinazione e normalizzazione rapida tra 0 e 1
+		return (n1 * n2 + 1) * 0.5;
+	}
 
 	
 	// [width, height, depth] for each piece, stacked bottom to top
@@ -1227,7 +1225,7 @@ button {
 			} else {
 				const delta = hillNoise(x, z);
 				top = base + delta;
-				col = (x + z) & 1 ? P.hillA : P.hillB;
+				col = terrainNoise(x, z) > 0.74 ? P.dirt : (x + z) & 1 ? P.hillA : P.hillB;
 			}
 			const h = top + 3;
 			setInst(ground, i, x, top - h * 0.5, z, 1, h, 1, 0, jitter(col, ax <= BED ? 0.05 : 0.025));
@@ -1317,6 +1315,56 @@ button {
 		life: 0.45,
 		g: -1
 	});
+	
+	
+	// ============ NUVOLE ============
+	const clouds = new THREE.Group();
+	let cloudsOn = true;
+
+	function resetCloud(c, z) {
+		c.position.set((Math.random() < 0.5 ? -1 : 1) * rnd(5, 18), 0, z);
+		c.userData.dy = rnd(4, 6);      // più vicine al terreno (prima 7-11)
+		c.userData.vx = rnd(0.2, 0.6);  // deriva laterale
+	}
+
+	function initClouds() {
+		const mat = new THREE.MeshLambertMaterial({
+			color: 0xffffff,
+			transparent: true,
+			opacity: 0.4,       // più trasparenti (prima 0.85)
+			depthWrite: false
+		});
+		for (let i = 0; i < 14; i++) {
+			const c = new THREE.Group();
+			// semplici: un blocco principale + un blocco più piccolo sopra
+			const a = new THREE.Mesh(unitBox, mat);
+			a.scale.set(rnd(3, 5), 0.8, rnd(1.8, 2.6));
+			c.add(a);
+			const b = new THREE.Mesh(unitBox, mat);
+			b.scale.set(rnd(1.5, 2.5), 0.7, rnd(1.2, 1.8));
+			b.position.set(rnd(-0.6, 0.6), 0.6, 0);
+			c.add(b);
+			resetCloud(c, rnd(-20, 90));
+			clouds.add(c);
+		}
+		scene.add(clouds);
+	}
+
+	function updateClouds(dt) {
+		clouds.visible = cloudsOn;
+		if (!cloudsOn) return;
+		for (const c of clouds.children) {
+			c.position.x += c.userData.vx * dt;
+			if (c.position.z < camTarget.z - 45) resetCloud(c, camTarget.z + rnd(55, 85));
+			c.position.y = S.camY + c.userData.dy;
+		}
+	}
+
+	function setClouds(on) {
+		cloudsOn = on;
+		clouds.visible = on;
+		$('#cloudBtn').classList.toggle('toggled-on', on);
+	}
 
 	// ============ DRAISINA + RIDER ============
 	const car = {};
@@ -1329,17 +1377,18 @@ button {
 		car.root = new THREE.Group();
 		scene.add(car.root);
 		car.wheels = [];
-		const wheelGeo = new THREE.CylinderGeometry(0.27, 0.27, 0.12, 10);
-		for (const wx of [0.55, -0.55])
+		const wheelGeo = new THREE.CylinderGeometry(0.27, 0.27, 0.16, 6);//ruota piu massiccia
+		for (const wx of [0.55, -0.55]) {
 			for (const wz of [0.5, -0.5]) {
 				const spin = group(0, 0, 0, group(wx, 0.33, wz, car.root));
 				const w = new THREE.Mesh(wheelGeo, lam(0x444455));
-				w.rotation.z = Math.PI / 2;
+				w.rotation.z = Math.PI * 0.5;
 				w.castShadow = true;
 				spin.add(w);
-				box(0.13, 0.08, 0.3, 0xdddddd, 0, 0, 0, spin, false);
+				box(0.24, 0.12, 0.12, 0xdddddd, 0, 0, 0, spin, false);//perno piu esile
 				car.wheels.push(spin);
 			}
+		}
 		const carColor = [0xaa6633, 0x664422, 0x553311, 0x442211];//[0xbb7744, 0x885533, 0x664422, 0x553322];
 		
 		box(2.4, 0.14, 1.6, carColor[0], 0, 0.6, 0, car.root);//top
@@ -2886,14 +2935,15 @@ button {
 	let MONSTER_REACH = 3.85;
 
 	function setCreature(n) {
+		if (rx && rx.root) scene.remove(rx.root);
+		
 		if (RIGS[n]) scene.remove(RIGS[n].root);
 		RIGS[n] = BUILD[n](); // nuova palette a ogni scelta
 		creature = n;
 		rx = RIGS[n];
 		MONSTER_REACH = rx.reach;
-		for (const k in RIGS) RIGS[k].root.visible = +k === n;
 	}
-
+	
 	function selectCreature(n) {
 		if (!BUILD[n] || S.state === 'caught') return;
 		const oldReach = MONSTER_REACH;
@@ -2901,7 +2951,7 @@ button {
 		if (S.state === 'playing') S.monsterZ += oldReach - MONSTER_REACH; // la punta del muso resta dov'era
 		if (S.paused) animate(0, performance.now() / 1000);                // in pausa: posiziona subito il nuovo rig
 	}
-
+	
 	// ============ UI ============
 	let currentCard = 'title';
 	let infoOpen = false;
@@ -3114,14 +3164,123 @@ button {
 			if (S.paused) setPaused(false);
 			else if (S.state !== 'playing') tap('L');
 		},
+		play: () => {
+			if (S.state === 'title' || S.state === 'over') startGame();
+			else if (S.paused) setPaused(false);
+		},
+		resume: () => setPaused(false),
+		closeInfo: closeInfo,
 		pause: () => setPaused(!S.paused),
 		mute: () => setMuted(!muted),
 		next: () => selectCreature((creature + 1) % Object.keys(BUILD).length),//cicla mostri
 		color: () => selectCreature(creature),
-		fps: () => { ui.fps.hidden = !ui.fps.hidden; },
+		fps: () => { ui.fps.hidden = !ui.fps.hidden; $('#fpsBtn').classList.toggle('toggled-on', !ui.fps.hidden); },
 		info: openInfo,
 		shadows: () => setShadows(!shadowsOn),
+		clouds: () => setClouds(!cloudsOn),
+		wire: () => {
+			isWireframe = !isWireframe;
+			toggleWorldWireframeOverlay(scene, isWireframe);
+			document.getElementById('wireframeBtn').classList.toggle('toggled-on', isWireframe);
+			},
+		auto: () => setAutoRun(!autoRun),//cheat
 	};
+	
+	const wireframeMat = new THREE.LineBasicMaterial({
+		color: 0x000000, // Colore delle linee (es. nero o bianco 0xffffff)
+		linewidth: 1, // Nota: WebGL spesso limita lo spessore a 1px
+		transparent: true,
+		opacity: 0.25,
+		polygonOffset: true,
+		polygonOffsetFactor: -4, // Spinge visivamente la linea leggermente in primo piano
+		polygonOffsetUnits: -4
+	});
+	
+	function toggleWorldWireframeOverlay(target = scene, enableWireframe = true) {
+		target.traverse((child) => {
+			
+			if (child === ground || child.userData.isWireframeOverlay || child.userData.isInstancedEdge) {
+				return;
+			}
+		
+			// Gestione delle InstancedMesh (alberi, rocce, terreno istanziato)
+			if (child.isInstancedMesh) {
+				let instancedEdge = child.children.find(c => c.userData.isInstancedEdge);
+
+				if (enableWireframe) {
+					if (!instancedEdge) {
+						if (!child.geometry.userData.cachedEdgesGeo) {
+							child.geometry.userData.cachedEdgesGeo = new THREE.EdgesGeometry(child.geometry, 30);
+						}
+						const edgesGeo = child.geometry.userData.cachedEdgesGeo;
+						
+						// Creiamo una LineSegments passandogli la stessa geometria e il numero di istanze
+						instancedEdge = new THREE.InstancedMesh(edgesGeo, wireframeMat, child.count);
+						instancedEdge.userData.isInstancedEdge = true;
+						instancedEdge.renderOrder = child.renderOrder + 1;
+
+						// Copia le matrici di trasformazione da ogni istanza dell'albero/roccia alla mesh dei bordi
+						const tempMatrix = new THREE.Matrix4();
+						for (let i = 0; i < child.count; i++) {
+							child.getMatrixAt(i, tempMatrix);
+							instancedEdge.setMatrixAt(i, tempMatrix);
+						}
+						instancedEdge.instanceMatrix.needsUpdate = true;
+
+						child.add(instancedEdge);
+					} else {
+						instancedEdge.visible = true;
+					}
+				} else if (instancedEdge) {
+					instancedEdge.visible = false;
+				}
+				return;
+			}
+		
+		
+		
+			if (child.isMesh) {
+				// 1. Cerca se la mesh ha già un overlay wireframe come figlio
+				let wireframeOverlay = child.children.find(c => c.userData.isWireframeOverlay);
+
+				if (enableWireframe) {
+					if (!wireframeOverlay) {
+						// 1. Caching della geometria per evitare ricalcoli su geometrie identiche
+						if (!child.geometry.userData.cachedEdgesGeo) {
+							// Soglia incrementata a 15 gradi per eliminare linee inutili
+							child.geometry.userData.cachedEdgesGeo = new THREE.EdgesGeometry(child.geometry, 15);
+						}
+
+						// 2. Crea la geometria per le linee a partire dalla mesh
+						const wireframeGeo = child.geometry.userData.cachedEdgesGeo;
+
+						// 3. Crea i segmenti di linea e aggiungili come figlio della Mesh
+						wireframeOverlay = new THREE.LineSegments(wireframeGeo, wireframeMat);
+						wireframeOverlay.userData.isWireframeOverlay = true; // Marker di riconoscimento
+						//wireframeOverlay.scale.setScalar(0.998); //per evitare z-fight
+						
+						// Impedisce problemi di Z-fighting tra la linea e la superficie
+						wireframeOverlay.renderOrder = child.renderOrder + 1;
+
+						child.add(wireframeOverlay);
+					} else {
+						wireframeOverlay.visible = true;
+					}
+				} else if (wireframeOverlay) {
+					// Nasconde l'overlay se la modalità viene disattivata
+					wireframeOverlay.visible = false;
+				}
+			}
+		});
+	}
+	
+	
+	//cheat
+	function setAutoRun(on) {
+		autoRun = on;
+		$('#autoBtn').classList.toggle('toggled-on', on);
+	}
+	
 	const KEYS = {
 		KeyA: 'padL',
 		ArrowLeft: 'padL',
@@ -3148,6 +3307,34 @@ button {
 
 	addEventListener('pointerdown', e => {
 		if (e.button > 0) return;
+		
+		const b = e.target.closest && e.target.closest('[data-action],[data-hold]');
+		
+		if (b) {
+			e.preventDefault();
+			if (b.dataset.hold) {
+				held.add(b.dataset.hold);
+				holdByPointer.set(e.pointerId, {
+					name: b.dataset.hold,
+					t0: performance.now()
+				});
+			} else if (ACTIONS[b.dataset.action]) {
+				ACTIONS[b.dataset.action]();
+			}
+			return;
+		}
+		
+		if (ui.overlay.classList.contains('show')) {
+			return;
+		}
+
+		e.preventDefault();
+		ACTIONS[e.clientX < innerWidth / 2 ? 'padL' : 'padR']();
+	}, { passive: false });
+	
+	/*
+	addEventListener('pointerdown', e => {
+		if (e.button > 0) return;
 		const t = e.target.closest ? e.target : null;
 		if (t && t.closest('.card[data-card="info"]') && !t.closest('[data-action]')) return;   // scroll e link, ma non il pulsante close
 		e.preventDefault();
@@ -3165,7 +3352,7 @@ button {
 		} else ACTIONS[b.dataset.action]();
 	}, {
 		passive: false
-	});
+	});*/
 
 	function releasePointer(e) {
 		const h = holdByPointer.get(e.pointerId);
@@ -3339,6 +3526,9 @@ button {
 			const dEff = TUNE.drag * (down ? TUNE.downhillDrag : 1);
 			S.speed -= (TUNE.friction * S.speed + dEff * S.speed * S.speed + gEff * S.grade) * dt;
 			S.speed = Math.min(S.speed, TUNE.slopeMaxSpeed);
+			
+			if (autoRun) S.speed = TUNE.maxSpeed - 2;//cheat
+			
 			if (S.speed < 0.03) {
 				S.speed = 0;
 				for (const sd of ['L', 'R'])
@@ -3645,6 +3835,9 @@ button {
 		const oz = (Math.random() - 0.5) * sh;
 		S.camY += (heightAt(camTarget.z) - S.camY) * lerp(3);
 		const cy = S.camY;
+		
+		updateClouds(dt);
+		
 		const horiz = CAM.dist * Math.cos(CAM.elev);
 		camera.position.set(camTarget.x + horiz * Math.sin(CAM.yaw) + ox, cy + CAM.dist * Math.sin(CAM.elev) + oy, camTarget.z + horiz * Math.cos(CAM.yaw) + oz);
 		camera.lookAt(camTarget.x + ox, cy + oy, camTarget.z + oz);
@@ -3751,6 +3944,7 @@ button {
 		if (window.visualViewport) visualViewport.addEventListener('resize', resize);
 		initWorld();
 		initFx();
+		initClouds();
 		initCar();
 		setCreature(rint(0, Object.keys(BUILD).length - 1));
 		newRiders();
