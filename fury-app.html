@@ -82,32 +82,62 @@ button {
 
 #hud {
 	position: fixed;
-	top: 0;
-	left: 0;
-	right: 0;
-	padding: calc(env(safe-area-inset-top) + 14px) 16px 0;
+	top: calc(env(safe-area-inset-top) + 8px);
+	left: 50%;
+	transform: translateX(-50%);
+	padding: 8px 16px 8px 16px;
+	xxxpadding: calc(env(safe-area-inset-top) + 14px) 16px 0;
 	pointer-events: none;
 	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 4px;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+	border: 2px solid var(--btn-border);
+	border-radius: var(--r);
+	background: var(--paper-white);
 }
 
 #dist {
-	font-size: 52px;
+	font-size: 64px;
 	line-height: 1;
 	color: var(--outline-fg);
+	min-width: 100px;
+	text-align: center;
 }
 
 #dist small {
 	font-size: 24px;
 }
 
+/* frecce a sinistra di dist */
+#slopeArrows {
+	height: 64px;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	font-size: 32px;
+	line-height: 1;
+	-webkit-text-stroke: 3px #fff;
+	paint-order: stroke fill;
+}
+
+#slopeArrows span {
+	opacity: .2;
+}
+
+#slopeArrows span.on {
+	opacity: 1;
+}
+
+#arrUp   { color: var(--danger); }
+#arrDown { color: var(--green); }
+
+/* barra danger verticale a destra di dist */
 #danger {
 	position: relative;
-	width: min(260px,62vw);
-	height: 24px;
-	border-radius: var(--r);
+	width: 16px;
+	height: 64px;
+	border-radius: var(--r-sm);
 	background: rgba(35,53,36,.35);
 	border: 2px solid var(--btn-border);
 }
@@ -118,44 +148,20 @@ button {
 
 #dangerFill {
 	position: absolute;
-	inset: 0 auto 0 0;
-	width: 0;
-	border-radius: var(--r-sm);
+	inset: 0 0 auto 0;   /* ancorata in alto, cresce verso il basso */
+	height: 0;
+	border-radius: 2px;
 	background: var(--ink);
 }
 
-#danger span {
-	position: absolute;
-	left: -40px;
-	top: 50%;
-	transform: translateY(-50%);
-	font-size: 24px;
-}
-
-#slope {
-	font-size: 15px;
-	font-weight: 700;
-	padding: 4px 12px;
-	border-radius: var(--r);
-	border: 2px solid var(--btn-border);
-	background: #fff;
-	opacity: 0;
-	min-height: 32px;/* altrimenti fury scende e sale in modo brutto */
-}
-
-#slope.up {
-	opacity: 1;
-	background: var(--danger);
-	color: #fff;
-}
-
-#slope.down {
-	opacity: 1;
-	background: var(--green);
-	color: #fff;
-}
-
+/* fury incoming: posizione fissa */
 #charge {
+	position: fixed;
+	top: calc(env(safe-area-inset-top) + 100px);
+	left: 50%;
+	transform: translateX(-50%);
+	white-space: nowrap;
+	letter-spacing: -4px;
 	font-size: 36px;
 	font-weight: 700;
 	padding: 5px 16px;
@@ -164,11 +170,15 @@ button {
 	background: var(--danger);
 	color: #fff;
 	opacity: 0;
+	pointer-events: none;
 }
 
 #charge.show {
 	opacity: 1;
 }
+
+
+
 
 #vignette {
 	position: fixed;
@@ -465,11 +475,11 @@ button {
 	text-align: left;
 }
 
-.card .left.big {
-	font-size: 20px;
+.card .big {
+	font-size: 18px;
 	font-weight: 700;
 	line-height: 1;
-	margin-top: 12px;
+	margin-top: 24px;
 }
 
 .card[data-card="info"] {
@@ -484,11 +494,11 @@ button {
 <div id="vignette"></div>
 
 <div id="hud">
+  <div id="danger"><div id="dangerFill"></div></div>
   <div id="dist" class="outline"><span id="distN">0</span><small>m</small></div>
-  <div id="danger"><div id="dangerFill"></div><span>😡</span></div>
-  <div id="slope"></div>
-  <div id="charge">FURY INCOMING!</div>
+  <div id="slopeArrows"><span id="arrUp">▲</span><span id="arrDown">▼</span></div>
 </div>
+<div id="charge">FURY INCOMING!</div>
 
 <div id="pads">
   	<div class="pad" id="padL">👈<b class="outline"></b></div>
@@ -531,11 +541,10 @@ button {
 			<p class="l4 outline-inverted" data-t="feat. 🥊😼Rocky Graffietto from Hell!">feat. 🥊😼Rocky Graffietto from Hell!</p>
 		</h1>
 		
+		<p class="big">❓ How to play</p>
+		<p>👈👉 Tap left and right, alternating</p>
+		<p>😡 Fury Incoming? Tap faster...<br/>or become breakfast!</p>
 		
-		<p>👈👉 Tap: Left and Right to move </p>
-		<p>⚡ Boost: Tap on Yellow for full speed</p>
-		<p>⚠️ Stop: Avoid Grey or you’ll slow down</p>
-		<p>😡 Run: Monster roars? RUN!</p>
 		<button class="play-btn" data-action="play">▶ PLAY</button>
 	</div>
 	<div class="card" data-card="over" hidden>
@@ -565,9 +574,9 @@ button {
 		</h1>
 		
 		<p class="left big">👉 Info</p>
-		<p class="left">Drive your rail cart through a 3D world and escape a relentless horde of creatures—including a Werewolf, T-Rex, charging Rhino, and giant Gorilla—while dodging an out-of-control steam train. Stay alert, avoid hazards, and survive as long as you can!</p>
+		<p class="left">Pump your rail handcar through a 3D world while a very angry monster chases you: a Gorilla on steroids, a crazy Dinosaur, a starving Crocodile, a Werewolf with a bad attitude, a Rhino with zero brakes and a giant Snake with a grudge. Stay alert and try not to become lunch!</p>
 		<p class="left big">👉 Disclaimer, Credits & Licenses</p>
-		<p class="left">This mini-game is built with <a href="https://threejs.org/" target="_blank" rel="noopener">Three.js</a> (released under the <a href="https://github.com/mrdoob/three.js/blob/dev/LICENSE" target="_blank" rel="noopener">MIT License</a>) and uses simple stylized 3D visuals for a playful arcade experience. Performance and rendering quality may vary depending on your device and graphics support.</p>			
+		<p class="left">This mini-game is built with <a href="https://threejs.org/" target="_blank" rel="noopener">Three.js</a> (released under the <a href="https://github.com/mrdoob/three.js/blob/dev/LICENSE" target="_blank" rel="noopener">MIT License</a>), is an Android adaptation of the web demo T Rex Is Coming! and uses simple stylized 3D visuals for a playful arcade experience. Performance and rendering quality may vary depending on your device and graphics support.</p>			
 		<button class="play-btn" data-action="closeInfo">✕ CLOSE</button>
 	</div>
 </div>
@@ -758,7 +767,7 @@ button {
 	const CAM = {
 		yaw: 0.4,
 		elev: 0.5,
-		zoom: 1.1,
+		zoom: 1.2,
 		dist: Math.hypot(3.2, 14, 9)
 	};
 	const JUDGE_TXT = { perfect: 'Perfect!', good: 'Good', late: 'Late', wrong: 'Miss' };
@@ -1442,7 +1451,7 @@ button {
 		r.mouth = box(0.1, 0.06, 0.02, 0x772222, 0, 0.1, 0.263, r.head, false);
 		
 		if (P.cap) {
-			if (Math.random() < 0.75) {
+			if (Math.random() < 0.95) {
 				//cappello da camionista
 				box(0.6, 0.18, 0.56, P.hat, 0, 0.56, -0.01, r.head);
 				box(0.5, 0.05, 0.3, P.hat, 0, 0.48, 0.38, r.head);
@@ -2990,7 +2999,9 @@ button {
 		distN: $('#distN'),
 		danger: $('#danger'),
 		dangerFill: $('#dangerFill'),
-		slope: $('#slope'),
+		/*slope: $('#slope'),*/
+		arrUp: $('#arrUp'),
+		arrDown: $('#arrDown'),
 		charge: $('#charge'),
 		vignette: $('#vignette'),
 		overlay: $('#overlay'),
@@ -3601,9 +3612,9 @@ button {
 		const lerp = k => Math.min(1, dt * k);
 		const gap = S.z - CAR_BACK - (S.monsterZ + MONSTER_REACH);
 		const danger = S.state === 'title' ? 0 : clamp(1 - gap / 12, 0, 1);
-		const playing = S.state === 'playing',
-			ch = S.charge,
-			charging = playing && ch.phase !== 'idle';
+		const playing = S.state === 'playing';
+		const ch = S.charge;
+		const charging = playing && ch.phase !== 'idle';
 
 		// draisina
 		S.pitch += (-Math.atan(gradeAt(S.z)) - S.pitch) * lerp(10);
@@ -3865,20 +3876,32 @@ button {
 		ui.danger.classList.toggle('flash', charging);
 		if (playing) {
 			ui.distN.textContent = Math.max(0, Math.floor(S.z));
-			ui.dangerFill.style.width = (danger * 100).toFixed(1) + '%';
+			////ui.dangerFill.style.width = (danger * 100).toFixed(1) + '%';
+			ui.dangerFill.style.height = (danger * 100).toFixed(1) + '%';
 			ui.dangerFill.style.background = danger > 0.7 || charging ? 'var(--danger)' : 'var(--sun)';
 			ui.vignette.style.opacity = (danger * danger * 0.9).toFixed(3);
-			const tag = S.grade > 0.07 ? 'up' : S.grade < -0.07 ? 'down' : '';
+			/*const tag = S.grade > 0.07 ? 'up' : S.grade < -0.07 ? 'down' : '';
 			if (tag !== S.slopeTag) {
 				S.slopeTag = tag;
 				ui.slope.className = tag;
 				ui.slope.textContent = tag === 'up' ? '▲ Uphill' : tag === 'down' ? '▼ Downhill' : '';
+			}*/
+			const tag = S.grade > 0.07 ? 'up' : S.grade < -0.07 ? 'down' : '';
+			if (tag !== S.slopeTag) {
+				S.slopeTag = tag;
+				ui.arrUp.classList.toggle('on', tag === 'up');
+				ui.arrDown.classList.toggle('on', tag === 'down');
 			}
 		} else if (S.state !== 'caught') {
 			ui.vignette.style.opacity = 0;
-			if (S.slopeTag) {
+			/*if (S.slopeTag) {
 				S.slopeTag = '';
 				ui.slope.className = '';
+			}*/
+			if (S.slopeTag) {
+				S.slopeTag = '';
+				ui.arrUp.classList.remove('on');
+				ui.arrDown.classList.remove('on');
 			}
 		}
 	}
