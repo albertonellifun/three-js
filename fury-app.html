@@ -897,7 +897,7 @@ button {
 	let ambientLight;
 	let unitBox;
 	let camTarget;
-	let camLead = 3;
+	let camLead = 0;
 	let isWireframe = false;
 	let autoRun = false;//cheat
 	
@@ -1009,7 +1009,7 @@ button {
 			bottom: -vh * 0.5
 		});
 		camera.updateProjectionMatrix();
-		camLead = aspect < 1 ? 3.5 : 1.2;
+		camLead = aspect < 1 ? -1 : 0;//dove guarda la telecamera
 	}
 
 	// ============ WORLD (alberi, rocce, binari) ============
