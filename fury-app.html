@@ -611,6 +611,7 @@ button {
 		roar: ['fury-roar.mp3', 1],
 		wind: ['fury-wind.mp3', 1],
 	};
+	/*
 	const clips = {};
 	let muted = false;
 	for (const id in SFX) {
@@ -645,7 +646,76 @@ button {
 		if (m) clips.wind.pause();
 		$('#muteBtn').textContent = m ? '🔇' : '🔊';
 	}
+	*/
+	
+	const AC = window.AudioContext || window.webkitAudioContext;
+	const actx = new AC();
+	const master = actx.createGain();
+	master.connect(actx.destination);
+	const buffers = {};
+	let muted = false;
 
+	for (const id in SFX) {
+		fetch(SFX[id][0])
+			.then(r => r.arrayBuffer())
+			.then(ab => new Promise((ok, ko) => actx.decodeAudioData(ab, ok, ko)))
+			.then(b => { buffers[id] = b; })
+			.catch(() => {});
+	}
+
+	// sblocca/riattiva il contesto: iOS/Android lo sospendono ("suspended"/"interrupted")
+	const unlock = () => { 
+		if (actx.state !== 'running') actx.resume().catch(() => {}); 
+	};
+	
+	['pointerdown', 'touchend', 'keydown'].forEach(ev => addEventListener(ev, unlock, { capture: true }));
+	
+	document.addEventListener('visibilitychange', () => { 
+		if (!document.hidden) unlock(); 
+	});
+	
+	addEventListener('focus', unlock);
+
+	function play(id, vol = 1) {
+		const b = buffers[id];
+		if (muted || !b) return;
+		unlock();
+		const src = actx.createBufferSource();
+		const g = actx.createGain();
+		src.buffer = b;
+		g.gain.value = clamp(vol * SFX[id][1], 0, 1);
+		src.connect(g).connect(master);
+		src.start();
+	}
+
+	// vento: un unico loop sempre attivo, si regola solo il gain
+	let wind = null;
+	function setWind(speed, rush) {
+		if (!wind && buffers.wind) {
+			const src = actx.createBufferSource();
+			const g = actx.createGain();
+			src.buffer = buffers.wind;
+			src.loop = true;
+			g.gain.value = 0;
+			src.connect(g).connect(master);
+			src.start();
+			wind = { src, g };
+		}
+		if (!wind) return;
+		if (muted || speed < 0.25) { wind.g.gain.value = 0; return; }
+		const sp = Math.min(1, speed / 11);
+		wind.g.gain.value = clamp(0.15 + 0.45 * sp + 0.35 * rush, 0, 1);
+		wind.src.playbackRate.value = 0.8 + sp * 0.6;
+	}
+
+	function setMuted(m) {
+		muted = m;
+		master.gain.value = m ? 0 : 1;
+		if (wind && m) wind.g.gain.value = 0;
+		$('#muteBtn').textContent = m ? '🔇' : '🔊';
+	}
+	
+	
 	// ============ CONFIG ============
 	const TUNE = {
 		gear: 3.5,
