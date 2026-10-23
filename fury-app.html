@@ -3992,8 +3992,7 @@ button {
 				for (const m of [].concat(o.material)) m.needsUpdate = true;
 			}
 		});
-		$('#shadowBtn').style.opacity = on ? 1 : 0.5;
-		try { localStorage.setItem('fury-shadows', on ? '1' : '0'); } catch (e) {}
+		$('#shadowBtn').classList.toggle('toggled-on', on);
 	}
 
 	// ============ LOOP ============
