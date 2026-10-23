@@ -86,7 +86,6 @@ button {
 	left: 50%;
 	transform: translateX(-50%);
 	padding: 8px 16px 8px 16px;
-	xxxpadding: calc(env(safe-area-inset-top) + 14px) 16px 0;
 	pointer-events: none;
 	display: flex;
     align-items: center;
@@ -98,7 +97,7 @@ button {
 }
 
 #dist {
-	font-size: 64px;
+	font-size: 48px;
 	line-height: 1;
 	color: var(--outline-fg);
 	min-width: 100px;
@@ -111,7 +110,7 @@ button {
 
 /* frecce a sinistra di dist */
 #slopeArrows {
-	height: 64px;
+	height: 48px;
 	display: flex;
 	flex-direction: column;
 	justify-content: space-between;
@@ -136,7 +135,7 @@ button {
 #danger {
 	position: relative;
 	width: 16px;
-	height: 64px;
+	height: 48px;
 	border-radius: var(--r-sm);
 	background: rgba(35,53,36,.35);
 	border: 2px solid var(--btn-border);
@@ -157,14 +156,14 @@ button {
 /* fury incoming: posizione fissa */
 #charge {
 	position: fixed;
-	top: calc(env(safe-area-inset-top) + 100px);
+	top: calc(env(safe-area-inset-top) + 84px);
 	left: 50%;
 	transform: translateX(-50%);
 	white-space: nowrap;
 	letter-spacing: -4px;
 	font-size: 36px;
 	font-weight: 700;
-	padding: 5px 16px;
+	padding: 4px 12px;
 	border-radius: var(--r);
 	border: 2px solid var(--btn-border);
 	background: var(--danger);
@@ -313,7 +312,7 @@ button {
 	background: var(--paper-white);
 	border: 2px solid var(--btn-border);
 	border-radius: var(--r);
-	padding: 48px 24px;
+	padding: 36px 12px;
 	width: min(520px,92vw);
 	max-height: calc(100% - 24px);
 	overflow: auto;
@@ -1221,8 +1220,10 @@ button {
 	const ROCK_TYPES = {
 		small:     { A: [0.6, 0.45, 0.5] },
 		smallDuo:  { A: [0.6, 0.45, 0.5], B: [0.3, 0.22, 0.28] },
+		medium:    { A: [0.7, 0.45, 0.6] },
 		mediumDuo: { A: [0.7, 0.45, 0.6], B: [0.38, 0.26, 0.34] },
-		largeDuo:  { A: [0.8, 0.5, 0.7],  B: [0.46, 0.3, 0.42] },
+		large:     { A: [0.8, 0.50, 0.7] },
+		largeDuo:  { A: [0.8, 0.50, 0.7], B: [0.46, 0.3, 0.42] },
 	};
 	
 	const ROCK_KEYS = Object.keys(ROCK_TYPES);
@@ -1240,7 +1241,7 @@ button {
 		y += h * s * 0.8;                             // next piece overlaps 20%, no gaps between rounded shapes
 	  };
 
-	  put(rocksA, T.A, jitter(P.rock, 0.10));
+	  put(rocksA, T.A, jitter(P.rock, 0.05));
 	  if (T.B) put(rocksB, T.B, jitter(P.rockTop, 0.05), 0.08, -0.05);
 	}
 	
