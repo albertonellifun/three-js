@@ -45,51 +45,6 @@
         text-shadow: 0 2px 6px rgba(0, 0, 0, .6);
       }
 
-      #sp {
-        left: max(14px, env(safe-area-inset-left));
-        top: max(8px, env(safe-area-inset-top));
-      }
-
-      #spd {
-        font-size: 54px;
-        font-weight: 800;
-        line-height: 1;
-        font-variant-numeric: tabular-nums;
-      }
-
-      #sp small {
-        font-size: 13px;
-        opacity: .85;
-        margin-left: 4px;
-      }
-
-      #gear {
-        display: inline-block;
-        margin-left: 10px;
-        font-size: 22px;
-        font-weight: 800;
-        background: rgba(0, 0, 0, .35);
-        border-radius: 8px;
-        padding: 0 9px;
-      }
-	  /*
-      #rpmOLD {
-        width: 150px;
-        height: 7px;
-        background: rgba(0, 0, 0, .4);
-        border-radius: 4px;
-        margin-top: 6px;
-        overflow: hidden;
-      }
-
-      #rpmFillOLD {
-        display: block;
-        height: 100%;
-        width: 0;
-        background: linear-gradient(90deg, #4ade80, #facc15, #ef4444);
-      }
-	  */
-	  
 	  #rpm {
 	    width: 130px;
 	    height: 130px;
@@ -348,14 +303,14 @@ animation: stampAnimation 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) 1.5s for
 
   <body>
     <div id="hud">
-      <div id="sp"><span id="spd">0</span><small>km/h</small><span id="gear">N</span>
-        <!--div id="rpmOLD"><i id="rpmFillOLD"></i></div-->
-		<div id="rpm"></div>
-      </div>
+      <div id="rpm"></div>
+	  
       <div id="top"><span id="surf">ASFALTO</span>
         <div id="note"></div>
       </div>
+	  
       <div id="dist">0.00 km</div>
+	  
 	  <div id="camBox">
 		  <button class="btn toggled-blue" data-hold="zoomIn">+</button>
 		  <button class="btn toggled-blue" data-hold="zoomOut">−</button>
@@ -1752,31 +1707,60 @@ const PEN_BACK=-60;//ostacoli da -60 a 8
 const PEN_FRONT=8;//
 const PEN_X=4.0;//lunghezza newjersey
 const PEN_DIST=0.10;//distanza tra newjersey
-const jMatA=new THREE.MeshLambertMaterial({color:0xffcc22});   // giallo
-const jMatB=new THREE.MeshLambertMaterial({color:0x111122});   // nero
-let jCount=0;
-const jBackLow=new THREE.BoxGeometry(PEN_X*0.5,.45,.6).translate(0,.225,0);
-const jBackUp=new THREE.BoxGeometry(PEN_X*0.5,.5,.3).translate(0,.7,0);
-const jSideLow=new THREE.BoxGeometry(.6,.45,PEN_X*0.5).translate(0,.225,0);
-const jSideUp=new THREE.BoxGeometry(.3,.5,PEN_X*0.5).translate(0,.7,0);
+const JL=PEN_X*0.5;                       // lunghezza di un jersey
+//const JH=JL*0.5;                          // mezzo jersey
+
+// un solo jersey (base + parte alta), bianco: il colore lo dà l'istanza
+const jerseyGeo=mergeGeos([
+ colorize(new THREE.BoxGeometry(JL,.45,.6).translate(0,.225,0),1,1,1),
+ colorize(new THREE.BoxGeometry(JL,.5,.3).translate(0,.7,0),1,1,1)]);
+ 
+const jerseyMat=new THREE.MeshLambertMaterial({vertexColors:true});
+const penObs=[];
+
 const yAtZ=z=>{
  const f=PRE+z/DS;
- const i=clamp(Math.floor(f),0,P.length-2), t=clamp(f-i,0,1);
- const y=P[i].y+(P[i+1].y-P[i].y)*t+.06;          // stessa quota del nastro stradale
- const sl=Math.atan2(P[i+1].y-P[i].y,DS);         // pendenza del tratto
+ const i=clamp(Math.floor(f),0,P.length-2);
+ const t=clamp(f-i,0,1);
+ const y=P[i].y+(P[i+1].y-P[i].y)*t+.06;
+ const sl=Math.atan2(P[i+1].y-P[i].y,DS);
  return[y,sl];
 };
-function jersey(x,z,side){
- const[y,sl]=yAtZ(z);
- const g=new THREE.Group();
- const mat=(jCount++%2)?jMatB:jMatA;
- g.add(new THREE.Mesh(side?jSideLow:jBackLow,mat),new THREE.Mesh(side?jSideUp:jBackUp,mat));
- g.position.set(x,y,z);
- if(side)g.rotation.x=-sl;scene.add(g);
+{
+ const list=[];                           // [x,z,side,colorIndex]
+ let n=0;
+ for(let x=-4.1;x<=4.4;x+=(JL+PEN_DIST))list.push([x,PEN_BACK,false,n++%2]);
+ n=0;
+ for(let z=PEN_BACK;z<=PEN_FRONT;z+=(JL+PEN_DIST))list.push([-5.6,z,true,n++%2]);
+ n=0;
+ for(let z=PEN_BACK;z<=PEN_FRONT;z+=(JL+PEN_DIST))list.push([5.6,z,true,n++%2]);
+
+ const jIm=new THREE.InstancedMesh(jerseyGeo,jerseyMat,list.length);//list.length*2
+ const COLS=[[1,.8,.13],[.07,.07,.13]];   // giallo, nero
+ let idx=0;
+ list.forEach(([x,z,side,ci])=>{
+   const px=x;
+   const pz=z;
+   const[y,sl]=yAtZ(pz);
+   dummy.position.set(px,y,pz);
+   dummy.rotation.set(side?-sl:0, side?Math.PI/2:0, 0);
+   dummy.scale.set(1,1,1);
+   dummy.updateMatrix();
+   jIm.setMatrixAt(idx,dummy.matrix);
+   jIm.setColorAt(idx,tmpCol.setRGB(COLS[ci][0],COLS[ci][1],COLS[ci][2]));
+   penObs.push({type:'jersey',x:px,y:y+.3,z:pz,r:.55,col:COLS[ci],im:jIm,i:idx});
+   idx++;
+ });
+ jIm.instanceMatrix.needsUpdate=true;
+ jIm.instanceColor.needsUpdate=true;
+ jIm.frustumCulled=false;
+ jIm.castShadow=true;
+ jIm.receiveShadow=true;
+ scene.add(jIm);
 }
-for(let x=-4.1;x<=4.4;x+=(PEN_X*0.5+PEN_DIST))jersey(x,PEN_BACK,false);//dietro
-for(let z=PEN_BACK;z<=PEN_FRONT;z+=(PEN_X*0.5+PEN_DIST))jersey(-5.6,z,true);//sx
-for(let z=PEN_BACK;z<=PEN_FRONT;z+=(PEN_X*0.5+PEN_DIST))jersey(5.6,z,true);//dx
+
+
+
 
 
 
@@ -2379,12 +2363,28 @@ function updFlyW(dt){
 
 
 function hitObstacles(){
- const cc=Math.floor(car.idx/CH),s=Math.sin(car.th),co=Math.cos(car.th),lists=[];
- for(let c=cc-2;c<=cc+2;c++){const ch=chunks.get(c);if(ch)lists.push(ch.obs);}
- const tx=Math.floor(car.x/TILE),tz=Math.floor(car.z/TILE);
- for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const t=tiles.get(tileKey(tx+a,tz+b));if(t)lists.push(t.obs);}
- for(const list of lists)for(const o of list){
-  if(o.dead)continue;
+ const cc=Math.floor(car.idx/CH);
+ const s=Math.sin(car.th);
+ const co=Math.cos(car.th);
+ const lists=[];
+ 
+ for(let c=cc-2;c<=cc+2;c++){
+    const ch=chunks.get(c);
+	if(ch)lists.push(ch.obs);
+ }
+ const tx=Math.floor(car.x/TILE);
+ const tz=Math.floor(car.z/TILE);
+ for(let a=-1;a<=1;a++) {
+   for(let b=-1;b<=1;b++){
+     const t=tiles.get(tileKey(tx+a,tz+b));
+	 if(t) lists.push(t.obs);
+   }
+ }
+ if(car.idx<PRE+60) lists.push(penObs);//new jersey
+ 
+ for(const list of lists){
+  for(const o of list){
+   if(o.dead)continue;
   
     if(car.air&&car.yS-o.y>(o.type==='tree'?7:1.2))continue;
   
@@ -2398,6 +2398,7 @@ function hitObstacles(){
   const d2=a*a+b*b;
   if(d2>=o.r*o.r)continue;
   const sp=Math.hypot(car.u,car.v);//velocita
+  
   if(o.type==='post'){
     // paletto: si rompe, nessun rallentamento
 	destroyObs(o);
@@ -2417,7 +2418,43 @@ function hitObstacles(){
 	car.shake=Math.max(car.shake,Math.min(1,.2+sp/30));
     for(let k=0;k<8;k++) emit(o.x,o.y,o.z,rnd(-3,3),rnd(1,4),rnd(-3,3),.62,.58,.52,rnd(.8,1.4),1,4,.6,-.5,1.8);
    }
-  else{
+  else if(o.type==='jersey'){
+    // new jersey ferma l'auto se vado piano (sp == 20 circa 70kmh), si distrugge altrimenti
+	if (sp < 20) {
+		
+		crash(cf,cl,sp);//danneggiamento
+	
+		let d=Math.sqrt(d2);
+		let na=a;
+		let nb=b;
+		if(d<1e-4){d=Math.hypot(lf,ll)||1;na=lf;nb=ll;}                          
+		na/=d;
+		nb/=d;
+		const push=o.r-d+.03;
+		car.x-=(na*s+nb*co)*push;
+		car.z-=(na*co-nb*s)*push;
+		if(sp>1.5){
+			car.shake=Math.min(1,.3+sp/30);
+			for(let k=0;k<12;k++)emit(o.x,o.y+rnd(1,4),o.z,rnd(-3,3),rnd(0,3),rnd(-3,3),.18,.38,.14,rnd(.8,1.3),.5,.4,1,6,.3);
+		}
+		car.u=0;
+		car.v=0;
+		car.r=0;
+	} else {
+		// Albero: ora si distrugge e genera detriti, rallentando l'auto
+		destroyObs(o);
+		spawnDebris(o,8,clamp(o.r*.33,0.8,1.8),3);
+		
+		crash(cf,cl,sp);//danneggiamento
+		
+		car.u*=.3;
+		car.v*=.3;
+		car.r*=.35;
+		car.shake=Math.max(car.shake,Math.min(1,.2+sp/10));
+		for(let k=0;k<8;k++) emit(o.x,o.y,o.z,rnd(-3,3),rnd(1,4),rnd(-3,3),.62,.58,.52,rnd(.8,1.4),1,4,.6,-.5,1.8);
+	}
+  }
+  else {
     // albero: ferma l'auto se vado piano (sp == 20 circa 70kmh), si distrugge altrimenti
 	if (sp < 20) {
 		
@@ -2453,6 +2490,7 @@ function hitObstacles(){
 		for(let k=0;k<8;k++) emit(o.x,o.y,o.z,rnd(-3,3),rnd(1,4),rnd(-3,3),.62,.58,.52,rnd(.8,1.4),1,4,.6,-.5,1.8);
 	}
    }
+  }
  }
 }
 function updDebris(dt){
@@ -2570,12 +2608,6 @@ function resetCar(){
  repairCar();
 }
 function updateWorld(dt){
-
- if(car.z<PEN_FRONT&&car.idx<PRE+40){
-  if(Math.abs(car.x)>PEN_X){car.x=clamp(car.x,-PEN_X,PEN_X);car.v*=.3;}
-  if(car.z<PEN_BACK+2.6){car.z=PEN_BACK+2.6;car.u*=.1;car.v*=.1;}
- }
-
 
  car.odo+=Math.abs(car.u)*dt;
  
@@ -2807,12 +2839,14 @@ function updateWorld(dt){
   updAudio(running?slip:0,dt);
   
  if(++hudTick%4===0){
-  $('spd').textContent=Math.max(0,Math.round(Math.abs(kmh)));
-  $('gear').textContent=car.u<-.5?'R':(Math.abs(kmh)<1&&ctl.gas<.1)?'N':gi+1;
-  //$('rpmFillOLD').style.width=(car.rpm*100)+'%';
+  const kmhVal = Math.max(0,Math.round(Math.abs(kmh)));
+  const geaVal = car.u<-.5?'R':(Math.abs(kmh)<1&&ctl.gas<.1)?'N':gi+1;
+  
+  //$('spd').textContent=kmhVal;
+  //$('gear').textContent=geaVal;
   
   //veglia borletti
-  tach(car.rpm);
+  tach(car.rpm,kmhVal,geaVal);
   $('rpm').classList.toggle('night',headlightsOn);
   
   const off=Math.abs(c.d)>5.4;
@@ -2831,7 +2865,7 @@ function updateWorld(dt){
 
   $('surf').textContent=off?'​⚡ FUORI STRADA ​⚡':surfText;
   
-  $('dist').textContent=(car.odo/1000).toFixed(2)+' km';
+  $('dist').textContent=(car.odo/1000).toFixed(1)+' km';
   if(hudTick%12===0)lastPace=pace();
   const n=$('note');n.innerHTML=lastPace?`${lastPace.left?'◀':'▶'} ${sev(lastPace.R)} <small>${Math.max(0,Math.round(lastPace.dist-(car.idx-lastPace.from)*DS))} m</small>`:'';
  }
@@ -2874,7 +2908,7 @@ const tach=(()=>{
  const TICK_OUT=64;
  const tk=v=>{const [x1,y1]=pt(v,TICK_IN),[x2,y2]=pt(v,TICK_OUT);return `M${x1} ${y1}L${x2} ${y2}`;};
  
- let h=`<svg viewBox="0 0 200 200" width="130" height="130">`
+ let h=`<svg viewBox="0 0 200 200" width="${IS_MOBILE ? 150 : 200}" height="${IS_MOBILE ? 150 : 200}">`
   +`<circle cx="100" cy="100" r="98" fill="#1b1b1b" stroke="#666" stroke-width="2"/>`//esterno grigio
   +`<circle cx="100" cy="100" r="92" fill="none"    stroke="#c8892a" stroke-width="1.5"/>`//esterno giallo
   +`<path d="M${ax} ${ay}A${ARC_R} ${ARC_R} 0 1 1 ${bx} ${by}" fill="none" stroke="#c8892a" stroke-width="3"/>`//interno giallo
@@ -2887,6 +2921,13 @@ const tach=(()=>{
   h+=`<text x="${x}" y="${y}" fill="${Y}" font-size="18" font-weight="900" text-anchor="middle" dominant-baseline="central" font-family="monospace">${n}</text>`;
  }
  
+ //MARCIA E KMH AL CENTRO
+ h+=`<rect                    x="120" y="28" width="44" height="44" rx="3" ry="3" fill="#111111" stroke="${Y}" stroke-width="1"/>`;
+ h+=`<text id="tachGearText"  x="140" y="48" fill="#ffffff" font-size="44" font-weight="900" text-anchor="middle" dominant-baseline="central" font-family="monospace">N</text>`;
+ 
+ h+=`<rect                    x="60"  y="113" width="80" height="22"  rx="3" ry="3" fill="#111111" stroke="${Y}" stroke-width="1"/>`;
+ h+=`<text id="tachSpeedText" x="138" y="124" fill="#ffffff" font-size="20" font-weight="700" text-anchor="end" dominant-baseline="central" font-family="monospace">0</text>`;
+   
  //scritte contorno
  h+=`<text x="100" y="70" fill="${Y}" font-size="6" font-weight="700" text-anchor="middle" font-family="sans-serif">VEGLIA</text>`
    +`<text x="100" y="78" fill="${Y}" font-size="5" font-weight="700" text-anchor="middle" font-family="sans-serif">BORLETTI</text>`
@@ -2906,7 +2947,10 @@ const tach=(()=>{
  el.innerHTML=h;
  const cs=el.querySelectorAll('.td');
  const needle=$('tachNeedle');
- return function(r){                        // r = car.rpm (0.22..1)
+ const speedText=el.querySelector('#tachSpeedText');
+ const gearText=el.querySelector('#tachGearText');
+ 
+ return function(r,kmh,gea){                        // r = car.rpm (0.22..1)
   const rpm=900+clamp((r-.22)/.78,0,1)*6600;  // stessa scala dell'audio
   needle.setAttribute('transform',`translate(100 100) rotate(${rpm/6000*180})`);
   for(let i=0;i<dots.length;i++){
@@ -2916,6 +2960,8 @@ const tach=(()=>{
    d.on=on;
    cs[i].setAttribute('fill',on?(d.red?RED:Y):(d.red?RED_OFF:Y_OFF));
   }
+  if(speedText) speedText.textContent = kmh + ' kmh';
+  if(gearText) gearText.textContent = gea;
  };
 })();
 
