@@ -16,7 +16,7 @@
         -webkit-user-select: none;
         user-select: none;
         -webkit-touch-callout: none;
-        -webkit-tap-highlight-color: transparent
+        -webkit-tap-highlight-color: transparent;
       }
 
       html,
@@ -27,40 +27,40 @@
         background: #9bb8d3;
         font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
         touch-action: none;
-        color: #fff
+        color: #fff;
       }
 
       canvas {
-        display: block
+        display: block;
       }
 
       #hud {
         position: fixed;
         inset: 0;
-        pointer-events: none
+        pointer-events: none;
       }
 
       #hud>div {
         position: absolute;
-        text-shadow: 0 2px 6px rgba(0, 0, 0, .6)
+        text-shadow: 0 2px 6px rgba(0, 0, 0, .6);
       }
 
       #sp {
         left: max(14px, env(safe-area-inset-left));
-        top: max(8px, env(safe-area-inset-top))
+        top: max(8px, env(safe-area-inset-top));
       }
 
       #spd {
         font-size: 54px;
         font-weight: 800;
         line-height: 1;
-        font-variant-numeric: tabular-nums
+        font-variant-numeric: tabular-nums;
       }
 
       #sp small {
         font-size: 13px;
         opacity: .85;
-        margin-left: 4px
+        margin-left: 4px;
       }
 
       #gear {
@@ -70,30 +70,31 @@
         font-weight: 800;
         background: rgba(0, 0, 0, .35);
         border-radius: 8px;
-        padding: 0 9px
+        padding: 0 9px;
       }
-
+	  /*
       #rpmOLD {
         width: 150px;
         height: 7px;
         background: rgba(0, 0, 0, .4);
         border-radius: 4px;
         margin-top: 6px;
-        overflow: hidden
+        overflow: hidden;
       }
 
       #rpmFillOLD {
         display: block;
         height: 100%;
         width: 0;
-        background: linear-gradient(90deg, #4ade80, #facc15, #ef4444)
+        background: linear-gradient(90deg, #4ade80, #facc15, #ef4444);
       }
+	  */
 	  
 	  #rpm {
 	    width: 130px;
 	    height: 130px;
 	    margin-top: 6px;
-	    filter: drop-shadow(0 2px 6px rgba(0,0,0,.6))
+	    filter: drop-shadow(0 2px 6px rgba(0,0,0,.6));
 		color: #f5c518;
 	  }
 	  #rpm.night { color: #ff8811; }
@@ -104,7 +105,7 @@
         left: 50%;
         top: max(8px, env(safe-area-inset-top));
         transform: translateX(-50%);
-        text-align: center
+        text-align: center;
       }
 
       #surf {
@@ -114,7 +115,7 @@
         letter-spacing: .08em;
         padding: 3px 12px;
         border-radius: 12px;
-        background: rgba(0, 0, 0, .4)
+        background: rgba(0, 0, 0, .4);
       }
 
       #note {
@@ -122,20 +123,20 @@
         font-size: 22px;
         font-weight: 800;
         min-height: 28px;
-        color: #fde047
+        color: #fde047;
       }
 
       #note small {
         font-size: 13px;
         color: #fff;
-        font-weight: 600
+        font-weight: 600;
       }
 
       #dist {
         right: max(64px, env(safe-area-inset-right));
         top: max(10px, env(safe-area-inset-top));
         font-size: 18px;
-        font-weight: 700
+        font-weight: 700;
       }
 
       #resetBtn {
@@ -149,7 +150,7 @@
         background: rgba(0, 0, 0, .35);
         color: #fff;
         font-size: 22px;
-        pointer-events: auto
+        pointer-events: auto;
       }
 
       #pad {
@@ -161,7 +162,7 @@
         border-radius: 55px;
         background: rgba(255, 255, 255, .14);
         border: 2px solid rgba(255, 255, 255, .35);
-        backdrop-filter: blur(3px)
+        backdrop-filter: blur(3px);
       }
 
       #pad span {
@@ -173,7 +174,7 @@
         font-weight: 800;
         opacity: .55;
         letter-spacing: .1em;
-        font-size: 14px
+        font-size: 14px;
       }
 
       #knob {
@@ -185,7 +186,7 @@
         margin: -39px 0 0 -39px;
         border-radius: 50%;
         background: rgba(255, 255, 255, .55);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, .4)
+        box-shadow: 0 2px 8px rgba(0, 0, 0, .4);
       }
 
       .btn {
@@ -199,39 +200,39 @@
         letter-spacing: .06em;
         background: rgba(255, 255, 255, .14);
         border: 2px solid rgba(255, 255, 255, .4);
-        backdrop-filter: blur(3px)
+        backdrop-filter: blur(3px);
       }
 
       .btn.on {
-        background: rgba(255, 255, 255, .45)
+        background: rgba(255, 255, 255, .45);
       }
 
       #bGas {
         right: max(14px, env(safe-area-inset-right));
         bottom: max(14px, env(safe-area-inset-bottom));
-        width: 112px;
-        height: 160px;
+        width: 75px;
+        height: 150px;
         border-color: #4ade80;
-        color: #bbf7d0
+        color: #bbf7d0;
       }
 
       #bBrake {
-        right: calc(max(14px, env(safe-area-inset-right)) + 126px);
+        right: calc(max(14px, env(safe-area-inset-right)) + 85px);
         bottom: max(14px, env(safe-area-inset-bottom));
-        width: 92px;
-        height: 72px;
+        width: 75px;
+        height: 80px;
         border-color: #f87171;
-        color: #fecaca
+        color: #fecaca;/* ATTENZIONE!!! */
       }
 
       #bHB {
-        right: calc(max(14px, env(safe-area-inset-right)) + 126px);
-        bottom: calc(max(14px, env(safe-area-inset-bottom)) + 84px);
-        width: 92px;
-        height: 62px;
+        right: calc(max(14px, env(safe-area-inset-right)) + 85px);
+        bottom: calc(max(14px, env(safe-area-inset-bottom)) + 88px);
+        width: 75px;
+        height: 60px;
         border-color: #fb923c;
         color: #fed7aa;
-        font-size: 13px
+        font-size: 13px;
       }
 
       #start {
@@ -244,7 +245,7 @@
         background: rgba(10, 20, 35, .62);
         text-align: center;
         padding: 20px;
-        z-index: 5
+        z-index: 5;
       }
 
       #start h1 {
@@ -259,7 +260,7 @@
       #start p {
         max-width: 520px;
         opacity: .9;
-        line-height: 1.5
+        line-height: 1.5;
       }
 
       #start b {
@@ -269,7 +270,7 @@
         border-radius: 30px;
         background: #facc15;
         color: #1a1a1a;
-        font-size: 18px
+        font-size: 18px;
       }
 	  
 	/* Testo con colore bandiera animato e sfondo trasparente */
@@ -348,7 +349,7 @@ animation: stampAnimation 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) 1.5s for
   <body>
     <div id="hud">
       <div id="sp"><span id="spd">0</span><small>km/h</small><span id="gear">N</span>
-        <div id="rpmOLD"><i id="rpmFillOLD"></i></div>
+        <!--div id="rpmOLD"><i id="rpmFillOLD"></i></div-->
 		<div id="rpm"></div>
       </div>
       <div id="top"><span id="surf">ASFALTO</span>
@@ -441,12 +442,8 @@ function dent(lx,lz,R,depth){
       const d=_v.distanceTo(_p); 
 	  if(d>R)continue;
       
-	  //const f=(1-d/R)**2*depth*(.6+Math.random()*.4);//random
-	  
-	  // variazione liscia e deterministica: dipende solo dalla posizione nel modello
-      const n=.75+.25*vnoise(_v.x*2.5+10,_v.z*2.5);
-      const f=(1-d/R)**2*depth*n;
-	  
+	  const f=(1-d/R)**2*depth*(.6+Math.random()*.4);//random effetto increspatura violenta!
+	  	  
       _v.z-=f*.6; _v.y-=f;
       model.localToWorld(_v); _v.applyMatrix4(inv);
       pos.setXYZ(i,_v.x,_v.y,_v.z);
@@ -2804,7 +2801,7 @@ function updateWorld(dt){
  if(++hudTick%4===0){
   $('spd').textContent=Math.max(0,Math.round(Math.abs(kmh)));
   $('gear').textContent=car.u<-.5?'R':(Math.abs(kmh)<1&&ctl.gas<.1)?'N':gi+1;
-  $('rpmFillOLD').style.width=(car.rpm*100)+'%';
+  //$('rpmFillOLD').style.width=(car.rpm*100)+'%';
   
   //veglia borletti
   tach(car.rpm);
@@ -2845,36 +2842,71 @@ function pace(){
 
 /* ============ CONTAGIRI VEGLIA BORLETTI (SVG) ============ */
 const tach=(()=>{
- //const el=$('rpm'),Y='#f5c518',RED='#e8321e',OFF_Y='#4a4020',OFF_R='#4a1a14',N=46,MAXR=9000,REDLINE=6500;
- const el=$('rpm'),Y='currentColor',RED='#e8321e',OFF_Y='#4a4020',N=46,MAXR=9000,REDLINE=6500,OFF_R='#4a1a14';
+ const el=$('rpm');
+ const Y='currentColor';//#f5c518
+ const YLancetta='#ffdd11';//piu chiara di #f5c518
+ const Y_OFF='#775511';//f5c518
+ const RED='#ee3311';
+ const RED_OFF='#772211';//
+ const N=36;//46;
+ const MAXR=9000;
+ const REDLINE=6500;
  const a=v=>v/6000*Math.PI;               // 0 a ore 3, 60 a ore 9, 90 a ore 12 (senso orario)
  const pt=(v,r)=>[100+Math.cos(a(v))*r,100+Math.sin(a(v))*r];
- const [ax,ay]=pt(500,50);
- let h='<svg viewBox="0 0 200 200" width="130" height="130">'
-  +'<circle cx="100" cy="100" r="98" fill="#1b1b1b" stroke="#666" stroke-width="2"/>'
-  +`<path d="M${ax} ${ay}A50 50 0 1 1 100 50" fill="none" stroke="#c8892a" stroke-width="2"/>`
-  +`<path d="M100 50V74M100 126V150M50 100H74M126 100H150" stroke="${Y}" stroke-width="1.5"/>`;
- for(let n=0;n<=90;n+=10){const [x,y]=pt(n*100,76);
-  h+=`<text x="${x}" y="${y}" fill="${Y}" font-size="13" font-weight="700" text-anchor="middle" dominant-baseline="central" font-family="sans-serif">${n}</text>`;}
-  h+=`<text x="100" y="68" fill="${Y}" font-size="6" font-weight="700" text-anchor="middle" font-family="sans-serif">VEGLIA</text>`
-    +`<text x="100" y="80" fill="${Y}" font-size="6" font-weight="700" text-anchor="middle" font-family="sans-serif">BORLETTI</text>`
-    +`<text x="140" y="92" fill="${Y}" font-size="7" font-weight="700" text-anchor="middle" font-family="sans-serif">RPM x 100</text>`;
+ 
+ // arco: valori sulla stessa scala dei numeri del quadrante (6000 = 180°)
+ const ARC_R=55;
+ const ARC_START=0;
+ const ARC_END=9000;
+ const [ax,ay]=pt(ARC_START,ARC_R);
+ const [bx,by]=pt(ARC_END,ARC_R);
+ 
+ // tacche a croce (ore 3, 6, 9, 12): raggio interno ed esterno
+ const TICK_IN=16;
+ const TICK_OUT=64;
+ const tk=v=>{const [x1,y1]=pt(v,TICK_IN),[x2,y2]=pt(v,TICK_OUT);return `M${x1} ${y1}L${x2} ${y2}`;};
+ 
+ let h=`<svg viewBox="0 0 200 200" width="130" height="130">`
+  +`<circle cx="100" cy="100" r="98" fill="#1b1b1b" stroke="#666" stroke-width="2"/>`//esterno grigio
+  +`<circle cx="100" cy="100" r="92" fill="none"    stroke="#c8892a" stroke-width="1.5"/>`//esterno giallo
+  +`<path d="M${ax} ${ay}A${ARC_R} ${ARC_R} 0 1 1 ${bx} ${by}" fill="none" stroke="#c8892a" stroke-width="3"/>`//interno giallo
+  +`<path d="${tk(0)}${tk(3000)}${tk(6000)}${tk(9000)}" stroke="${Y}" stroke-width="1.5"/>`;
+ 
+ 
+ //scritte rpm
+ for(let n=0;n<=90;n+=10){
+  const [x,y]=pt(n*100,70);
+  h+=`<text x="${x}" y="${y}" fill="${Y}" font-size="18" font-weight="900" text-anchor="middle" dominant-baseline="central" font-family="monospace">${n}</text>`;
+ }
+ 
+ //scritte contorno
+ h+=`<text x="100" y="70" fill="${Y}" font-size="6" font-weight="700" text-anchor="middle" font-family="sans-serif">VEGLIA</text>`
+   +`<text x="100" y="78" fill="${Y}" font-size="5" font-weight="700" text-anchor="middle" font-family="sans-serif">BORLETTI</text>`
+   +`<text x="170" y="88" fill="${Y}" font-size="7" font-weight="700" text-anchor="middle" font-family="sans-serif">RPM x 100</text>`;
+   
+ //pallini
  const dots=[];
- for(let i=0;i<=N;i++){const v=i/N*MAXR,[x,y]=pt(v,90),big=i%5===0;
-  h+=`<circle class="td" cx="${x}" cy="${y}" r="${big?3.2:2}" fill="${v>=REDLINE?OFF_R:OFF_Y}"/>`;
-  dots.push({v,red:v>=REDLINE,on:false});}
- h+='<polygon id="tachNeedle" points="0,-3 84,-1 84,1 0,3" fill="'+Y+'" transform="translate(100 100)"/>'
-  +'<circle cx="100" cy="100" r="9" fill="#0d0d0d"/></svg>';
+ for(let i=0;i<=N;i++){
+  const v=i/N*MAXR;
+  const [x,y]=pt(v,85);
+  const big=i%4===0;//5
+  h+=`<circle class="td" cx="${x}" cy="${y}" r="${big?4:2}" fill="${v>=REDLINE?RED_OFF:Y_OFF}"/>`;
+  dots.push({v,red:v>=REDLINE,on:false});
+ }
+ h+=`<polygon id="tachNeedle" points="-30,-5 84,-2 84,2 -30,5" fill="${YLancetta}" transform="translate(100 100)"/>`
+   +`<circle cx="100" cy="100" r="9" fill="#111111"/></svg>`;
  el.innerHTML=h;
- const cs=el.querySelectorAll('.td'),needle=$('tachNeedle');
+ const cs=el.querySelectorAll('.td');
+ const needle=$('tachNeedle');
  return function(r){                        // r = car.rpm (0.22..1)
   const rpm=900+clamp((r-.22)/.78,0,1)*6600;  // stessa scala dell'audio
   needle.setAttribute('transform',`translate(100 100) rotate(${rpm/6000*180})`);
   for(let i=0;i<dots.length;i++){
-   const d=dots[i],on=d.v<=rpm;
+   const d=dots[i];
+   const on=d.v<=rpm;
    if(on===d.on)continue;
    d.on=on;
-   cs[i].setAttribute('fill',on?(d.red?RED:Y):(d.red?OFF_R:OFF_Y));
+   cs[i].setAttribute('fill',on?(d.red?RED:Y):(d.red?RED_OFF:Y_OFF));
   }
  };
 })();
