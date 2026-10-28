@@ -1065,9 +1065,21 @@ function addGrass(tile,R){
     const x=x0+R(0,TILE);
 	const z=z0+R(0,TILE);
     if(smp(ads,x,z)<5.5)continue;                 // più vicino alla strada
-    const y=smp(hs,x,z); if(y>52)continue;
+    const y=smp(hs,x,z); if(y>52)continue;		  // no erba oltre 52m di altitudine
     if(vnoise(x*.05,z*.05)<.12)continue;          // chiazze rade invece di un terzo vuoto
     pts.push([x,y,z,R(.6,1.3)]);
+  }
+  for(let k=0;k<GRASS_N;k++){
+    const x=x0+R(0,TILE);
+    const z=z0+R(0,TILE);
+    if(smp(ads,x,z)<5.5)continue;   // più vicino alla strada
+    const y=smp(hs,x,z);
+	//if(y>52)continue;		  		// no erba oltre 52m di altitudine
+    const keep=1-sm(y,25,58);
+    if(R(0,1)>keep)continue;
+	if(vnoise(x*.05,z*.05)<.12)continue; // chiazze rade invece di un terzo vuoto
+	//pts.push([x,y,z,R(.6,1.3)]);
+    pts.push([x,y,z,R(.6,1.3)*(1-.4*sm(y,25,58))]);//erba meno alta man mano che aumenta altitudine
   }
 
   if(!pts.length)return;
@@ -2344,8 +2356,12 @@ function crash(cf,cl,sp){
     const d=Math.hypot(cl-WO[w][0],cf-WO[w][1]);   // distanza contatto -> ruota
     if(d<bd){bd=d;best=w;}
   }
-  if(best>=0&&bd<1.25&&sev>.3&&Math.random()<sev*1.5) loseWheel(best);
+  //if(best>=0&&bd<1.25&&sev>.3&&Math.random()<sev*1.5) loseWheel(best);
   //else if(cf>.5) dent(cl,cf,.5+sev*.7,.1+sev*.35);
+  
+  // ruota persa solo ad alta velocità, contatto vicino alla ruota, e con probabilità contenuta
+  //if(best>=0 && bd<0.90 && sev>.55 && Math.random() < (sev-.55)*0.90) loseWheel(best);
+  if(best>=0 && bd<1.05 && sev>.42 && Math.random() < (sev-.42)*1.2) loseWheel(best);
   //else 
   if(cf>.5) dent(cl,cf,1.4+sev*.9,.2+sev*.45);//deve partire a prescindere l'ammaccatura!
 }
