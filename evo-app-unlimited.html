@@ -1063,14 +1063,6 @@ function addGrass(tile,R){
   };
   for(let k=0;k<GRASS_N;k++){
     const x=x0+R(0,TILE);
-	const z=z0+R(0,TILE);
-    if(smp(ads,x,z)<5.5)continue;                 // più vicino alla strada
-    const y=smp(hs,x,z); if(y>52)continue;		  // no erba oltre 52m di altitudine
-    if(vnoise(x*.05,z*.05)<.12)continue;          // chiazze rade invece di un terzo vuoto
-    pts.push([x,y,z,R(.6,1.3)]);
-  }
-  for(let k=0;k<GRASS_N;k++){
-    const x=x0+R(0,TILE);
     const z=z0+R(0,TILE);
     if(smp(ads,x,z)<5.5)continue;   // più vicino alla strada
     const y=smp(hs,x,z);
