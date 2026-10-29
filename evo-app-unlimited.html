@@ -1476,6 +1476,105 @@ const deltaColors = [
 	{top:0x0088ee, mid:0xdd1122, low:0x112255},//martini ubriachi
  ];
  
+ 
+// sporco e' bello
+let dirt=0, dirtyMats=[];
+const dirtCol=new THREE.Color(.5,.43,.3), _dc=new THREE.Color();
+//               0 1 2 3  grav1        fango         roccia        offroad
+const DIRT_COLS=[0,0,0,0,[.62,.50,.32],[.25,.17,.10],[.45,.45,.45],[.30,.22,.13]];
+const MAX_DIRT_COLOR=0.2;
+const MAX_DIRT_OPACITY=1.6;
+
+/*
+function collectDirtMats(){
+  dirtyMats=[]; 
+  const seen=new Set();
+  model.traverse(o=>{
+    if(!o.isMesh)return;
+    [].concat(o.material).forEach(m=>{
+      if(seen.has(m)||!m.color||m.transparent||m.opacity<1||m.isMeshBasicMaterial)return;// niente vetri/fari
+      seen.add(m);
+      dirtyMats.push({m,c0:m.color.clone(),
+        met:m.metalness, rou:m.roughness, cc:m.clearcoat,
+        env:m.envMapIntensity, shi:m.shininess,
+        spec:m.specular?m.specular.clone():null});
+    });
+  });
+}
+
+function applyDirt(){
+  const k=Math.min(dirt,1)*.75;   // 0.75 = sporco massimo (non copre del tutto)
+  for(const d of dirtyMats) d.m.color.copy(d.c0).lerp(dirtCol,k);
+}*/
+
+const dirtU={uDirt:{value:0},uDirtCol:{value:dirtCol},uInv:{value:new THREE.Matrix4()}};
+
+function patchDirtMat(m){
+  m.onBeforeCompile=sh=>{
+    Object.assign(sh.uniforms,dirtU);
+    sh.vertexShader=sh.vertexShader
+      .replace('#include <common>','#include <common>\nuniform mat4 uInv;\nvarying vec3 vDP;')
+      .replace('#include <begin_vertex>','#include <begin_vertex>\nvDP=(uInv*modelMatrix*vec4(position,1.)).xyz;');
+    sh.fragmentShader=sh.fragmentShader
+      .replace('#include <common>',`#include <common>
+uniform float uDirt; uniform vec3 uDirtCol; varying vec3 vDP;
+float dh(vec3 p){return fract(sin(dot(p,vec3(12.9898,78.233,37.719)))*43758.5453);}
+float dn(vec3 p){vec3 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
+  return mix(mix(mix(dh(i),dh(i+vec3(1,0,0)),f.x),mix(dh(i+vec3(0,1,0)),dh(i+vec3(1,1,0)),f.x),f.y),
+             mix(mix(dh(i+vec3(0,0,1)),dh(i+vec3(1,0,1)),f.x),mix(dh(i+vec3(0,1,1)),dh(i+vec3(1,1,1)),f.x),f.y),f.z);}`)
+      .replace('#include <color_fragment>',`#include <color_fragment>
+{
+  float n=dn(vDP*7.)*.6+dn(vDP*19.)*.4;
+  float low=1.-smoothstep(.15,1.0,vDP.y+(n-.5)*.5);          // più sporco in basso
+  float rear=smoothstep(-.3,-2.1,vDP.z);                      // e dietro
+  float base=low*(.55+.75*rear);
+  float mask=smoothstep(.25,.6,base*uDirt*1.6+(n-.5)*.35*uDirt)*clamp(uDirt*1.5,0.,1.);
+  diffuseColor.rgb=mix(diffuseColor.rgb,uDirtCol*.8,mask);
+}`);
+  };
+  m.customProgramCacheKey=()=>'dirt';
+  m.needsUpdate=true;
+}
+
+function collectDirtMats(){
+  dirtyMats=[];
+  const seen=new Set();
+  model.traverse(o=>{
+    if(!o.isMesh)return;
+    [].concat(o.material).forEach(m=>{
+      if(seen.has(m)||!m.color||m.transparent||m.opacity<1||m.isMeshBasicMaterial)return;
+      seen.add(m);
+      patchDirtMat(m);
+      dirtyMats.push({m,c0:m.color.clone(),
+        met:m.metalness, rou:m.roughness, cc:m.clearcoat,
+        env:m.envMapIntensity, shi:m.shininess,
+        spec:m.specular?m.specular.clone():null});
+    });
+  });
+}
+
+function applyDirt(){
+  dirtU.uDirt.value=dirt;
+  const k=Math.min(dirt,1)*MAX_DIRT_COLOR;     // intensità del colore
+  const mk=Math.min(dirt*MAX_DIRT_OPACITY,1);         // l'opacità arriva prima del colore
+  for(const d of dirtyMats){
+    const m=d.m;
+    m.color.copy(d.c0).lerp(dirtCol,k);
+    if(d.met!==undefined) m.metalness=lerp(d.met,0,mk);
+    if(d.rou!==undefined) m.roughness=lerp(d.rou,1,mk);
+    if(d.cc!==undefined)  m.clearcoat=lerp(d.cc,0,mk);
+    if(d.env!==undefined) m.envMapIntensity=lerp(d.env,0,mk);
+    if(d.shi!==undefined) m.shininess=lerp(d.shi,2,mk);          // Phong/Lambert-like
+    if(d.spec) m.specular.copy(d.spec).multiplyScalar(1-mk);
+  }  
+}
+
+
+
+ 
+ 
+ 
+ 
 function changeDelta() {
     const car = carG.children[0].userData;
 	const hasLivery = currentDeltaColor === 0 || currentDeltaColor === 1;//has livery
@@ -1609,6 +1708,10 @@ function spawnCar(){
   steerWheel=buildInterior(model);
 
   model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+  
+  //sporco e' bello
+  collectDirtMats();
+  applyDirt();
 }
 
 function buildInterior(parent){
@@ -2642,6 +2745,10 @@ function resetCar(){
  car.vy=0;
  car.gy=null;
  skW.forEach(s=>{s.on=false;s.has=false;s.k=0;});//toglie sgommate
+ 
+ //sporco rimosso PRIMA di riparare l'auto (respawn)
+ dirt=0;
+ 
  //danneggiamento rimosso
  repairCar();
 }
@@ -2660,6 +2767,10 @@ function updateWorld(dt){
  let mu=[0,0,0,0];
  let st=[0,0,0,0];
  let rr=0;
+ 
+ let dusty=0;//sporco e' bello
+ let sfDust=4;//sporco ci piace
+ 
  for(let w=0;w<4;w++){
   const wd=wheelDat[w];
   const x=car.x+fx*WO[w][1]+lx*WO[w][0];
@@ -2673,6 +2784,9 @@ function updateWorld(dt){
   ym+=SHD.y;
   const off=Math.abs(SHD.d)>5.4;
   const sf=off?(MU.length-1):SHD.surf;
+  
+  if(sf>=4){ dusty++; sfDust=sf; }//sporco e' bello
+  
   mu[w]=MU[sf];
   st[w]=ST[sf];
   rr+=RR[sf];
@@ -2692,7 +2806,17 @@ function updateWorld(dt){
  car.stF*=1-mis*1.2;  
  car.stR*=1-(Math.abs(dmg.toe[2])+Math.abs(dmg.toe[3]))*.6;
  
- 
+ //sporco e' bellissimo
+ if(dusty&&!car.air){
+  const add=Math.abs(car.u)*dt*(dusty/4)*.004;
+  const nd=Math.min(1,dirt+add);
+  const t=DIRT_COLS[sfDust];
+  // peso del nuovo sporco sul totale; il minimo (.05/s) evita che a dirt=1 il colore resti congelato
+  const w=clamp(Math.max(add,dt*.05)/Math.max(nd,.05),0,1);
+  dirtCol.lerp(_dc.setRGB(t[0],t[1],t[2]),w);
+  dirt=nd;
+  applyDirt();
+ }
  
  
  
@@ -2774,7 +2898,13 @@ function updateWorld(dt){
  
  
  
- carG.position.set(car.x,car.yS,car.z);carG.rotation.set(-car.pitch,car.th,car.roll);
+ carG.position.set(car.x,car.yS,car.z);
+ carG.rotation.set(-car.pitch,car.th,car.roll);
+ 
+ //sporchissimo e' bellissimo!
+ carG.updateMatrixWorld(true);
+ dirtU.uInv.value.copy(carG.matrixWorld).invert();
+ 
  
  //sole segue l'auto
  {
