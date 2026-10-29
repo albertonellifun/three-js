@@ -378,10 +378,11 @@
     </div>
 
     <script src="./three.min.js"></script>
-	<script src="./evo-app-buildcar-repsol.js"></script>
-    <!-- Esempio con la versione r128 (modifica la versione in base a quella di Three.js che usi) -->
 	<script src="./GLTFLoader.js"></script>
-
+	
+	<!--script src="./evo-app-buildcar-repsol.js"></script-->
+	<script src="./evo-app-buildcar-martini.js"></script>
+    
 <script>
 (()=>{
 'use strict';
@@ -411,7 +412,10 @@ let shadowsOn=true;
 
 //danneggiamento!
 const dmg={toe:[0,0,0,0],camber:[0,0,0,0],lost:[false,false,false,false],pull:0};
-function repairCar(){ spawnCar(); Object.assign(dmg,{toe:[0,0,0,0],camber:[0,0,0,0],lost:[false,false,false,false],pull:0}); }
+function repairCar(){ 
+  spawnCar(); 
+  Object.assign(dmg,{toe:[0,0,0,0],camber:[0,0,0,0],lost:[false,false,false,false],pull:0}); 
+}
 
 const _v=new THREE.Vector3(), _p=new THREE.Vector3();
 
@@ -1484,27 +1488,23 @@ const wheelPivots=[],wheelMeshes=[];
 })();
 */
 const deltaColors = [
-	{base: 0xe9e9e9, hasLivery:true}, //bianco + loghi
-	{base: 0xe9e9e9, hasLivery:true}, //bianco + loghi
-	{base: 0xe9e9e9, hasLivery:true}, //bianco + loghi
-	{base: 0xf2f2f2, hasLivery:false}, //bianco standard
-	{base: 0xf0c020, hasLivery:false}, //giallo
-	{base: 0x990000, hasLivery:false}, //rosso
-	{base: 0x556666, hasLivery:false}, //grigio quartz
-	{base: 0x00a3e0, hasLivery:false}, //blu martini
-	{base: 0x153020, hasLivery:false}, //verde york
-	{base: 0x101520, hasLivery:false}, //lord blu
-	{base: 0x101010, hasLivery:false}, //nero
-	{base: 0xff8800, hasLivery:false}, //arancio
+	{base: 0xdddddd, lanciaBadge: true, liveryMartini: {azz:0x006600, blu:0xffffff, red:0xdd1122} }, //bianco + martini ubriachi
+	{base: 0xe9e9e9, lanciaBadge: true, liveryRepsol:  {ora:0xff8800, azz:0x112255, red:0xdd1122} }, //bianco + repsol
+	{base: 0xe9e9e9, lanciaBadge: true, liveryRepsol:  {ora:0x006600, azz:0xeeeeee, red:0x990000} }, //bianco + totip
+	{base: 0xe9e9e9, lanciaBadge: true, liveryRepsol:  {ora:0xffee00, azz:0xff9900, red:0xff4400} }, //bianco + orangina
+	{base: 0xe9e9e9, lanciaBadge: true, liveryRepsol:  {ora:0x0088ee, azz:0xdd1122, red:0x112255} }, //bianco + martini falsa
+	{base: 0xe9e9e9, lanciaBadge: true, liveryMartini: {azz:0x112266, blu:0x00aaee, red:0xee0011} }, //bianco + martini
+	{base: 0xf2f2f2}, //bianco standard
+	{base: 0xf0c020}, //giallo
+	{base: 0x990000}, //rosso
+	{base: 0x556666}, //grigio quartz
+	{base: 0x00a3e0}, //blu martini
+	{base: 0x153020}, //verde york
+	{base: 0x101520}, //lord blu
+	{base: 0x101010}, //nero
+	{base: 0xff8800}, //arancio
  ];
- 
- const liveryColors = [
-	{top:0xff8800, mid:0x112255, low:0xdd1122},//repsol
-	{top:0x006600, mid:0xeeeeee, low:0x990000},//totip
-	{top:0xffee00, mid:0xff9900, low:0xff4400},//orangina
-	{top:0x0088ee, mid:0xdd1122, low:0x112255},//martini ubriachi
- ];
- 
+  
  
 // sporco e' bello
 let dirt=0, dirtyMats=[];
@@ -1513,32 +1513,13 @@ const dirtCol=new THREE.Color(.5,.43,.3), _dc=new THREE.Color();
 const DIRT_COLS=[0,0,0,0,[.62,.50,.32],[.25,.17,.10],[.45,.45,.45],[.30,.22,.13]];
 const MAX_DIRT_COLOR=0.2;
 const MAX_DIRT_OPACITY=1.6;
+const dirtU={uDirt:{value:0}, uDirtCol:{value:dirtCol}, uInv:{value:new THREE.Matrix4()}};
 
-/*
-function collectDirtMats(){
-  dirtyMats=[]; 
-  const seen=new Set();
-  model.traverse(o=>{
-    if(!o.isMesh)return;
-    [].concat(o.material).forEach(m=>{
-      if(seen.has(m)||!m.color||m.transparent||m.opacity<1||m.isMeshBasicMaterial)return;// niente vetri/fari
-      seen.add(m);
-      dirtyMats.push({m,c0:m.color.clone(),
-        met:m.metalness, rou:m.roughness, cc:m.clearcoat,
-        env:m.envMapIntensity, shi:m.shininess,
-        spec:m.specular?m.specular.clone():null});
-    });
-  });
-}
 
-function applyDirt(){
-  const k=Math.min(dirt,1)*.75;   // 0.75 = sporco massimo (non copre del tutto)
-  for(const d of dirtyMats) d.m.color.copy(d.c0).lerp(dirtCol,k);
-}*/
-
-const dirtU={uDirt:{value:0},uDirtCol:{value:dirtCol},uInv:{value:new THREE.Matrix4()}};
 
 function patchDirtMat(m){
+  const prevCompile = m.onBeforeCompile;//la salvo altrimenti sovrascrive le livery
+  const prevKey = m.customProgramCacheKey;
   m.onBeforeCompile=sh=>{
     Object.assign(sh.uniforms,dirtU);
     sh.vertexShader=sh.vertexShader
@@ -1554,16 +1535,20 @@ float dn(vec3 p){vec3 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
       .replace('#include <color_fragment>',`#include <color_fragment>
 {
   float n=dn(vDP*7.)*.6+dn(vDP*19.)*.4;
-  float low=1.-smoothstep(.15,1.0,vDP.y+(n-.5)*.5);          // più sporco in basso
-  float rear=smoothstep(-.3,-2.1,vDP.z);                      // e dietro
+  float low=1.-smoothstep(.15,1.0,vDP.y+(n-.5)*.5);
+  float rear=smoothstep(-.3,-2.1,vDP.z);
   float base=low*(.55+.75*rear);
   float mask=smoothstep(.25,.6,base*uDirt*1.6+(n-.5)*.35*uDirt)*clamp(uDirt*1.5,0.,1.);
   diffuseColor.rgb=mix(diffuseColor.rgb,uDirtCol*.8,mask);
 }`);
+    if (prevCompile) prevCompile(sh);   // livrea: si inserisce subito dopo color_fragment, prima dello sporco
   };
-  m.customProgramCacheKey=()=>'dirt';
+  m.customProgramCacheKey=()=>(prevKey?prevKey.call(m):'')+'dirt';
   m.needsUpdate=true;
 }
+
+
+
 
 function collectDirtMats(){
   dirtyMats=[];
@@ -1600,40 +1585,13 @@ function applyDirt(){
 
 
 
- 
- 
- 
- 
-function changeDelta() {
-    const car = carG.children[0].userData;
-	const hasLivery = currentDeltaColor === 0 || currentDeltaColor === 1;//has livery
-	
-	currentDeltaColor = (currentDeltaColor + 1) % deltaColors.length;//change color
-	const deltaColor = deltaColors[currentDeltaColor];
-	car.setPaint(deltaColor.base);
-	
-	if (car.setSpoiler) car.setSpoiler(deltaColor.base);
-	
-	if (hasLivery) {
-		const liveryColorIndex = Math.floor(Math.random()*liveryColors.length);
-		const liveryTop = liveryColors[liveryColorIndex].top;
-		const liveryMid = liveryColors[liveryColorIndex].mid;
-		const liveryLow = liveryColors[liveryColorIndex].low;
-		const spoiler = liveryTop;
-		if (car.setLivery) car.setLivery({top:liveryTop, mid:liveryMid, low:liveryLow});
-		if (car.setSpoiler) car.setSpoiler(liveryTop);
-	}
-}
-
-
-
-
-
 
 let model=null;
 let steerWheel=null;
 let currentDeltaColor=new Date().getSeconds()%deltaColors.length;
 
+
+//numeri sulle fiancate!
 function makeNumberTexture(num) {
   const c = document.createElement('canvas');
   c.width = 256;
@@ -1684,13 +1642,16 @@ function disposeModel(m){
   });
 }
 
+
+
+//crea lancia delta
 function spawnCar(){
   if(model) disposeModel(model);
   wheelPivots.length=0; 
   wheelMeshes.length=0;
 
   const dc=deltaColors[currentDeltaColor];
-  const lv=liveryColors[Math.floor(Math.random()*liveryColors.length)];
+  
   const spoilerOn=Math.random()<0.75;
 
   model=buildCar({
@@ -1699,14 +1660,32 @@ function spawnCar(){
 	glassOpacity:0.85,
     spoilerEnabled:spoilerOn, 
 	spoilerWidth:1.20,
-    spoiler:dc.hasLivery?lv.top:dc.base,
-    livery:dc.hasLivery, 
-	liveryTop:lv.top, 
-	liveryMid:lv.mid, 
-	liveryLow:lv.low
+	spoiler:dc.liveryMartini?dc.liveryMartini.azz:dc.liveryRepsol?dc.liveryRepsol.ora:dc.base,
+	
+	liveryOrder: ['repsol','martini'],
+	
+	lanciaBadge: dc.lanciaBadge?true:false,
+	badgeSize: 0.50,
+	badgeZ: -0.30,
+	
+    liveryMartini:dc.liveryMartini?true:false, 
+	
+	martiniAzz:dc.liveryMartini?dc.liveryMartini.azz:null,
+	martiniBlu:dc.liveryMartini?dc.liveryMartini.blu:null,
+	martiniRed:dc.liveryMartini?dc.liveryMartini.red:null,
+	
+	liveryRepsol:dc.liveryRepsol?true:false,
+	repsolOra:dc.liveryRepsol?dc.liveryRepsol.ora:null,
+	repsolAzz:dc.liveryRepsol?dc.liveryRepsol.azz:null,
+	repsolRed:dc.liveryRepsol?dc.liveryRepsol.red:null,
   });
   model.position.y=.06;//altrimenti sembra affondare
   carG.add(model);
+
+
+  console.log(model);
+
+
 
   // ruote
   model.userData.wheels.slice()
@@ -1743,8 +1722,10 @@ function spawnCar(){
   applyDirt();
 }
 
+//sedili, cruscotto, volante, etc...
 function buildInterior(parent){
-  const IZ=-0.1,IY=0;// se non combacia con la scocca, sposta questi due valori
+  const IZ=-0.1;
+  const IY=0;// se non combacia con la scocca, sposta questi due valori
   let steerWheel;
   
  const M=c=>new THREE.MeshLambertMaterial({color:c});
@@ -1757,8 +1738,8 @@ function buildInterior(parent){
   box(.22,.2,.09,bolM,x,1.28,-.41,-.18);        // poggiatesta
   for(const s of[-1,1])box(.07,.45,.2,bolM,x+s*.26,.82,-.3,-.18);   // fianchetti
  }
- box(1.5,.14,.5,seatM,0,.5,-.95);                // divano posteriore
- box(1.5,.6,.12,seatM,0,.85,-1.2,-.12);
+ box(1.45,.14,.5,seatM,0,.5,-.95);                // divano posteriore
+ box(1.45,.6,.12,seatM,0,.85,-1.2,-.12);
  box(1.6,.22,.4,dashM,0,.88,.62);                // plancia
  box(.22,.25,.9,dashM,0,.55,.1);                 // tunnel centrale
  const tilt=new THREE.Group();tilt.position.set(.4,.98,.33);tilt.rotation.x=.5;g.add(tilt);
@@ -3179,11 +3160,21 @@ $('resetBtn').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropag
 addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});
 
 ensurePoints((AHEAD+3)*CH);
-///////car.idx=3;car.x=P[3].x;car.z=P[3].z;car.th=P[3].h;car.camYaw=car.th;
 car.idx=PRE;car.x=P[PRE].x;car.z=P[PRE].z;car.th=P[PRE].h;car.camYaw=car.th;
 
 
 for(let c=0;c<=AHEAD;c++)chunks.set(c,buildChunk(c));
+
+
+// --- AGGIUNTA PER STABILIZZARE L'AUTO ALL'AVVIO ---
+car.yS = P[PRE].y;
+carG.position.set(car.x, car.yS, car.z);
+carG.rotation.set(0, car.th, 0);
+carG.updateMatrixWorld(true);
+if (model) model.updateMatrixWorld(true);
+// --------------------------------------------------
+
+
 updateWorld(.016);
 
 let last=performance.now();
