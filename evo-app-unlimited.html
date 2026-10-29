@@ -425,18 +425,27 @@ function dent(lx,lz,R,depth){
   model.updateMatrixWorld(true);
   let moved=0;
   model.traverse(o=>{
-    if(!o.isMesh||o.userData.noDent) return;
-    if(!o.userData.own){o.geometry=o.geometry.clone();o.userData.own=true;}
-    const pos=o.geometry.attributes.position, inv=o.matrixWorld.clone().invert();
-    for(let i=0;i<pos.count;i++){
+	if(!o.isMesh||o.userData.noDent) return;
+	let isWheel = false;
+	if (o.parent && (o.parent.name === 'steer' || o.parent.name === 'spin')) isWheel=true;
+    
+	if(!o.userData.own){o.geometry=o.geometry.clone();o.userData.own=true;}
+    
+	const pos=o.geometry.attributes.position;
+	const inv=o.matrixWorld.clone().invert();
+    
+	const damageFactor = isWheel ? 0.25 : 1.0;//ruote assorbono la botta di solito
+	
+	for(let i=0;i<pos.count;i++){
       _v.fromBufferAttribute(pos,i).applyMatrix4(o.matrixWorld);
       model.worldToLocal(_v);
       const d=_v.distanceTo(_p);
       if(d>R)continue;
       
-	  const f=(1-d/R)**2*depth*(.6+Math.random()*.4);//random effetto increspatura violenta!
+	  const f=(1-d/R)**2*depth*(.6+Math.random()*.4) * damageFactor;//random effetto increspatura violenta!
 	  
-      _v.z+=push*f*.6; _v.y-=f;
+      _v.z+=push*f*.6; 
+	  _v.y-=f;
       model.localToWorld(_v); _v.applyMatrix4(inv);
       pos.setXYZ(i,_v.x,_v.y,_v.z);
       moved++;
@@ -1488,12 +1497,12 @@ const wheelPivots=[],wheelMeshes=[];
 })();
 */
 const deltaColors = [
-	{base: 0xdddddd, lanciaBadge: true, liveryMartini: {azz:0x006600, blu:0xffffff, red:0xdd1122} }, //bianco + martini ubriachi
-	{base: 0xe9e9e9, lanciaBadge: true, liveryRepsol:  {ora:0xff8800, azz:0x112255, red:0xdd1122} }, //bianco + repsol
-	{base: 0xe9e9e9, lanciaBadge: true, liveryRepsol:  {ora:0x006600, azz:0xeeeeee, red:0x990000} }, //bianco + totip
-	{base: 0xe9e9e9, lanciaBadge: true, liveryRepsol:  {ora:0xffee00, azz:0xff9900, red:0xff4400} }, //bianco + orangina
-	{base: 0xe9e9e9, lanciaBadge: true, liveryRepsol:  {ora:0x0088ee, azz:0xdd1122, red:0x112255} }, //bianco + martini falsa
-	{base: 0xe9e9e9, lanciaBadge: true, liveryMartini: {azz:0x112266, blu:0x00aaee, red:0xee0011} }, //bianco + martini
+	{base: 0xdddddd, lanciaBadge: true, liveryTricolore: {azz:0x006600, blu:0xffffff, red:0xdd1122} }, //bianco + martini ubriachi
+	{base: 0xe9e9e9, lanciaBadge: true, liveryRepsol:    {ora:0xff8800, azz:0x112255, red:0xdd1122} }, //bianco + repsol
+	{base: 0xe9e9e9, lanciaBadge: true, liveryRepsol:    {ora:0x006600, azz:0xeeeeee, red:0x990000} }, //bianco + totip
+	{base: 0xe9e9e9, lanciaBadge: true, liveryRepsol:    {ora:0xffee00, azz:0xff9900, red:0xff4400} }, //bianco + orangina
+	{base: 0xe9e9e9, lanciaBadge: true, liveryRepsol:    {ora:0x0088ee, azz:0xdd1122, red:0x112255} }, //bianco + martini falsa
+	{base: 0xe9e9e9, lanciaBadge: true, liveryMartini:   {azz:0x112266, blu:0x00aaee, red:0xee0011} }, //bianco + martini
 	{base: 0xf2f2f2}, //bianco standard
 	{base: 0xf0c020}, //giallo
 	{base: 0x990000}, //rosso
@@ -1660,13 +1669,23 @@ function spawnCar(){
 	glassOpacity:0.85,
     spoilerEnabled:spoilerOn, 
 	spoilerWidth:1.20,
-	spoiler:dc.liveryMartini?dc.liveryMartini.azz:dc.liveryRepsol?dc.liveryRepsol.ora:dc.base,
+	spoiler:dc.liveryTricolore?dc.liveryTricolore.azz:
+			dc.liveryMartini?dc.liveryMartini.azz:
+			dc.liveryRepsol?dc.liveryRepsol.ora:
+			dc.base,
 	
-	liveryOrder: ['repsol','martini'],
+	liveryOrder: ['tricolore','repsol','martini'],
 	
 	lanciaBadge: dc.lanciaBadge?true:false,
 	badgeSize: 0.50,
 	badgeZ: -0.30,
+	
+	liveryTricolore:dc.liveryTricolore?true:false, 
+	
+	tricoloreAzz:dc.liveryTricolore?dc.liveryTricolore.azz:null,
+	tricoloreBlu:dc.liveryTricolore?dc.liveryTricolore.blu:null,
+	tricoloreRed:dc.liveryTricolore?dc.liveryTricolore.red:null,
+	
 	
     liveryMartini:dc.liveryMartini?true:false, 
 	
@@ -3016,7 +3035,7 @@ function updateWorld(dt){
  ////////updAudio(running?slip:0);
   updAudio(running?slip:0,dt);
   
- if(++hudTick%4===0){
+ if(++hudTick%3===0){
   const kmhVal = Math.max(0,Math.round(Math.abs(kmh)));
   const geaVal = car.u<-.5?'R':(Math.abs(kmh)<1&&ctl.gas<.1)?'N':gi+1;
   

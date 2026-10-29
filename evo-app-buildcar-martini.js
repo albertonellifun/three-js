@@ -3,9 +3,10 @@
      length: 3.95, paint: 0xf2f2f2, glassOpacity: 0.55,
      liveryRepsol: true,            // livrea Repsol
      liveryMartini: true,           // livrea Martini (si può attivare insieme a Repsol)
-     liveryOrder: ['repsol','martini'], // ordine dei layer: l'ultimo sta sopra (default)
+     liveryOrder: ['tricolore','repsol','martini'], // ordine dei layer: l'ultimo sta sopra (default)
      repsolOra, repsolAzz, repsolRed,   // colori Repsol (opzionali)
      martiniAzz, martiniBlu, martiniRed,// colori Martini (opzionali)
+	 tricoloreAzz, tricoloreBlu, tricoloreRed,// colori Tricolore (opzionali)
      spoilerEnabled: true, spoiler: 0x112255, spoilerWidth: 1.52
    }) -> THREE.Group
    car.userData.setLivery({ repsol:{ora,azz,red}, martini:{azz,blu,red} })  (anche parziale)
@@ -103,23 +104,77 @@ const EVO_LIVERIES = {
     col: { azz: "#112255", ora: "#ff8800", red: "#dd1122" },
     glsl: "{\n vec3 lp = vLiv / __K__;\n float ee = 0.0120;\n float az = abs(lp.z);\n float yTop = 0.5200 + 0.1100;\n float yBot = 0.5200 - 0.1100;\n float z0 = clamp(1.5500 - 0.9000 * (lp.y - yTop), 1.1500, 1.5500);\n float z1 = clamp(1.4500 - 1.0000 * (yBot - lp.y), 1.2000, 1.4500);\n float mOra = smoothstep(yTop - ee, yTop + ee, lp.y) * smoothstep(z0 - ee, z0 + ee, az);\n float mRed = (1.0 - smoothstep(yBot - ee, yBot + ee, lp.y)) * smoothstep(z1 - ee, z1 + ee, az);\n float mBand = 1.0 - smoothstep(0.1100 - ee, 0.1100 + ee, abs(lp.y - 0.5200));\n vec3 lc = diffuseColor.rgb;\n lc = mix(lc, uROra, mOra);\n lc = mix(lc, uRRed, mRed);\n lc = mix(lc, uRAzz, mBand);\n diffuseColor.rgb = lc;\n}"
   },
+  tricolore: {
+	pre: 'T',
+	col: { azz: "#112366", blu: "#00aa33", red: "#ee0011" },
+	glsl: "{ "
+	+" vec3 lp = vLiv / __K__;"
+	+" float ee = 0.0100; "
+	+" float ax = abs(lp.x);"
+	+" float hw = 0.0400;"
+	+" float sp = 0.0950;"
+	+" float yc = 0.4600;"
+	+" float sideM = smoothstep(0.3000 - ee, 0.3000 + ee, ax);"
+	+" float sD = (1.0 - smoothstep(hw - ee, hw + ee, abs(lp.y - (yc + sp)))) * sideM;"
+	+" float sL = (1.0 - smoothstep(hw - ee, hw + ee, abs(lp.y - yc))) * sideM;"
+	+" float sR = (1.0 - smoothstep(hw - ee, hw + ee, abs(lp.y - (yc - sp)))) * sideM;"
+	+" float topM = (1.0 - smoothstep(0.1700 - ee, 0.1700 + ee, ax)) * smoothstep(0.4500 - ee, 0.4500 + ee, lp.y);"
+	+" float tD = (1.0 - smoothstep(hw - ee, hw + ee, abs(lp.x + sp))) * topM;"
+	+" float tL = (1.0 - smoothstep(hw - ee, hw + ee, abs(lp.x))) * topM;"
+	+" float tR = (1.0 - smoothstep(hw - ee, hw + ee, abs(lp.x - sp))) * topM;"
+	+" vec3 lc = diffuseColor.rgb;"
+	+" lc = mix(lc, uTAzz, max(sD, tD));"
+	+" lc = mix(lc, uTBlu, max(sL, tL));"
+	+" lc = mix(lc, uTRed, max(sR, tR));"
+	+" diffuseColor.rgb = lc;"
+	+"}"
+  },
   martini: {
     pre: 'M',
     col: { azz: "#112366", blu: "#00aa33", red: "#ee0011" },
-    glsl: "{\n vec3 lp = vLiv / __K__;\n float ee = 0.0100;\n float ax = abs(lp.x);\n float hw = 0.0400;\n float sp = 0.0950;\n float yc = 0.4600;\n float sideM = smoothstep(0.3000 - ee, 0.3000 + ee, ax);\n float sD = (1.0 - smoothstep(hw - ee, hw + ee, abs(lp.y - (yc + sp)))) * sideM;\n float sL = (1.0 - smoothstep(hw - ee, hw + ee, abs(lp.y - yc))) * sideM;\n float sR = (1.0 - smoothstep(hw - ee, hw + ee, abs(lp.y - (yc - sp)))) * sideM;\n float topM = (1.0 - smoothstep(0.1700 - ee, 0.1700 + ee, ax)) * smoothstep(0.4500 - ee, 0.4500 + ee, lp.y);\n float tD = (1.0 - smoothstep(hw - ee, hw + ee, abs(lp.x + sp))) * topM;\n float tL = (1.0 - smoothstep(hw - ee, hw + ee, abs(lp.x))) * topM;\n float tR = (1.0 - smoothstep(hw - ee, hw + ee, abs(lp.x - sp))) * topM;\n vec3 lc = diffuseColor.rgb;\n lc = mix(lc, uMAzz, max(sD, tD));\n lc = mix(lc, uMBlu, max(sL, tL));\n lc = mix(lc, uMRed, max(sR, tR));\n diffuseColor.rgb = lc;\n}"
+    glsl: " { "
+    +" vec3 lp = vLiv / __K__;"
+    +" float pos = lp.y; "
+    +" float baseCenter = 0.85;"
+    +" float slope = 0.08;"
+    +" float center = baseCenter - (lp.z * slope); "
+	+" float widthMultiplier = 1.0 - (lp.z * 0.3); "
+    +" widthMultiplier = max(0.1, widthMultiplier);"
+    +" float redWidth  = 0.030 * widthMultiplier;"
+    +" float blue1Width = 0.030 * widthMultiplier;"
+    +" float sky1Width  = 0.030 * widthMultiplier;"
+    +" float blue2Width = 0.030 * widthMultiplier;"
+    +" float sky2Width  = 0.030 * widthMultiplier;"
+    +" float ee = 0.008 * widthMultiplier;"
+    +" float dist = abs(pos - center);"
+    +" vec3 lc = diffuseColor.rgb;"
+    +" float limit2 = redWidth + blue1Width + sky1Width + blue2Width + sky2Width;"
+    +" float maskSky2 = 1.0 - smoothstep(limit2 - ee, limit2 + ee, dist);"
+    +" lc = mix(lc, uMBlu, maskSky2);"
+    +" float limit1_b2 = redWidth + blue1Width + sky1Width + blue2Width;"
+    +" float maskBlue2 = 1.0 - smoothstep(limit1_b2 - ee, limit1_b2 + ee, dist);"
+    +" lc = mix(lc, uMAzz, maskBlue2);"
+    +" float limit1_s1 = redWidth + blue1Width + sky1Width;"
+    +" float maskSky1 = 1.0 - smoothstep(limit1_s1 - ee, limit1_s1 + ee, dist);"
+    +" lc = mix(lc, uMBlu, maskSky1);"
+    +" float limit1_b1 = redWidth + blue1Width;"
+    +" float maskBlue1 = 1.0 - smoothstep(limit1_b1 - ee, limit1_b1 + ee, dist);"
+    +" lc = mix(lc, uMAzz, maskBlue1);"
+    +" float maskRed = 1.0 - smoothstep(redWidth - ee, redWidth + ee, dist);"
+    +" lc = mix(lc, uMRed, maskRed);"
+    +" diffuseColor.rgb = lc;"
+    +" }"
   }
 };
 
 const _cap = s => s[0].toUpperCase() + s.slice(1);
 
-/* 
-order = ['repsol','martini'] -> layer applicati in sequenza (l'ultimo è sopra).
-Ritorna { repsol:{azz,ora,red}, martini:{azz,blu,red} } con i THREE.Color live.
-*/
+
 function _evoLivery(mat, k, order, opts) {
   const cols = {}, unis = [], parts = [];
   order.forEach(function (name) {
-    const L = EVO_LIVERIES[name], c = {};
+    const L = EVO_LIVERIES[name];
+    const c = {};
     for (const key in L.col) {
       const ov = opts[name + _cap(key)];                       // es. repsolOra, martiniBlu
       c[key] = new THREE.Color(ov != null ? ov : L.col[key]);
@@ -224,14 +279,14 @@ function buildCar(opts) {
   for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i);
 
   // livree attive, nell'ordine dei layer
-  const liveryOrder = (opts.liveryOrder || ['repsol', 'martini']).filter(function (n) {
-    return n === 'repsol' ? opts.liveryRepsol : n === 'martini' ? opts.liveryMartini : false;
+  const liveryOrder = (opts.liveryOrder || ['tricolore', 'repsol', 'martini']).filter(function (n) {
+    return n === 'tricolore' ? opts.liveryTricolore : n === 'repsol' ? opts.liveryRepsol : n === 'martini' ? opts.liveryMartini : false;
   });
 
   // materiali
   let liveryCols = null;
   const mats = D.M.map(m => {
-    const mat = new THREE.MeshStandardMaterial({ color: m.c, roughness: m.r, metalness: m.m, name: m.name || m.k });
+    const mat = new THREE.MeshStandardMaterial({ color: m.c, roughness: m.r, metalness: m.m, name: m.name || m.k || 'material' });
     if (m.k === 'glass') {
       mat.transparent = true;
       mat.opacity = opts.glassOpacity != null ? opts.glassOpacity : m.o;
@@ -247,7 +302,10 @@ function buildCar(opts) {
 
   const car = new THREE.Group();
   car.name = 'EvoDelta';
+  
   const groups = [car];
+  
+  // ruote
   const wheels = D.W.map((w, i) => {
     const steer = new THREE.Group(); steer.name = 'steer';
     const spin = new THREE.Group(); spin.name = 'spin';
