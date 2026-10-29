@@ -935,6 +935,16 @@ function fillQueue(){
 
 
 
+//LA FIX?
+const ROAD_INF=190;   // >= raggio d'influenza in terrain() (grid ±3 celle = 192)
+function dirtyTilesAround(x,z){
+ const a0=Math.floor((x-ROAD_INF)/TILE),a1=Math.floor((x+ROAD_INF)/TILE);
+ const b0=Math.floor((z-ROAD_INF)/TILE),b1=Math.floor((z+ROAD_INF)/TILE);
+ for(let a=a0;a<=a1;a++)for(let b=b0;b<=b1;b++){
+  const t=tiles.get(tileKey(a,b));
+  if(t)t.dirty=true;
+ }
+}
 
 
 
@@ -954,6 +964,9 @@ function genPoint(){
  const i=P.length;
  P.push({x:gen.x,z:gen.z,y:gen.y,h:gen.h,k:gen.k,s:gen.s,surf:surfOf(Math.floor(i/CH))});
  gridAdd(i);
+ 
+ //LA FIX?
+ dirtyTilesAround(gen.x,gen.z);
  
 }
 function ensurePoints(n){while(P.length<n)genPoint();}
@@ -1270,7 +1283,8 @@ function buildTile(tx,tz){
  mesh.receiveShadow=true;//prova ombra
  scene.add(mesh);
  ////return{tx,tz,x0,z0,mesh,detail:false,obs:[],objs:[]};
- return{tx,tz,x0,z0,mesh,detail:false,obs:[],objs:[],hs,ads};//anche hs e ads per l'erba
+ /////return{tx,tz,x0,z0,mesh,detail:false,obs:[],objs:[],hs,ads};//anche hs e ads per l'erba
+ return{tx,tz,x0,z0,mesh,detail:false,obs:[],objs:[],hs,ads,born:performance.now(),dirty:false};//LA FIX?
 }
 function buildDetail(tile){
  tile.detail=true;
@@ -1339,12 +1353,27 @@ function disposeTile(t){
 function manageTiles(){
  const ctx=Math.floor(car.x/TILE);
  const ctz=Math.floor(car.z/TILE);
+ /*
  for(const[k,t]of tiles) { 
    if(Math.abs(t.tx-ctx)>TR+1||Math.abs(t.tz-ctz)>TR+1){
      disposeTile(t);
 	 tiles.delete(k);
    }
+ }*/
+ 
+ //LA FIX?
+ const nowMs=performance.now();
+ for(const[k,t]of tiles){
+   const far=Math.abs(t.tx-ctx)>TR+1||Math.abs(t.tz-ctz)>TR+1;
+   // dirty: si butta e verrà ricostruita nello stesso frame (budget 6 ms).
+   // Il ritardo di 400 ms evita di ricostruirla a ogni nuovo punto mentre la strada le passa accanto.
+   if(far||(t.dirty&&nowMs-t.born>400)){
+     disposeTile(t);
+     tiles.delete(k);
+   }
  }
+ 
+ 
  const ax=car.x+Math.sin(car.th)*TILE*1.5;
  const az=car.z+Math.cos(car.th)*TILE*1.5;
  const want=[];
