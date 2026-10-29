@@ -46,8 +46,8 @@
       }
 
 	  #rpm {
-	    width: 130px;
-	    height: 130px;
+	    width: 150px;
+	    height: 150px;
 	    margin-top: 6px;
 	    filter: drop-shadow(0 2px 6px rgba(0,0,0,.6));
 		color: #f5c518;
@@ -88,25 +88,28 @@
       }
 
       #dist {
-        right: max(64px, env(safe-area-inset-right));
+        right: max(16px, env(safe-area-inset-right));
         top: max(10px, env(safe-area-inset-top));
         font-size: 18px;
         font-weight: 700;
       }
 
       #resetBtn {
-        position: fixed;
-        right: max(12px, env(safe-area-inset-right));
-        top: max(8px, env(safe-area-inset-top));
-        width: 42px;
-        height: 42px;
-        border-radius: 50%;
-        border: 2px solid rgba(255, 255, 255, .5);
-        background: rgba(0, 0, 0, .35);
-        color: #fff;
-        font-size: 22px;
-        pointer-events: auto;
-      }
+	    position: fixed;
+	    right: max(14px, env(safe-area-inset-right));
+	    bottom: calc(max(14px, env(safe-area-inset-bottom)) + 158px);  /* sopra i pedali (gas 150px + 8px) */
+	    width: 160px;            /* stessa larghezza di freno + gas (85 + 75) */
+	    height: 40px;
+	    border-radius: 18px;
+	    border: 2px solid rgba(255, 255, 255, .4);
+	    background: rgba(255, 255, 255, .14);
+	    backdrop-filter: blur(3px);
+	    color: #fff;
+	    font-size: 15px;
+	    font-weight: 800;
+	    letter-spacing: .06em;
+	    pointer-events: auto;
+	  }
 
       #pad {
         position: fixed;
@@ -263,40 +266,67 @@
       100% { background-position: 100% 50%; }
     }
 	  
-	  #camBox{position:fixed;right:max(12px,env(safe-area-inset-right));top:calc(max(8px,env(safe-area-inset-top)) + 54px);display:grid;grid-template-columns:repeat(2,44px);gap:6px;z-index:4}
-#camBox .btn{position:static;width:44px;height:44px;border-radius:12px;font-size:20px;color:#fff;padding:0}
-.btn.toggled-blue{background:rgba(70,90,255,.50);border-color:#4455cc}
-.btn.toggled-red{background:rgba(204,0,0,.50);border-color:#cc0000}
-#camBox, #camBox .btn { pointer-events: auto; }
+	#camBox{
+	  position:fixed;
+	  right:max(12px,env(safe-area-inset-right));
+	  top:calc(max(8px,env(safe-area-inset-top)) + 34px);
+	  display:grid;
+	  grid-template-columns:repeat(2,44px);
+	  gap:6px;
+	  z-index:4;
+	}
+    #camBox .btn{
+	  position:static;
+	  width:44px;
+	  height:44px;
+	  border-radius:12px;
+	  font-size:20px;
+	  color:#fff;
+	  padding:0;
+	}
+   .btn.toggled-blue{
+      background:rgba(70,90,255,.50);
+	  border-color:#4455cc;
+    }
+   .btn.toggled-red{
+      background:rgba(204,0,0,.50);
+	  border-color:#cc0000;
+	}
+    #camBox, #camBox .btn { pointer-events: auto; }
 
-.stamp {
-  position: absolute;
-  top: 40%;
-  left: 50%;
-  color: #ff3333;               /* Rosso timbro vivace */
-  font-size: 48px;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 4px;
-  border: 4px solid #ff3333;   /* Bordo tipo timbro */
-  padding: 4px 16px;
-  border-radius: 8px;
-  transform: rotate(-15deg);   /* Inclinazione diagonale */
-  opacity: 0.85;                /* Effetto lieve trasparenza */
-  pointer-events: none;        /* Non interferisce con i click sottostanti */
-  z-index: 10;                  /* Sopra a tutti gli altri elementi */
-  box-shadow: 0 0 10px rgba(255, 51, 51, 0.4);
-  font-family: 'Impact', 'Arial Black', sans-serif;
-  
-  opacity: 0;
-animation: stampAnimation 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) 1.5s forwards;
-}
-
-@keyframes stampAnimation {
-  0% {  transform: translate(-50%, -50%) scale(3) rotate(-15deg); opacity: 0.0; }
-  100% { transform: translate(-50%, -50%) scale(1) rotate(-15deg); opacity: 0.85; }
-}
-
+   .stamp {
+     position: absolute;
+     top: 40%;
+     left: 50%;
+     color: #ff3333;               /* Rosso timbro vivace */
+     font-size: 48px;
+     font-weight: 900;
+     text-transform: uppercase;
+     letter-spacing: 4px;
+     border: 4px solid #ff3333;   /* Bordo tipo timbro */
+     padding: 4px 16px;
+     border-radius: 8px;
+     transform: rotate(-15deg);   /* Inclinazione diagonale */
+     opacity: 0.85;                /* Effetto lieve trasparenza */
+     pointer-events: none;        /* Non interferisce con i click sottostanti */
+     z-index: 10;                  /* Sopra a tutti gli altri elementi */
+     box-shadow: 0 0 10px rgba(255, 51, 51, 0.4);
+     font-family: 'Impact', 'Arial Black', sans-serif;
+     
+     opacity: 0;
+     animation: stampAnimation 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) 1.5s forwards;
+   }
+   
+   @keyframes stampAnimation {
+     0% {  transform: translate(-50%, -50%) scale(3) rotate(-15deg); opacity: 0.0; }
+     100% { transform: translate(-50%, -50%) scale(1) rotate(-15deg); opacity: 0.85; }
+   }
+   
+   @media (orientation: landscape) and (pointer: coarse) {
+     #camBox {
+       grid-template-columns: repeat(4, 44px);
+     }
+   }
 
     </style>
   </head>
@@ -318,16 +348,17 @@ animation: stampAnimation 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) 1.5s for
 		  <button class="btn toggled-blue" data-hold="down">↓</button>
 		  <button class="btn toggled-blue" data-hold="cw">↻</button>
 		  <button class="btn toggled-blue" data-hold="ccw">↺</button>
-		  <button class="btn toggled-red"  id="shadowBtn" title="Interruttore Ombre">🌓</button>
-		  <button class="btn toggled-red"  id="grassBtn"  title="Interruttore Erba">🍀</button>
-		  <button class="btn"              id="lightsBtn" title="Interruttore Luci/Fari">💡</button>
-		  <button class="btn"              id="hornBtn"   title="Pulsante Clackson">📯</button>
-		  <button class="btn"              id="colorsBtn" title="Pulsante Cambia colore">🎨</button>
-		  <button class="btn toggled-red"  id="numberBtn" title="Interruttore Numeri di Gara">🔢</button>
-		  <button class="btn"              id="muteBtn"   title="Interruttore Altoparlante">🔇</button>
+		  <button class="btn toggled-red"  id="shadowBtn"   title="Interruttore Ombre">🌓</button>
+		  <button class="btn toggled-red"  id="grassBtn"    title="Interruttore Erba">🍀</button>
+		  <button class="btn"              id="lightsBtn"   title="Interruttore Luci/Fari">💡</button>
+		  <button class="btn"              id="hornBtn"     title="Pulsante Clackson">📯</button>
+		  <button class="btn"              id="colorsBtn"   title="Pulsante Cambia colore">🎨</button>
+		  <button class="btn toggled-red"  id="numberBtn"   title="Interruttore Numeri di Gara">🔢</button>
+		  <button class="btn"              id="muteBtn"     title="Interruttore Altoparlante">🔇</button>
+		  <button class="btn toggled-blue" id="camResetBtn" title="Reset Visuale">👁️</button>
 		</div>
     </div>
-    <button id="resetBtn" title="Rimetti in strada">↻</button>
+    <button id="resetBtn" title="Rimetti in strada">🧑‍🔧 RESET 🔧</button>
     <div id="pad"><span>◀ STERZO ▶</span>
       <div id="knob"></div>
     </div>
@@ -383,23 +414,25 @@ const dmg={toe:[0,0,0,0],camber:[0,0,0,0],lost:[false,false,false,false],pull:0}
 function repairCar(){ spawnCar(); Object.assign(dmg,{toe:[0,0,0,0],camber:[0,0,0,0],lost:[false,false,false,false],pull:0}); }
 
 const _v=new THREE.Vector3(), _p=new THREE.Vector3();
+
 function dent(lx,lz,R,depth){
   _p.set(lx,.6,lz);
+  const push = lz>=0 ? -1 : 1;          // urto davanti: spinge indietro, urto dietro: spinge avanti
   model.updateMatrixWorld(true);
   let moved=0;
   model.traverse(o=>{
-    if(!o.isMesh||o.userData.noDent) {console.log('no dent!'); return; }
+    if(!o.isMesh||o.userData.noDent) return;
     if(!o.userData.own){o.geometry=o.geometry.clone();o.userData.own=true;}
     const pos=o.geometry.attributes.position, inv=o.matrixWorld.clone().invert();
     for(let i=0;i<pos.count;i++){
       _v.fromBufferAttribute(pos,i).applyMatrix4(o.matrixWorld);
       model.worldToLocal(_v);
-      const d=_v.distanceTo(_p); 
-	  if(d>R)continue;
+      const d=_v.distanceTo(_p);
+      if(d>R)continue;
       
 	  const f=(1-d/R)**2*depth*(.6+Math.random()*.4);//random effetto increspatura violenta!
-	  	  
-      _v.z-=f*.6; _v.y-=f;
+	  
+      _v.z+=push*f*.6; _v.y-=f;
       model.localToWorld(_v); _v.applyMatrix4(inv);
       pos.setXYZ(i,_v.x,_v.y,_v.z);
       moved++;
@@ -408,6 +441,7 @@ function dent(lx,lz,R,depth){
   });
   console.log('dent: vertici spostati',moved);
 }
+
 
 //erba on/off
 let grassOn=true;
@@ -421,6 +455,13 @@ function toggleGrass(){
 grassBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();toggleGrass();});
 
 
+//reset camera
+$('camResetBtn').addEventListener('pointerdown',e=>{
+  e.preventDefault();e.stopPropagation();
+  cam.zoom=1; 
+  cam.el=0; 
+  cam.yaw=0;   // stesso effetto del tasto C
+});
 
 // audio on/off
 let muted=false;
@@ -1016,17 +1057,20 @@ function addGrass(tile,R){
 	const k=(a+1)*M+b+1;
     return lerp(lerp(arr[k],arr[k+1],v),lerp(arr[k+M],arr[k+M+1],v),u);
   };
+  const DIRADAMENTO_MIN = 45;
+  const DIRADAMENTO_MAX = 78;
+  
   for(let k=0;k<GRASS_N;k++){
     const x=x0+R(0,TILE);
     const z=z0+R(0,TILE);
     if(smp(ads,x,z)<5.5)continue;   // più vicino alla strada
     const y=smp(hs,x,z);
 	//if(y>52)continue;		  		// no erba oltre 52m di altitudine
-    const keep=1-sm(y,25,58);
+    const keep=1-sm(y,DIRADAMENTO_MIN,DIRADAMENTO_MAX);//diradamento 25-58
     if(R(0,1)>keep)continue;
 	if(vnoise(x*.05,z*.05)<.12)continue; // chiazze rade invece di un terzo vuoto
 	//pts.push([x,y,z,R(.6,1.3)]);
-    pts.push([x,y,z,R(.6,1.3)*(1-.4*sm(y,25,58))]);//erba meno alta man mano che aumenta altitudine
+    pts.push([x,y,z,R(.6,1.3)*(1-.4*sm(y,DIRADAMENTO_MIN,DIRADAMENTO_MAX))]);//erba meno alta man mano che aumenta altitudine
   }
 
   if(!pts.length)return;
@@ -1046,11 +1090,6 @@ function addGrass(tile,R){
   scene.add(im);
   tile.objs.push(im);   // disposeTile lo smaltisce già
 }
-
-
-
-
-
 
 
 /* ============ CHUNK STRADA (nastro + paletti) ============ */
@@ -1085,6 +1124,9 @@ function buildChunk(c){
  scene.add(road);
  ch.objs.push(road);
  ch.geos.push(rg);
+
+
+ 
  //paletti
  const posts=[];
  for(let j=0;j<CH;j++){
@@ -1201,7 +1243,8 @@ function buildTile(tx,tz){
  for(let a=-1;a<=N;a++)for(let b=-1;b<=N;b++){terrain(x0+a*CS,z0+b*CS,TQ);const k=(a+1)*M+b+1;
   ///xxx
   ////////////////////hs[k]=TQ.y-.4*(1-sm(TQ.ad,5.2,8.5));
-  hs[k]=TQ.y-(.4+6*TQ.sl)*(1-sm(TQ.ad,5.2,8.5));
+  //hs[k]=TQ.y-(.4+6*TQ.sl)*(1-sm(TQ.ad,5.2,8.5));//gradino bordo strada, non mi piace
+  hs[k]=TQ.y-(0.08+1.5*TQ.sl)*(1-sm(TQ.ad,5.2,8.5));//no gradino?
   
   
   
@@ -2323,7 +2366,7 @@ function destroyObs(o){o.dead=true;o.im.setMatrixAt(o.i,HIDE);o.im.instanceMatri
 
 //danneggiamento:
 function crash(cf,cl,sp){
-  if(sp<8)return;
+  if(sp<4)return;
   const sev=clamp((sp-8)/25,0,1);
   let best=-1;
   let bd=1e9;
@@ -2332,14 +2375,9 @@ function crash(cf,cl,sp){
     const d=Math.hypot(cl-WO[w][0],cf-WO[w][1]);   // distanza contatto -> ruota
     if(d<bd){bd=d;best=w;}
   }
-  //if(best>=0&&bd<1.25&&sev>.3&&Math.random()<sev*1.5) loseWheel(best);
-  //else if(cf>.5) dent(cl,cf,.5+sev*.7,.1+sev*.35);
-  
   // ruota persa solo ad alta velocità, contatto vicino alla ruota, e con probabilità contenuta
-  //if(best>=0 && bd<0.90 && sev>.55 && Math.random() < (sev-.55)*0.90) loseWheel(best);
   if(best>=0 && bd<1.05 && sev>.42 && Math.random() < (sev-.42)*1.2) loseWheel(best);
-  //else 
-  if(cf>.5) dent(cl,cf,1.4+sev*.9,.2+sev*.45);//deve partire a prescindere l'ammaccatura!
+  if(Math.abs(cf)>.5) dent(cl,cf,1.4+sev*.9,.52+sev*.45);//deve partire a prescindere l'ammaccatura!(X,Z,R,DEPTH)
 }
 const flyW=[];
 function loseWheel(w){
@@ -2923,9 +2961,9 @@ const tach=(()=>{
  
  //MARCIA E KMH AL CENTRO
  h+=`<rect                    x="120" y="28" width="44" height="44" rx="3" ry="3" fill="#111111" stroke="${Y}" stroke-width="1"/>`;
- h+=`<text id="tachGearText"  x="140" y="48" fill="#ffffff" font-size="44" font-weight="900" text-anchor="middle" dominant-baseline="central" font-family="monospace">N</text>`;
+ h+=`<text id="tachGearText"  x="140" y="50" fill="#ffffff" font-size="44" font-weight="900" text-anchor="middle" dominant-baseline="central" font-family="monospace">N</text>`;
  
- h+=`<rect                    x="60"  y="113" width="80" height="22"  rx="3" ry="3" fill="#111111" stroke="${Y}" stroke-width="1"/>`;
+ h+=`<rect                    x="58"  y="113" width="84" height="22"  rx="3" ry="3" fill="#111111" stroke="${Y}" stroke-width="1"/>`;
  h+=`<text id="tachSpeedText" x="138" y="124" fill="#ffffff" font-size="20" font-weight="700" text-anchor="end" dominant-baseline="central" font-family="monospace">0</text>`;
    
  //scritte contorno
@@ -2942,7 +2980,7 @@ const tach=(()=>{
   h+=`<circle class="td" cx="${x}" cy="${y}" r="${big?4:2}" fill="${v>=REDLINE?RED_OFF:Y_OFF}"/>`;
   dots.push({v,red:v>=REDLINE,on:false});
  }
- h+=`<polygon id="tachNeedle" points="-30,-5 84,-2 84,2 -30,5" fill="${YLancetta}" transform="translate(100 100)"/>`
+ h+=`<polygon id="tachNeedle" points="-30,-5 82,-1 82,1 -30,5" fill="${YLancetta}" transform="translate(100 100)"/>`
    +`<circle cx="100" cy="100" r="9" fill="#111111"/></svg>`;
  el.innerHTML=h;
  const cs=el.querySelectorAll('.td');
