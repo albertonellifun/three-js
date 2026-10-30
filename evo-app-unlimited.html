@@ -356,7 +356,7 @@
 		  <button class="btn toggled-red"  id="numberBtn"   title="Interruttore Numeri di Gara">🔢</button>
 		  <button class="btn"              id="hoodBtn"     title="Camera cofano">🚘</button>
 		  <button class="btn"              id="cockpitBtn"  title="Camera abitacolo">💺</button>
-		  <button class="btn toggled-blue" id="camResetBtn" title="Reset Visuale">👁️</button>
+		  <button class="btn"              id="camResetBtn" title="Reset Visuale">👁️</button>
 		  <button class="btn"              id="muteBtn"     title="Interruttore Altoparlante">🔇</button>
 		</div>
     </div>
@@ -474,7 +474,8 @@ grassBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation
 
 //reset camera
 $('camResetBtn').addEventListener('pointerdown',e=>{
-  e.preventDefault();e.stopPropagation();
+  e.preventDefault();
+  e.stopPropagation();
   cam.zoom=1; 
   cam.el=0; 
   cam.yaw=0;   // stesso effetto del tasto C
@@ -1014,7 +1015,17 @@ const pineGeo=mergeGeos([
  colorize(new THREE.ConeGeometry(1.0,2.6,PINE_LEAVES_GEO).translate(0,7.0,0),.14,.35,.17)]);
 const pineMat=new THREE.MeshLambertMaterial({vertexColors:true});
 const rockGeo=new THREE.IcosahedronGeometry(1,0),rockMat=new THREE.MeshLambertMaterial({color:0xffffff});
-const postGeo=new THREE.BoxGeometry(.2,1.0,.2),postMat=new THREE.MeshLambertMaterial({color:0xffffff});
+
+////////const postGeo=new THREE.BoxGeometry(.2,1.0,.2),postMat=new THREE.MeshLambertMaterial({color:0xffffff});
+const POST_H = 1.5;   // altezza totale in metri
+const postGeo = mergeGeos([
+  colorize(new THREE.BoxGeometry(.14, POST_H - .2, .09).translate(0, -.1, 0), 1, 1, 1),//corpo bianco
+  colorize(new THREE.BoxGeometry(.17, .20, .12).translate(0, POST_H / 2 - .1, 0), .04, .04, .04),//testa nera
+  colorize(new THREE.BoxGeometry(.08, .13, .012).translate(0, POST_H / 2 - .1, -.062), 1, .52, 0),//catarifrangente lato strada
+  colorize(new THREE.BoxGeometry(.08, .13, .012).translate(0, POST_H / 2 - .1, .062), 1, .52, 0)//catarifrangente opposto
+]);
+const postMat = new THREE.MeshLambertMaterial({ vertexColors: true });
+
 const chunks=new Map(),dummy=new THREE.Object3D(),tmpCol=new THREE.Color(),c3=[0,0,0];
 
 //erba non da fumare...
@@ -1124,6 +1135,113 @@ function addGrass(tile,R){
 }
 
 
+
+
+
+/* ============ CARTELLI STRADALI ============ */
+const SIGN_EVERY = 125;// metri tra un cartello e l'altro
+const signTex = {};
+const signMats = {};
+
+function signTexture(type) {
+  if (signTex[type]) return signTex[type];
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  const g = c.getContext('2d');
+  g.lineJoin = 'round'; g.lineCap = 'round';
+
+  const V = [[128, 20], [240, 214], [16, 214]], cx = 128, cy = 149.3;
+  const tri = (sc, col, lw) => {
+    g.fillStyle = g.strokeStyle = col; g.lineWidth = lw; g.beginPath();
+    V.forEach((v, i) => { const x = cx + (v[0] - cx) * sc, y = cy + (v[1] - cy) * sc; i ? g.lineTo(x, y) : g.moveTo(x, y); });
+    g.closePath(); g.fill(); g.stroke();
+  };
+
+  if (type === 'limit50') {
+    g.fillStyle = '#d4141c'; g.beginPath(); g.arc(128, 128, 118, 0, 6.2832); g.fill();
+    g.fillStyle = '#fff';    g.beginPath(); g.arc(128, 128, 86, 0, 6.2832); g.fill();
+    g.fillStyle = '#111'; g.font = 'bold 100px Arial'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('50', 128, 134);
+  } else {
+    tri(1, '#d4141c', 14); tri(.72, '#ffffff', 6);
+    g.fillStyle = g.strokeStyle = '#111';
+	
+	    if (type === 'slippery') {                          // auto che sbanda
+      g.save();
+      g.translate(128, 128); g.rotate(-0.1); g.translate(-128, -128);
+
+      g.fillStyle = '#111';
+      g.beginPath();                                    // cabina
+      g.moveTo(104, 118); g.lineTo(112, 98); g.lineTo(144, 98); g.lineTo(152, 118);
+      g.closePath(); g.fill();
+      g.beginPath(); g.roundRect(94, 116, 68, 24, 5); g.fill();         // carrozzeria
+      g.fillRect(98, 138, 13, 13); g.fillRect(145, 138, 13, 13);        // ruote
+
+      g.fillStyle = '#fff';
+      g.beginPath();                                    // parabrezza
+      g.moveTo(111, 115); g.lineTo(117, 103); g.lineTo(139, 103); g.lineTo(145, 115);
+      g.closePath(); g.fill();
+      g.fillRect(99, 123, 12, 6); g.fillRect(145, 123, 12, 6);          // fari
+      g.restore();
+
+      g.strokeStyle = '#111'; g.lineWidth = 7; g.lineCap = 'round';     // scie
+      for (const dx of [-22, 22]) {
+        g.beginPath(); g.moveTo(128 + dx, 157);
+        g.bezierCurveTo(128 + dx + 16, 165, 128 + dx - 16, 175, 128 + dx, 184);
+        g.bezierCurveTo(128 + dx + 10, 189, 128 + dx - 6, 192, 128 + dx - 2, 194);
+        g.stroke();
+      }
+    } else {                                            // curveR / curveL
+	
+	
+	
+	/*
+    if (type === 'slippery') {                          // auto che sbanda
+      g.fillRect(100, 130, 56, 22);
+      g.beginPath(); g.moveTo(108, 130); g.lineTo(116, 112); g.lineTo(140, 112); g.lineTo(148, 130); g.fill();
+      g.fillStyle = '#fff'; g.fillRect(118, 116, 20, 10); g.fillStyle = '#111';
+      g.fillRect(96, 148, 12, 12); g.fillRect(148, 148, 12, 12);
+      g.lineWidth = 6;
+      for (const dx of [-18, 18]) {
+        g.beginPath(); g.moveTo(128 + dx, 168);
+        g.bezierCurveTo(128 + dx - 16, 176, 128 + dx + 16, 184, 128 + dx, 192); g.stroke();
+      }
+    } else {                                            // curveR / curveL
+	*/
+      g.save();
+      if (type === 'curveL') { g.translate(256, 0); g.scale(-1, 1); }
+      g.lineWidth = 14; g.lineCap = 'butt';
+      g.beginPath(); g.moveTo(108, 190); g.lineTo(108, 152); g.quadraticCurveTo(108, 114, 132, 112); g.stroke();
+      g.beginPath(); g.moveTo(128, 100); g.lineTo(150, 112); g.lineTo(128, 124); g.fill();
+      g.restore();
+    }
+  }
+  const t = new THREE.CanvasTexture(c); t.anisotropy = 4;
+  return signTex[type] = t;
+}
+const signMat = type => signMats[type] || (signMats[type] = new THREE.MeshBasicMaterial({ map: signTexture(type), alphaTest: .5 }));
+
+const SIGN_H = 2.5;      // altezza del palo
+const SIGN_SIZE = 1.2;   // lato del cartello
+const signPoleGeo = new THREE.CylinderGeometry(.035, .035, SIGN_H, 6).translate(0, SIGN_H / 2, 0);
+const signPlaneGeo = new THREE.PlaneGeometry(SIGN_SIZE, SIGN_SIZE);
+const SIGN_FACE_Y = SIGN_H - SIGN_SIZE / 2 - .1;
+const signPoleMat = new THREE.MeshLambertMaterial({ color: 0x8a9096 });
+const signBackMat = new THREE.MeshBasicMaterial({ color: 0x555a60, alphaTest: .5 });
+
+function makeSign(type) {
+  const g = new THREE.Group();
+  const pole = new THREE.Mesh(signPoleGeo, signPoleMat);
+  const face = new THREE.Mesh(signPlaneGeo, signMat(type)); face.position.set(0, SIGN_FACE_Y, .04);
+  const back = new THREE.Mesh(signPlaneGeo, signBackMat);  back.position.set(0, SIGN_FACE_Y, .03); back.rotation.y = Math.PI;
+  back.material.map = signTexture(type);
+  pole.castShadow = true;
+  g.add(pole, face, back);
+  return g;
+}
+
+
+
+
 /* ============ CHUNK STRADA (nastro + paletti) ============ */
 function buildChunk(c){
  ensurePoints((c+1)*CH+3);
@@ -1161,13 +1279,15 @@ function buildChunk(c){
  
  //paletti
  const posts=[];
+ const POST_OFFSET = 0.25;
+ const d = HALF + POST_OFFSET;
  for(let j=0;j<CH;j++){
    const p=P[i0+j];
    const lx=Math.cos(p.h);
    const lz=-Math.sin(p.h);
    if(Math.abs(p.k)>1/60 && j%2 === 0){
      const sd=-Math.sign(p.k);
-     posts.push([p.x+lx*sd*6,p.y+.3,p.z+lz*sd*6,p.h,(i0+j)%4<2]);
+     posts.push([p.x+lx*sd*d, p.y + POST_H / 2 - .3, p.z+lz*sd*d, p.h, (i0+j)%4<2]);//invece di 6 schiantato, uso d
    }
  }
  if(posts.length){
@@ -1178,8 +1298,10 @@ function buildChunk(c){
 	dummy.scale.set(1,1,1);
 	dummy.updateMatrix();
 	im.setMatrixAt(i,dummy.matrix);
-    im.setColorAt(i,t[4]?tmpCol.setRGB(.9,.1,.1):tmpCol.setRGB(1,1,1));
-    ch.obs.push({type:'post',x:t[0],y:t[1],z:t[2],r:.35,col:t[4]?[.9,.1,.1]:[1,1,1],im,i});
+    ////im.setColorAt(i,t[4]?tmpCol.setRGB(.9,.1,.1):tmpCol.setRGB(1,1,1));
+    ////ch.obs.push({type:'post',x:t[0],y:t[1],z:t[2],r:.35,col:t[4]?[.9,.1,.1]:[1,1,1],im,i});
+	im.setColorAt(i, tmpCol.setRGB(1, 1, 1));
+    ch.obs.push({type:'post',x:t[0],y:t[1],z:t[2],r:.35,col:[1,1,1],im,i});
   });
   im.instanceMatrix.needsUpdate=true;
   im.instanceColor.needsUpdate=true;
@@ -1188,6 +1310,34 @@ function buildChunk(c){
   scene.add(im);
   ch.objs.push(im);
  }
+ 
+ //cartelli ogni SIGN_EVERY metri
+ const sA = P[i0].s;
+ const sB = P[i0 + CH].s;
+ for (let n = Math.max(1, Math.ceil(sA / SIGN_EVERY)); n * SIGN_EVERY < sB; n++) {
+   const s = n * SIGN_EVERY;
+   let j = i0; while (j < i0 + CH - 1 && P[j + 1].s <= s) j++;
+   const p = P[j];
+   ensurePoints(j + 70);
+   let kmax = 0, ks = 0;
+   for (let q = j + 8; q < j + 60; q++) if (Math.abs(P[q].k) > kmax) { kmax = Math.abs(P[q].k); ks = Math.sign(P[q].k); }
+   const type = kmax > 1 / 70 ? (ks > 0 ? 'curveL' : 'curveR')
+              : p.surf >= 4 ? 'slippery'
+              : (n % 2 ? 'limit50' : 'slippery');
+
+   const lx = Math.cos(p.h), lz = -Math.sin(p.h);
+   const x = p.x - lx * (HALF + 1.3), z = p.z - lz * (HALF + 1.3);   // lato destro
+   const sg = makeSign(type);
+   sg.position.set(x, p.y - .3, z);
+   sg.rotation.y = p.h + Math.PI;                                    // rivolto verso chi arriva
+   scene.add(sg);
+   ch.objs.push(sg);
+   ch.obs.push({ type: 'sign', x, y: p.y + 1, z, r: .3, col: [.55, .57, .6], group: sg });
+ }
+ 
+ 
+ 
+ 
  return ch;
 }
 function disposeChunk(ch){ch.objs.forEach(o=>{scene.remove(o);if(o.isInstancedMesh)o.dispose();});ch.geos.forEach(g=>g.dispose());}
@@ -1762,7 +1912,8 @@ function buildInterior(parent){
   const IY=0;// se non combacia con la scocca, sposta questi due valori
   let steerWheel;
   
- const M=c=>new THREE.MeshLambertMaterial({color:c});
+ ////const M=c=>new THREE.MeshLambertMaterial({color:c});
+ const M = c => new THREE.MeshBasicMaterial({ color: c });//no luce!
  const seatM=M(0x2a2d33),bolM=M(0x3c4350),dashM=M(0x15171c),rimM=M(0x0d0d0f);
  const g=new THREE.Group();g.position.set(0,IY,IZ);
  const box=(w,h,d,m,x,y,z,rx)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);if(rx)o.rotation.x=rx;g.add(o);return o;};
@@ -1779,6 +1930,15 @@ function buildInterior(parent){
  const tilt=new THREE.Group();tilt.position.set(.4,.98,.33);tilt.rotation.x=.5;g.add(tilt);
  steerWheel=new THREE.Group();tilt.add(steerWheel);
  steerWheel.add(new THREE.Mesh(new THREE.TorusGeometry(.17,.022,8,24),rimM));
+ 
+ // striscia gialla a ore 12
+ const markM = M(0xffaa00);
+ const markArc = 0.05;                                          // ampiezza in radianti, circa 3,5 cm
+ const mark = new THREE.Mesh(new THREE.TorusGeometry(.17, .0235, 8, 4, markArc), markM);   // tubo appena più spesso: niente z-fighting
+ mark.rotation.z = Math.PI / 2 - markArc / 2;                  // l'arco parte da +X: lo centro su +Y
+ steerWheel.add(mark); 
+ 
+ 
  const sp1=new THREE.Mesh(new THREE.BoxGeometry(.3,.03,.02),rimM),sp2=new THREE.Mesh(new THREE.BoxGeometry(.03,.17,.02),rimM);
  sp2.position.y=-.09;
  const hub=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,.03,10).rotateX(Math.PI/2),rimM);
@@ -2615,7 +2775,12 @@ function spawnDebris(o,n,size,pw){
   m.scale.set(d.sx,d.sy,d.sz);scene.add(m);debris.push(d);
  }
 }
-function destroyObs(o){o.dead=true;o.im.setMatrixAt(o.i,HIDE);o.im.instanceMatrix.needsUpdate=true;}
+function destroyObs(o){
+	o.dead=true;
+	if (o.group) { o.group.visible = false; return; }          // cartello	
+	o.im.setMatrixAt(o.i,HIDE);
+	o.im.instanceMatrix.needsUpdate=true;
+}
 
 //danneggiamento:
 function crash(cf,cl,sp){
@@ -2690,10 +2855,11 @@ function hitObstacles(){
   if(d2>=o.r*o.r)continue;
   const sp=Math.hypot(car.u,car.v);//velocita
   
-  if(o.type==='post'){
+  if (o.type === 'post' || o.type === 'sign') {
     // paletto: si rompe, nessun rallentamento
 	destroyObs(o);
-	spawnDebris(o,2,0.20,2);
+	if (o.type === 'sign') spawnDebris(o,5,0.10,2);
+	else spawnDebris(o,3,0.10,2);
 	car.shake=Math.max(car.shake,.12);
 	}
   else if(o.type==='rock'){
