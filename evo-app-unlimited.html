@@ -1220,8 +1220,8 @@ function signTexture(type) {
 }
 const signMat = type => signMats[type] || (signMats[type] = new THREE.MeshBasicMaterial({ map: signTexture(type), alphaTest: .5 }));
 
-const SIGN_H = 2.5;      // altezza del palo
-const SIGN_SIZE = 1.2;   // lato del cartello
+const SIGN_H = 3.0;      // altezza del palo (un po piu alti, vengono interrati di 30cm)
+const SIGN_SIZE = 1.5;   // lato del cartello
 const signPoleGeo = new THREE.CylinderGeometry(.035, .035, SIGN_H, 6).translate(0, SIGN_H / 2, 0);
 const signPlaneGeo = new THREE.PlaneGeometry(SIGN_SIZE, SIGN_SIZE);
 const SIGN_FACE_Y = SIGN_H - SIGN_SIZE / 2 - .1;
