@@ -354,8 +354,10 @@
 		  <button class="btn"              id="hornBtn"     title="Pulsante Clackson">📯</button>
 		  <button class="btn"              id="colorsBtn"   title="Pulsante Cambia colore">🎨</button>
 		  <button class="btn toggled-red"  id="numberBtn"   title="Interruttore Numeri di Gara">🔢</button>
-		  <button class="btn"              id="muteBtn"     title="Interruttore Altoparlante">🔇</button>
+		  <button class="btn"              id="hoodBtn"     title="Camera cofano">🚘</button>
+		  <button class="btn"              id="cockpitBtn"  title="Camera abitacolo">💺</button>
 		  <button class="btn toggled-blue" id="camResetBtn" title="Reset Visuale">👁️</button>
+		  <button class="btn"              id="muteBtn"     title="Interruttore Altoparlante">🔇</button>
 		</div>
     </div>
     <button id="resetBtn" title="Rimetti in strada">🧑‍🔧 RESET 🔧</button>
@@ -409,6 +411,8 @@ const PINE_TRUNK_GEO = 4;//tronco è un cilindro quadrato
 const PINE_LEAVES_GEO = 6;//le foglie sono coni esagonali :)
 let headlightsOn = false;//luci accese anche di giorno, e prudenza... sempre!
 let shadowsOn=true;
+let camInside = false;
+let glassInside = null;   // ultimo stato applicato
 
 //danneggiamento!
 const dmg={toe:[0,0,0,0],camber:[0,0,0,0],lost:[false,false,false,false],pull:0};
@@ -474,6 +478,7 @@ $('camResetBtn').addEventListener('pointerdown',e=>{
   cam.zoom=1; 
   cam.el=0; 
   cam.yaw=0;   // stesso effetto del tasto C
+  if(camMode)setCamMode(camMode);
 });
 
 // audio on/off
@@ -1675,6 +1680,8 @@ function spawnCar(){
 			dc.liveryRepsol?dc.liveryRepsol.ora:
 			dc.base,
 	
+	glassOpacity: camInside ? 0.1 : 0.85,
+	
 	liveryOrder: ['tricolore','repsol','martini'],
 	
 	raceNumber: 1 + Math.floor(Math.random() * 99),
@@ -1968,11 +1975,39 @@ pad.addEventListener('pointermove',e=>{if(pad.hasPointerCapture(e.pointerId))pad
 document.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
 document.addEventListener('contextmenu',e=>e.preventDefault());
 const KM={ArrowUp:'gas',KeyW:'gas',ArrowDown:'brake',KeyS:'brake',Space:'hb'};
+
+
+
+/* ===== MODALITÀ CAMERA: 0 chase, 1 cofano, 2 abitacolo ===== */
+let camMode=0;
+const hoodBtn=$('hoodBtn'), cockpitBtn=$('cockpitBtn');
+const CAM_HOOD=new THREE.Vector3(0,1.25,1.0);      // sopra il cofano
+const CAM_COCKPIT=new THREE.Vector3(0.4,1.28,-0.1);// occhi del pilota (volante a x=.4)
+const _cp=new THREE.Vector3(), _ct=new THREE.Vector3();
+function setCamMode(m){
+  camMode=(camMode===m)?0:m;
+  hoodBtn.classList.toggle('toggled-red',camMode===1);
+  cockpitBtn.classList.toggle('toggled-red',camMode===2);
+  camera.near=camMode===2?0.08:0.3;
+  camera.updateProjectionMatrix();
+  cam.zoom=1;cam.el=0;cam.yaw=0;
+}
+hoodBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();setCamMode(1); camInside = false;});
+cockpitBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();setCamMode(2); camInside = true;});
+
+
+
+
+
+
 addEventListener('keydown',e=>{
  if (KM[e.code]){keys[KM[e.code]]=1;e.preventDefault();}
  if (e.code==='ArrowLeft'||e.code==='KeyA') keys.left=1;
  if (e.code==='ArrowRight'||e.code==='KeyD') keys.right=1;
  if (e.code==='KeyR') resetCar();
+ if(e.code==='Digit1') { setCamMode(1); camInside = false; }
+ if(e.code==='Digit2') { setCamMode(2); camInside = true; }
+ 
  if (e.code==='KeyT') changeDelta();
  if (e.code==='KeyH') hornBtnPlay();
  if (e.code === 'KeyL') toggleLights();
@@ -2837,7 +2872,7 @@ function stepCamera(dt) {
 }
 
 addEventListener('keydown',e=>{
-	if (e.code==='KeyC') { cam.zoom=1; cam.el=0; cam.yaw=0; }// C = camera di default
+	if (e.code==='KeyC') { cam.zoom=1; cam.el=0; cam.yaw=0; if(camMode)setCamMode(camMode); }// C = camera di default
 	if (e.code === 'KeyQ') cam.rotDir = -1;
     if (e.code === 'KeyE') cam.rotDir = 1;
     if (e.code === 'KeyZ') cam.zoomDir = -1;
@@ -3079,10 +3114,37 @@ function updateWorld(dt){
  const D=Math.hypot(CAM_BACK+spd*.04,CAM_UP+spd*.03)*cam.zoom;
  const el=clamp(Math.atan2(CAM_UP+spd*.03,CAM_BACK+spd*.04)+cam.el,.08,1.5),hd=D*Math.cos(el),hgt=D*Math.sin(el),cy=car.camYaw+cam.yaw;
  
+ 
+ /*
  camera.position.set(car.x-Math.sin(cy)*hd+rnd(-sk,sk),car.camY+hgt+rnd(-sk,sk),car.z-Math.cos(cy)*hd);
  terrain(camera.position.x,camera.position.z,SHD);camera.position.y=Math.max(camera.position.y,SHD.y+1.8);
  const ahead=6*Math.max(0,Math.cos(cam.yaw));   // girando intorno all'auto guarda sempre verso di lei
  camera.lookAt(car.x+Math.sin(car.camYaw)*ahead,car.camY+1.2,car.z+Math.cos(car.camYaw)*ahead);
+ */
+ 
+ if(camMode===0){
+  camera.position.set(car.x-Math.sin(cy)*hd+rnd(-sk,sk),car.camY+hgt+rnd(-sk,sk),car.z-Math.cos(cy)*hd);
+  terrain(camera.position.x,camera.position.z,SHD);camera.position.y=Math.max(camera.position.y,SHD.y+1.8);
+  const ahead=6*Math.max(0,Math.cos(cam.yaw));
+  camera.lookAt(car.x+Math.sin(car.camYaw)*ahead,car.camY+1.2,car.z+Math.cos(car.camYaw)*ahead);
+ }else{
+  // soggettiva: posizione e sguardo in coordinate locali dell'auto (segue pitch/roll)
+  _cp.copy(camMode===1?CAM_HOOD:CAM_COCKPIT);
+  const yawL=cam.yaw, pL=cam.el*.6-(camMode===1?.08:0);   // ↑↓ e ↻↺ = guardarsi intorno
+  _ct.set(Math.sin(yawL)*Math.cos(pL),Math.sin(pL),Math.cos(yawL)*Math.cos(pL)).multiplyScalar(10).add(_cp);
+  carG.localToWorld(_cp);
+  carG.localToWorld(_ct);
+  camera.position.copy(_cp).add(_v.set(rnd(-sk,sk)*.3,rnd(-sk,sk)*.3,0));
+  camera.lookAt(_ct);
+ }
+ 
+ if (glassInside !== camInside) {                       // applica solo al cambio
+  glassInside = camInside;
+  model.userData.setGlassOpacity(camInside ? 0.1 : 0.85);
+ }
+ 
+ 
+ 
  
  
  //il cielo segue!

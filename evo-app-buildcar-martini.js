@@ -485,5 +485,10 @@ function buildCar(opts) {
   car.userData.wheels = wheels;
   car.userData.paint = paintMat;
   car.userData.setPaint = hex => paintMat.color.set(hex);
+  
+  const glassMat = mats[D.M.findIndex(m => m.k === 'glass')];
+  car.userData.glass = glassMat;
+  car.userData.setGlassOpacity = v => { glassMat.opacity = v; };   // transparent resta true: nessuna ricompilazione
+  
   return car;
 }
