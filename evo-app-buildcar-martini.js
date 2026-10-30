@@ -17,6 +17,11 @@
    opts.badgeSize   0.34
    opts.badgeZ     -0.10
    opts.badgeColor  0x112266
+   
+   opts.numberSize : 0.45;
+   opts.numberY    : 0.60;
+   opts.numberZ    : 0.20;
+   opts.numberStripe
 */
    
 const EVO_DELTA = {
@@ -253,18 +258,105 @@ function _evoAddBadge(car, roofMeshes, k, opts) {
   holder.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), n);
 
   // piano orizzontale con la punta della lancia verso dietro
-  const geo = new THREE.PlaneGeometry(size, size).rotateX(-Math.PI / 2);//.rotateY(Math.PI);
+  //const geo = new THREE.PlaneGeometry(size, size).rotateX(-Math.PI / 2);//.rotateY(Math.PI);
+  const geo = new THREE.PlaneGeometry(size, size, 4, 4).rotateX(-Math.PI / 2);//.rotateY(Math.PI);   // 25 vertici per accartocciamento
+  
   const mat = new THREE.MeshStandardMaterial({
-    map: _evoBadgeTexture(opts.badgeColor), transparent: true, roughness: 0.25, metalness: 0,
+    map: _evoBadgeTexture(opts.badgeColor), roughness: 0.25, metalness: 0,
+	alphaTest: 0.5, // al posto di transparent: true altrimenti non si infanga!
     polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, depthWrite: false
   });
   const m = new THREE.Mesh(geo, mat);
-  m.userData.noDent = true;          // dent() non lo deforma
+  //m.userData.noDent = true;          // dent() non lo deforma
   holder.add(m);
   car.add(holder);
 }
 
+/* ===== TARGA CON NUMERO DI GARA ===== */
+function _evoNumberTexture(num, stripe) {
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const g = c.getContext('2d');
+  const m = 12;
+  const size = 256 - m * 2;
+  const r = 24;
 
+  g.fillStyle = '#ffffff';
+  g.beginPath();
+  g.roundRect(m, m, size, size, [0, 0, r, r]);
+  g.fill();
+  g.strokeStyle = '#111111'; g.lineWidth = 8; g.stroke();
+
+  g.strokeStyle = stripe || '#0088ee'; g.lineWidth = 40;       // fascia superiore
+  g.beginPath(); g.moveTo(m, m + 20); g.lineTo(m + size, m + 20); g.stroke();
+
+  g.fillStyle = '#111111';
+  g.font = '900 200px monospace';
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(String(num), 128, 170);
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.anisotropy = 4;
+  return tex;
+}
+
+function _evoAddNumbers(car, bodyMeshes, opts) {
+  const num = opts.raceNumber | 0;
+  if (num <= 0) return [];                                      // 0 = nessuna targa
+
+  const size = opts.numberSize != null ? opts.numberSize : 0.45;
+  const y    = opts.numberY    != null ? opts.numberY    : 0.60;
+  const z    = opts.numberZ    != null ? opts.numberZ    : 0.20;
+
+  const mat = new THREE.MeshLambertMaterial({
+    map: _evoNumberTexture(num, opts.numberStripe),
+    alphaTest: 0.5, // al posto di transparent: true altrimenti non si infanga!
+    polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1
+  });
+  
+  //const geo = new THREE.PlaneGeometry(size, size);
+  const geo = new THREE.PlaneGeometry(size, size, 4, 4);   // 25 vertici per accartocciamento
+  const visible = opts.numbersVisible !== false;
+
+  car.updateMatrixWorld(true);
+  const rc = new THREE.Raycaster();
+  const plates = [];
+
+  [1, -1].forEach(function (side) {                             // +X sinistra, -X destra
+    rc.set(new THREE.Vector3(side * 3, y, z), new THREE.Vector3(-side, 0, 0));
+    const hit = rc.intersectObjects(bodyMeshes, false)[0];
+
+    const n = new THREE.Vector3(side, 0, 0);
+    const p = new THREE.Vector3(side * 0.90, y, z);             // fallback se il raggio non colpisce
+    if (hit) {
+      p.copy(hit.point);
+      if (hit.face) {
+        const f = hit.face.normal.clone();
+        if (f.x * side > 0.5) {
+          f.z = 0;                                              // niente inclinazione avanti/indietro
+          f.y = Math.max(-0.2, Math.min(0.2, f.y));             // solo la leggera inclinazione della fiancata
+          n.copy(f).normalize();
+        }
+      }
+    }
+    p.addScaledVector(n, 0.006);
+
+    // base ortonormale: z = normale, y = alto del mondo proiettato sul piano, x = y × z
+    const zA = n.clone();
+    const yA = new THREE.Vector3(0, 1, 0).addScaledVector(zA, -zA.y).normalize();
+    const xA = new THREE.Vector3().crossVectors(yA, zA).normalize();
+
+    const m = new THREE.Mesh(geo, mat);
+    m.name = 'raceNumber';
+    //m.userData.noDent = true;
+    m.position.copy(p);
+    m.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(xA, yA, zA));
+    m.visible = visible;
+    car.add(m);
+    plates.push(m);
+  });
+  return plates;
+}
 
 
 
@@ -347,7 +439,13 @@ function buildCar(opts) {
     groups[gi].add(mesh);
   }
 
+  //scudo lancia
   if (opts.lanciaBadge) _evoAddBadge(car, roofMeshes, k, opts);
+  
+  //numero sugli sportelli
+  const numberPlates = _evoAddNumbers(car, roofMeshes, opts);
+  car.userData.numberPlates = numberPlates;
+  car.userData.setNumbersVisible = function (v) { numberPlates.forEach(function (m) { m.visible = v; }); };
 
   // ---- alettone posteriore: geometria procedurale, colore proprio (opts.spoiler) ----
   let wingMat = null;

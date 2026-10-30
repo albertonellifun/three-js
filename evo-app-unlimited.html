@@ -498,8 +498,9 @@ const numberBtn = $('numberBtn');
 
 function toggleNumbers() {
   numbersVisible = !numbersVisible;
-  if (plateLeft) plateLeft.visible = numbersVisible;
-  if (plateRight) plateRight.visible = numbersVisible;
+  //if (plateLeft) plateLeft.visible = numbersVisible;
+  //if (plateRight) plateRight.visible = numbersVisible;
+  if (model && model.userData.setNumbersVisible) model.userData.setNumbersVisible(numbersVisible);
   
   if (numbersVisible) {
     numberBtn.classList.add('toggled-red');
@@ -1676,6 +1677,10 @@ function spawnCar(){
 	
 	liveryOrder: ['tricolore','repsol','martini'],
 	
+	raceNumber: 1 + Math.floor(Math.random() * 99),
+    numbersVisible: numbersVisible,
+	numberStripe: Math.random() < 0.3 ? '#0088ee' : Math.random() < 0.5 ? '#dd1100' : '#333333',
+	
 	lanciaBadge: dc.lanciaBadge?true:false,
 	badgeSize: 0.50,
 	badgeZ: -0.30,
@@ -1718,11 +1723,13 @@ function spawnCar(){
       });
     });
 
+  /*
   // numeri di gara (texture nuova a ogni auto)
   const numMat=new THREE.MeshLambertMaterial({
     map:makeNumberTexture(1+Math.floor(Math.random()*99)),
     transparent:true, polygonOffset:true, polygonOffsetFactor:-1, polygonOffsetUnits:-1
   });
+  
   const plateGeo=new THREE.PlaneGeometry(.45,.45);
   plateLeft=new THREE.Mesh(plateGeo,numMat);
   plateLeft.position.set(.90,.55,.20); plateLeft.rotation.y=Math.PI/2;
@@ -1730,6 +1737,7 @@ function spawnCar(){
   plateRight.position.set(-.90,.55,.20); plateRight.rotation.y=-Math.PI/2;
   plateLeft.visible=plateRight.visible=numbersVisible;
   model.add(plateLeft,plateRight);
+  */
 
   // abitacolo e volante
   steerWheel=buildInterior(model);
@@ -2094,6 +2102,76 @@ const pMat=new THREE.ShaderMaterial({transparent:true,depthWrite:false,uniforms:
  vertexShader:'attribute float aSize;attribute float aAlpha;attribute vec3 aColor;uniform float uScale;varying vec3 vC;varying float vA;void main(){vC=aColor;vA=aAlpha;vec4 mv=modelViewMatrix*vec4(position,1.);gl_PointSize=aSize*uScale/(-mv.z);gl_Position=projectionMatrix*mv;}',
  fragmentShader:'varying vec3 vC;varying float vA;void main(){float d=length(gl_PointCoord-.5);float a=smoothstep(.5,.12,d)*vA;if(a<.01)discard;gl_FragColor=vec4(vC,a);}'});
 const pPoints=new THREE.Points(pGeo,pMat);pPoints.frustumCulled=false;scene.add(pPoints);
+
+
+
+/* ===== FIAMMATE SCARICHI (additive, colore per età) ===== */
+const NF=160;
+const fPos=new Float32Array(NF*3).fill(-9999),fVel=new Float32Array(NF*3);
+const fSize=new Float32Array(NF),fAge=new Float32Array(NF).fill(1);
+const fLife=new Float32Array(NF),fMax=new Float32Array(NF).fill(1),fS=new Float32Array(NF);
+let fHead=0;
+const fGeo=new THREE.BufferGeometry();
+fGeo.setAttribute('position',new THREE.BufferAttribute(fPos,3).setUsage(THREE.DynamicDrawUsage));
+fGeo.setAttribute('aSize',new THREE.BufferAttribute(fSize,1).setUsage(THREE.DynamicDrawUsage));
+fGeo.setAttribute('aAge',new THREE.BufferAttribute(fAge,1).setUsage(THREE.DynamicDrawUsage));
+const fMat=new THREE.ShaderMaterial({
+ transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
+ uniforms:{uScale:pMat.uniforms.uScale},   // stesso oggetto: si aggiorna da solo
+ vertexShader:`attribute float aSize;attribute float aAge;uniform float uScale;varying float vAge;
+  void main(){vAge=aAge;vec4 mv=modelViewMatrix*vec4(position,1.);gl_PointSize=aSize*uScale/(-mv.z);gl_Position=projectionMatrix*mv;}`,
+ fragmentShader:`varying float vAge;
+  void main(){
+   float d=length(gl_PointCoord-.5);
+   float core=smoothstep(.5,.0,d);
+   vec3 c=mix(vec3(1.,.95,.7),vec3(1.,.5,.08),smoothstep(0.,.35,vAge));
+   c=mix(c,vec3(.7,.07,.02),smoothstep(.3,.9,vAge));
+   float a=core*core*(1.-vAge*.7);
+   if(a<.01)discard;
+   gl_FragColor=vec4(c,a);
+  }`
+});
+const fPoints=new THREE.Points(fGeo,fMat);fPoints.frustumCulled=false;fPoints.renderOrder=2;scene.add(fPoints);
+
+function exhaustFlames(power){   // power ~0.7 (piccola) .. 1.5 (grossa)
+ const fx=Math.sin(car.th),fz=Math.cos(car.th),lx=Math.cos(car.th),lz=-Math.sin(car.th);
+ const cvx=car.u*fx+car.v*lx, cvz=car.u*fz+car.v*lz;      // l'auto si muove: le fiamme la seguono
+ for(const o of exhaustOffsets){
+  const px=car.x+fx*(o.z-.1)+lx*o.x, pz=car.z+fz*(o.z-.1)+lz*o.x, py=car.yS+o.y;
+  const n=Math.round(10*power);
+  for(let k=0;k<n;k++){
+   const i=fHead;fHead=(fHead+1)%NF;
+   const sp=rnd(3,9)*power, j=.6;
+   fPos[i*3]=px;fPos[i*3+1]=py;fPos[i*3+2]=pz;
+   fVel[i*3]  =cvx-fx*sp+lx*rnd(-j,j);                      // getto verso DIETRO
+   fVel[i*3+1]=rnd(-.3,.5);
+   fVel[i*3+2]=cvz-fz*sp+lz*rnd(-j,j);
+   fMax[i]=fLife[i]=rnd(.10,.22)*(.8+.4*power);
+   fS[i]=rnd(.3,.55)*power;
+  }
+ }
+}
+function updFlames(dt){
+ for(let i=0;i<NF;i++){
+  if(fLife[i]<=0){fAge[i]=1;fSize[i]=0;continue;}
+  fLife[i]-=dt;
+  const t=1-fLife[i]/fMax[i];
+  if(t>=1){fLife[i]=0;fAge[i]=1;fSize[i]=0;continue;}
+  const dk=Math.max(0,1-4*dt);
+  fVel[i*3]*=dk;fVel[i*3+1]=fVel[i*3+1]*dk+1.5*dt;fVel[i*3+2]*=dk;
+  fPos[i*3]+=fVel[i*3]*dt;fPos[i*3+1]+=fVel[i*3+1]*dt;fPos[i*3+2]+=fVel[i*3+2]*dt;
+  fAge[i]=t;fSize[i]=fS[i]*(1-.6*t);
+ }
+ fGeo.attributes.position.needsUpdate=fGeo.attributes.aSize.needsUpdate=fGeo.attributes.aAge.needsUpdate=true;
+}
+
+
+
+
+
+
+
+
 function emit(x,y,z,vx,vy,vz,r,g,b,life,s0,s1,a0,grav,drag){
  const i=pHead;pHead=(pHead+1)%NP;
  pPos[i*3]=x;pPos[i*3+1]=y;pPos[i*3+2]=z;pVel[i*3]=vx;pVel[i*3+1]=vy;pVel[i*3+2]=vz;
@@ -2356,6 +2434,7 @@ function updAudio(skid,dt){
 	burst(2500,'bandpass',.35,.45,.8);
 	E.blowT=.8;
 	
+	/*
 	// Condizione per far partire la fiammata (es. gas rilasciato, contagiri alto e velocità > 5 km/h)
     exhaustOffsets.forEach(offset => {
       // Calcola la posizione mondiale dello scarico in base alla rotazione e posizione dell'auto
@@ -2387,7 +2466,7 @@ function updAudio(skid,dt){
 		2       //attrito
       );
     });
-
+	*/
 	
 	
 	
@@ -2417,62 +2496,69 @@ function updAudio(skid,dt){
   E.lp.frequency.setTargetAtTime(700+rn*2200+th*1100,t,.08);
   E.exhG.gain.setTargetAtTime(.04+.16*th*(.4+rn),t,.07);
  }
+ 
  E.tw.frequency.setTargetAtTime(1600+E.boost*3800,t,.1);
  E.twG.gain.setTargetAtTime(E.boost*.035,t,.1);E.tnG.gain.setTargetAtTime(E.boost*.05,t,.1);
  E.rdG.gain.setTargetAtTime(clamp(skid,0,1)*.3+clamp(Math.abs(car.u)/60,0,1)*.04,t,.06);
+ 
  if(th<.05&&rn>.45&&car.u>5){                                                       // scoppiettii in rilascio
   E.popT-=dt;
   if(E.popT<=0){
+	
+	/*
 	if(Math.random()<.6){
-		burst(220,'lowpass',.5,.1,1);
-		burst(1800,'bandpass',.22,.04,1);
+	  burst(220,'lowpass',.5,.1,1);
+	  burst(1800,'bandpass',.22,.04,1);
 	
 	
 	
 	
-	// Condizione per far partire la fiammata (es. gas rilasciato, contagiri alto e velocità > 5 km/h)
-const isDecelerating = (ctl.gas < 0.05 && car.rpm > 0.45 && Math.abs(car.u) > 5);
+	  // Condizione per far partire la fiammata (es. gas rilasciato, contagiri alto e velocità > 5 km/h)
+	  const isDecelerating = (ctl.gas < 0.05 && car.rpm > 0.45 && Math.abs(car.u) > 5);
 
-if (isDecelerating) {
-    exhaustOffsets.forEach(offset => {
-      // Calcola la posizione mondiale dello scarico in base alla rotazione e posizione dell'auto
-      const fx = Math.sin(car.th), fz = Math.cos(car.th);
-      const lx = Math.cos(car.th), lz = -Math.sin(car.th);
-      
-      const worldX = car.x - fz * offset.z - lx * offset.x; // Adatta in base al sistema di riferimento
-      const worldY = car.yS + offset.y;
-      const worldZ = car.z - fx * offset.z - lz * offset.x;
+	  if (isDecelerating) {
+		exhaustOffsets.forEach(offset => {
+		  // Calcola la posizione mondiale dello scarico in base alla rotazione e posizione dell'auto
+		  const fx = Math.sin(car.th), fz = Math.cos(car.th);
+		  const lx = Math.cos(car.th), lz = -Math.sin(car.th);
+		  
+		  const worldX = car.x - fz * offset.z - lx * offset.x; // Adatta in base al sistema di riferimento
+		  const worldY = car.yS + offset.y;
+		  const worldZ = car.z - fx * offset.z - lz * offset.x;
 
-      // Emetti particelle di fiamma usando la funzione emit esistente
-      // Parametri: x, y, z, vx, vy, vz, r, g, b, vita, sizeInizio, sizeFine, alpha, gravità, drag
-      emit(
-        car.x - Math.sin(car.th)*2.2 + (offset.x * Math.cos(car.th)), 
-        car.yS + offset.y, 
-        car.z - Math.cos(car.th)*2.2 - (offset.x * Math.sin(car.th)),
-        //-Math.sin(car.th) * rnd(8, 12) + rnd(-1, 1), // spinta all'indietro
-        //rnd(-0.5, 0.5),
-        //-Math.cos(car.th) * rnd(8, 12) + rnd(-1, 1),
-		Math.sin(car.th)*1.2, 	//vx
-		rnd(-0.5, 0.5),			//vy
-		Math.cos(car.th)*1.2,	//vz
-        1.0, 0.85, 0.5, //RGB (arancione)
-        0.1,    // Durata brevissima della fiammata
-        0.8, 	//size inizio
-		0.1,	//size fine
-        0.9,    //opaca
-        0, 		//gravita
-		2       //attrito
-      );
-    });
-  }
+		  // Emetti particelle di fiamma usando la funzione emit esistente
+		  // Parametri: x, y, z, vx, vy, vz, r, g, b, vita, sizeInizio, sizeFine, alpha, gravità, drag
+		  emit(
+			car.x - Math.sin(car.th)*2.2 + (offset.x * Math.cos(car.th)), 
+			car.yS + offset.y, 
+			car.z - Math.cos(car.th)*2.2 - (offset.x * Math.sin(car.th)),
+			//-Math.sin(car.th) * rnd(8, 12) + rnd(-1, 1), // spinta all'indietro
+			//rnd(-0.5, 0.5),
+			//-Math.cos(car.th) * rnd(8, 12) + rnd(-1, 1),
+			Math.sin(car.th)*1.2, 	//vx
+			rnd(-0.5, 0.5),			//vy
+			Math.cos(car.th)*1.2,	//vz
+			1.0, 0.85, 0.5, //RGB (arancione)
+			0.1,    // Durata brevissima della fiammata
+			0.8, 	//size inizio
+			0.1,	//size fine
+			0.9,    //opaca
+			0, 		//gravita
+			2       //attrito
+		  );
+		});
+	  }
+    }*/
 	
 	
-	
-	
-	
-	
-	
+	if(Math.random()<.6){
+	 burst(220,'lowpass',.5,.1,1);
+	 burst(1800,'bandpass',.22,.04,1);
+	 exhaustFlames(rnd(.7,1.5));   // il botto e la fiamma partono insieme
 	}
+	
+	
+	
   E.popT=rnd(.08,.35);}
  }
 }
@@ -3018,6 +3104,7 @@ function updateWorld(dt){
  emitWheels(dt);
  updSkids(dt);
  updParticles(dt);
+ updFlames(dt);
  
  
  
