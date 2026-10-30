@@ -1519,7 +1519,58 @@ function disposeTile(t){
   t.mesh.geometry.dispose();
   t.objs.forEach(o=>{scene.remove(o);o.dispose();});
 }
+
+
+
 function manageTiles(){
+ const ctx=Math.floor(car.x/TILE);
+ const ctz=Math.floor(car.z/TILE);
+ const nowMs=performance.now();
+
+ // si eliminano solo le tile lontane; quelle dirty NON si distruggono più qui
+ for(const[k,t]of tiles){
+   if(Math.abs(t.tx-ctx)>TR+1||Math.abs(t.tz-ctz)>TR+1){
+     disposeTile(t);
+     tiles.delete(k);
+   }
+ }
+
+ const ax=car.x+Math.sin(car.th)*TILE*1.5;
+ const az=car.z+Math.cos(car.th)*TILE*1.5;
+ const want=[];
+ for(let a=-TR;a<=TR;a++){
+   for(let b=-TR;b<=TR;b++){
+     const tx=ctx+a;
+     const tz=ctz+b;
+     const t=tiles.get(tileKey(tx,tz));
+     const d=((tx+.5)*TILE-ax)**2+((tz+.5)*TILE-az)**2;
+
+     if(!t)want.push([d,tx,tz,0]);                                   // tile mancante: priorità massima
+     else if(t.dirty&&nowMs-t.born>400)want.push([d+1e6,tx,tz,2]);   // rigenerazione "a caldo"
+     else if(!t.detail&&Math.max(Math.abs(a),Math.abs(b))<=2)want.push([d+1e7,tx,tz,1]);
+   }
+ }
+ want.sort((p,q)=>p[0]-q[0]);
+ const t0=performance.now();
+ for(const w of want){
+   if(performance.now()-t0>6)break;
+   const key=tileKey(w[1],w[2]);
+   if(w[3]===0){
+     tiles.set(key,buildTile(w[1],w[2]));
+   }else if(w[3]===1){
+     buildDetail(tiles.get(key));
+   }else{
+     // swap senza buchi: costruisco la nuova, poi tolgo la vecchia nello stesso frame
+     const old=tiles.get(key);
+     const nt=buildTile(w[1],w[2]);
+     if(old.detail)buildDetail(nt);   // stesso seed: alberi nelle stesse posizioni
+     disposeTile(old);
+     tiles.set(key,nt);
+   }
+ }
+}
+
+function manageTilesOLD(){
  const ctx=Math.floor(car.x/TILE);
  const ctz=Math.floor(car.z/TILE);
  /*
