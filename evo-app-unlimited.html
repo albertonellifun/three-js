@@ -1,3 +1,10 @@
+/* TODO:
+ODO distanza percorsa in alto 
+MAPPA in alto a destra
+AUDIO di m
+FPS / GEOM
+*/
+
 <!DOCTYPE html>
 <html lang="it">
 
@@ -52,7 +59,15 @@
 	    filter: drop-shadow(0 2px 6px rgba(0,0,0,.6));
 		color: #f5c518;
 	  }
+	  #rpm #tachNeedle { color: #ffee11; }
+	  #rpm #tachGearText { color: #ffffff; }
+	  #rpm #tachSpeedText { color: #ffffff; }
+	  
 	  #rpm.night { color: #ff8811; }
+	  #rpm.night #tachNeedle { color: #ffff33; }
+	  #rpm.night #tachGearText { color: #ffee11; }
+	  #rpm.night #tachSpeedText { color: #ffee11; }
+	  
 	  #rpm svg { display: block; }
 	  
 
@@ -423,32 +438,32 @@ function repairCar(){
 
 const _v=new THREE.Vector3(), _p=new THREE.Vector3();
 
+//danneggiamento
 function dent(lx,lz,R,depth){
   _p.set(lx,.6,lz);
-  const push = lz>=0 ? -1 : 1;          // urto davanti: spinge indietro, urto dietro: spinge avanti
+  // direzione di spinta verso l'interno, combinando componente longitudinale e laterale
+  const fFront=clamp(lz/2.1,-1,1);   // -1 dietro .. 1 davanti
+  const fSide =clamp(lx/.95,-1,1);   // -1 sinistra .. 1 destra
+  const pushZ=-fFront;
+  const pushX=-fSide;                // urto laterale: lo sportello si incassa verso il centro auto
   model.updateMatrixWorld(true);
   let moved=0;
   model.traverse(o=>{
 	if(!o.isMesh||o.userData.noDent) return;
 	let isWheel = false;
 	if (o.parent && (o.parent.name === 'steer' || o.parent.name === 'spin')) isWheel=true;
-    
 	if(!o.userData.own){o.geometry=o.geometry.clone();o.userData.own=true;}
-    
 	const pos=o.geometry.attributes.position;
 	const inv=o.matrixWorld.clone().invert();
-    
-	const damageFactor = isWheel ? 0.25 : 1.0;//ruote assorbono la botta di solito
-	
+	const damageFactor = isWheel ? 0.25 : 1.0;
 	for(let i=0;i<pos.count;i++){
       _v.fromBufferAttribute(pos,i).applyMatrix4(o.matrixWorld);
       model.worldToLocal(_v);
       const d=_v.distanceTo(_p);
       if(d>R)continue;
-      
-	  const f=(1-d/R)**2*depth*(.6+Math.random()*.4) * damageFactor;//random effetto increspatura violenta!
-	  
-      _v.z+=push*f*.6; 
+	  const f=(1-d/R)**2*depth*(.6+Math.random()*.4) * damageFactor;
+      _v.x+=pushX*f*.6;
+      _v.z+=pushZ*f*.6; 
 	  _v.y-=f;
       model.localToWorld(_v); _v.applyMatrix4(inv);
       pos.setXYZ(i,_v.x,_v.y,_v.z);
@@ -485,9 +500,11 @@ $('camResetBtn').addEventListener('pointerdown',e=>{
 // audio on/off
 let muted=false;
 const muteBtn=$('muteBtn');
+
 function applyMute(){
   if(E.master) E.master.gain.value = muted ? 0 : .55;
 }
+
 function toggleMute(){
   muted=!muted;
   muteBtn.classList.toggle('toggled-red',muted);
@@ -498,14 +515,10 @@ muteBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation(
 
 //numeri di Gara
 let numbersVisible = true;
-let plateLeft;
-let plateRight;
 const numberBtn = $('numberBtn');
 
 function toggleNumbers() {
   numbersVisible = !numbersVisible;
-  //if (plateLeft) plateLeft.visible = numbersVisible;
-  //if (plateRight) plateRight.visible = numbersVisible;
   if (model && model.userData.setNumbersVisible) model.userData.setNumbersVisible(numbersVisible);
   
   if (numbersVisible) {
@@ -574,6 +587,33 @@ function hornBtnPlay() {
     hornBtn.classList.remove('toggled-red'); 
   }, 500);
 }
+
+// suoni di collisione
+const SFX={
+  tree:  './evo-crash-tree.mp3',
+  rock:  './evo-crash-rock.mp3',
+  post:  './evo-crash-post.mp3',
+  sign:  './evo-crash-sign.mp3',
+  jersey:'./evo-crash-jersey.mp3'
+};
+const sfxBase={};
+const sfxLast={};
+function sfxPreload(){
+  for(const k in SFX){ const a=new Audio(SFX[k]); a.preload='auto'; sfxBase[k]=a; }
+}
+function sfx(name,vol=1,cool=300){
+  if(muted)return;
+  const now=performance.now();
+  if(now-(sfxLast[name]||0)<cool)return;   // anti-spam: l'auto premuta contro un albero colpisce ogni frame
+  sfxLast[name]=now;
+  const base=sfxBase[name]||(sfxBase[name]=new Audio(SFX[name]));
+  const a=base.cloneNode();                // clone: permette sovrapposizioni
+  a.volume=clamp(vol,0,1);
+  a.play().catch(()=>{});
+}
+const crashVol=sp=>clamp(.3+sp/30,.3,1);  // più veloce = più forte
+
+
 
 colorsBtn.addEventListener('pointerdown', e => {
   e.preventDefault();
@@ -859,7 +899,8 @@ function surfOf(c){
 //////////const elev=s=>24+11*Math.sin(s/230+1.3)+5*Math.sin(s/83+.4)+1.5*Math.sin(s/37);
 
 const bumpAt=s=>{
- const c=Math.floor(s/140);let y=0;
+ const c=Math.floor(s/140);
+ let y=0;
  for(let k=Math.max(1,c-1);k<=c+1;k++){
   if(hash2(k,77)<.55)continue;                       // ~1 dosso ogni 300 m
   const cx=(k+.25+hash2(k,91)*.5)*140,w=10+hash2(k,13)*5,a=.6+hash2(k,5)*1.0,d=(s-cx)/w;
@@ -894,7 +935,7 @@ function fillQueueRaw(){
 //GEMINI FIX
 const MIN_GAP=80;// distanza minima tra tratti non adiacenti (60m)
 const MIN_GAP2=MIN_GAP*MIN_GAP;   
-const ARC_SKIP=250;// ignora i punti più vicini di 250 m lungo la strada
+const ARC_SKIP=250;//250;// ignora i punti più vicini di 250 m lungo la strada
 
 function nearRoad(x,z,s){
  const cx=Math.floor(x/GRID);
@@ -1062,9 +1103,50 @@ const grassMat=new THREE.ShaderMaterial({
     }`
 });
 
+const grassMatMobile = new THREE.ShaderMaterial({
+  uniforms: grassU, // Condivide uTime con il desktop
+  side: THREE.DoubleSide,
+  vertexShader: /* glsl */`
+    uniform float uTime;
+    varying float vH;
+    
+    void main() {
+      vec4 wp = modelMatrix * instanceMatrix * vec4(position, 1.0);
+      
+      float h = position.y;
+      float bendFactor = h * h; // La base è fissa, la punta flette con il vento
+      
+      // Calcolo del vento (uguale al desktop)
+      float ph = wp.x * 0.35 + wp.z * 0.27;
+      wp.x += (sin(uTime * 2.0 + ph) * 0.12 + sin(uTime * 0.7 + wp.z * 0.1) * 0.08) * bendFactor;
+      wp.z += cos(uTime * 1.6 + ph) * 0.08 * bendFactor;
+      
+      vH = h;
+      
+      vec4 mvPosition = viewMatrix * wp;
+      gl_Position = projectionMatrix * mvPosition;
+    }
+  `,
+  fragmentShader: /* glsl */`
+    varying float vH;
+    
+    void main() {
+      // Colore uniforme di base dell'erba (puoi modificarlo a piacimento)
+      vec3 grassColor = vec3(0.22, 0.40, 0.11); 
+      
+      // Un piccolissimo scuro alla base (vH) giusto per dare volume, 
+      // senza pesanti calcoli di casualità o doppi gradienti
+      vec3 finalColor = mix(grassColor * 0.75, grassColor, vH * 2.0);
+      
+      gl_FragColor = vec4(finalColor, 1.0);
+    }
+  `
+});
+
+
 //erba ciuffo!
 const IS_MOBILE = matchMedia('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-const GRASS_N = IS_MOBILE ? 3000 : 30000; // tentativi per tile
+const GRASS_N = IS_MOBILE ? 10000 : 30000; // tentativi per tile
 const GRASS_WIDTH  = 0.05;                // semi-larghezza alla base del filo
 const GRASS_NUMBER = IS_MOBILE ? 3 : 5;   // fili per ciuffo
 const GRASS_HEIGHT = 0.5;   // altezza del filo
@@ -1117,7 +1199,7 @@ function addGrass(tile,R){
   }
 
   if(!pts.length)return;
-  const im=new THREE.InstancedMesh(grassGeo,grassMat,pts.length);
+  const im=new THREE.InstancedMesh(grassGeo,IS_MOBILE?grassMatMobile:grassMat,pts.length);
   pts.forEach((t,i)=>{
     dummy.position.set(t[0],t[1]+0.02,t[2]);//-0.05
     dummy.rotation.set(0,R(0,6.28),0);
@@ -1165,7 +1247,7 @@ function signTexture(type) {
     tri(1, '#d4141c', 14); tri(.72, '#ffffff', 6);
     g.fillStyle = g.strokeStyle = '#111';
 	
-	    if (type === 'slippery') {                          // auto che sbanda
+	if (type === 'slippery') {                          // auto che sbanda
       g.save();
       g.translate(128, 128); g.rotate(-0.1); g.translate(-128, -128);
 
@@ -1434,17 +1516,19 @@ function buildTile(tx,tz){
   
   
  const pos=new Float32Array(N*N*3),nor=new Float32Array(N*N*3),col=new Float32Array(N*N*3),ind=[];
- for(let a=0;a<N;a++)for(let b=0;b<N;b++){
-  const k=(a+1)*M+b+1,id=(a*N+b)*3,x=x0+a*CS,z=z0+b*CS;
-  pos[id]=x;pos[id+1]=hs[k];pos[id+2]=z;
-  const nx=(hs[k-M]-hs[k+M])/(2*CS),nz=(hs[k-1]-hs[k+1])/(2*CS),ny=1/Math.hypot(nx,1,nz);
-  nor[id]=nx*ny;nor[id+1]=ny;nor[id+2]=nz*ny;
-  altCol(hy[k],c3);const ad=ads[k];
-  if(ad<9){const t=clamp((9-ad)/4,0,1)*.8,vc=sf[k]===1?[.58,.48,.34]:[.38,.40,.30];for(let q=0;q<3;q++)c3[q]=lerp(c3[q],vc[q],t);}
-  if(ny<.8){const t=clamp((.8-ny)/.25,0,1)*.7;c3[0]=lerp(c3[0],.45,t);c3[1]=lerp(c3[1],.42,t);c3[2]=lerp(c3[2],.38,t);}
-  const jt=.92+hash2(Math.round(x/CS),Math.round(z/CS))*.16;
-  col[id]=c3[0]*jt;col[id+1]=c3[1]*jt;col[id+2]=c3[2]*jt;
-  if(a<N-1&&b<N-1){const i00=a*N+b;ind.push(i00,i00+1,i00+N,i00+N,i00+1,i00+N+1);}
+ for(let a=0;a<N;a++){
+  for(let b=0;b<N;b++){
+   const k=(a+1)*M+b+1,id=(a*N+b)*3,x=x0+a*CS,z=z0+b*CS;
+   pos[id]=x;pos[id+1]=hs[k];pos[id+2]=z;
+   const nx=(hs[k-M]-hs[k+M])/(2*CS),nz=(hs[k-1]-hs[k+1])/(2*CS),ny=1/Math.hypot(nx,1,nz);
+   nor[id]=nx*ny;nor[id+1]=ny;nor[id+2]=nz*ny;
+   altCol(hy[k],c3);const ad=ads[k];
+   if(ad<9){const t=clamp((9-ad)/4,0,1)*.8,vc=sf[k]===1?[.58,.48,.34]:[.38,.40,.30];for(let q=0;q<3;q++)c3[q]=lerp(c3[q],vc[q],t);}
+   if(ny<.8){const t=clamp((.8-ny)/.25,0,1)*.7;c3[0]=lerp(c3[0],.45,t);c3[1]=lerp(c3[1],.42,t);c3[2]=lerp(c3[2],.38,t);}
+   const jt=.92+hash2(Math.round(x/CS),Math.round(z/CS))*.16;
+   col[id]=c3[0]*jt;col[id+1]=c3[1]*jt;col[id+2]=c3[2]*jt;
+   if(a<N-1&&b<N-1){const i00=a*N+b;ind.push(i00,i00+1,i00+N,i00+N,i00+1,i00+N+1);}
+  }
  }
  const g=new THREE.BufferGeometry();
  g.setAttribute('position',new THREE.BufferAttribute(pos,3));g.setAttribute('normal',new THREE.BufferAttribute(nor,3));g.setAttribute('color',new THREE.BufferAttribute(col,3));g.setIndex(ind);
@@ -1455,6 +1539,7 @@ function buildTile(tx,tz){
  /////return{tx,tz,x0,z0,mesh,detail:false,obs:[],objs:[],hs,ads};//anche hs e ads per l'erba
  return{tx,tz,x0,z0,mesh,detail:false,obs:[],objs:[],hs,ads,born:performance.now(),dirty:false};//LA FIX?
 }
+
 function buildDetail(tile){
  tile.detail=true;
  const rng=mulberry((tile.tx*73856093)^(tile.tz*19349663));
@@ -1568,55 +1653,6 @@ function manageTiles(){
      tiles.set(key,nt);
    }
  }
-}
-
-function manageTilesOLD(){
- const ctx=Math.floor(car.x/TILE);
- const ctz=Math.floor(car.z/TILE);
- /*
- for(const[k,t]of tiles) { 
-   if(Math.abs(t.tx-ctx)>TR+1||Math.abs(t.tz-ctz)>TR+1){
-     disposeTile(t);
-	 tiles.delete(k);
-   }
- }*/
- 
- //LA FIX?
- const nowMs=performance.now();
- for(const[k,t]of tiles){
-   const far=Math.abs(t.tx-ctx)>TR+1||Math.abs(t.tz-ctz)>TR+1;
-   // dirty: si butta e verrà ricostruita nello stesso frame (budget 6 ms).
-   // Il ritardo di 400 ms evita di ricostruirla a ogni nuovo punto mentre la strada le passa accanto.
-   if(far||(t.dirty&&nowMs-t.born>400)){
-     disposeTile(t);
-     tiles.delete(k);
-   }
- }
- 
- 
- const ax=car.x+Math.sin(car.th)*TILE*1.5;
- const az=car.z+Math.cos(car.th)*TILE*1.5;
- const want=[];
- for(let a=-TR;a<=TR;a++){
-   for(let b=-TR;b<=TR;b++){
-     const tx=ctx+a;
-	 const tz=ctz+b;
-	 const t=tiles.get(tileKey(tx,tz));
-	 const d=((tx+.5)*TILE-ax)**2+((tz+.5)*TILE-az)**2;
-	 
-	 if(!t)want.push([d,tx,tz,0]);
-	 //else if(!t.detail&&Math.max(Math.abs(a),Math.abs(b))<=2)want.push([d,tx,tz,1]);
-	 
-	 //CLAUDE FIX
-	 else if(!t.detail&&Math.max(Math.abs(a),Math.abs(b))<=2)want.push([d+1e7,tx,tz,1]);
-   }
- }
- want.sort((p,q)=>p[0]-q[0]);
- const t0=performance.now();
- for(const w of want){
-   if(performance.now()-t0>6)break;
-   if(w[3]===0)tiles.set(tileKey(w[1],w[2]),buildTile(w[1],w[2]));
-   else buildDetail(tiles.get(tileKey(w[1],w[2])));}
 }
 
 /* ============ AUTO ============ */
@@ -1868,7 +1904,7 @@ function spawnCar(){
 
   const dc=deltaColors[currentDeltaColor];
   
-  const spoilerOn=Math.random()<0.75;
+  const spoilerOn=currentDeltaColor < 6 || Math.random()<0.5;
 
   model=buildCar({
     length:4.2, 
@@ -1930,22 +1966,6 @@ function spawnCar(){
         [].concat(o.material).forEach(m=>{m.side=THREE.DoubleSide;m.needsUpdate=true;});//fix bug ruote trasparenti
       });
     });
-
-  /*
-  // numeri di gara (texture nuova a ogni auto)
-  const numMat=new THREE.MeshLambertMaterial({
-    map:makeNumberTexture(1+Math.floor(Math.random()*99)),
-    transparent:true, polygonOffset:true, polygonOffsetFactor:-1, polygonOffsetUnits:-1
-  });
-  
-  const plateGeo=new THREE.PlaneGeometry(.45,.45);
-  plateLeft=new THREE.Mesh(plateGeo,numMat);
-  plateLeft.position.set(.90,.55,.20); plateLeft.rotation.y=Math.PI/2;
-  plateRight=new THREE.Mesh(plateGeo,numMat);
-  plateRight.position.set(-.90,.55,.20); plateRight.rotation.y=-Math.PI/2;
-  plateLeft.visible=plateRight.visible=numbersVisible;
-  model.add(plateLeft,plateRight);
-  */
 
   // abitacolo e volante
   steerWheel=buildInterior(model);
@@ -2094,6 +2114,8 @@ const WO=[[SEMI_CARREGGIATA, SEMI_PASSO], [-SEMI_CARREGGIATA, SEMI_PASSO], [SEMI
 ////const MU=[1.4,.95,.58];
 //const ST=[1,.65,.55];
 //const RR=[.015,.045,.07];
+
+//ADERENZA!
 //          tarG   tarB   tarNO  tarSI  grav1  grav2  rocks  offroad
 const MU = [1.35,  1.30,  1.40,  1.30,  0.95,  0.80,  0.85,  0.58]; // Aderenza per ogni materiale
 const ST = [1.05,  1.00,  1.10,  1.05,  0.95,  0.75,  0.85,  0.55]; // Sterzata
@@ -2526,9 +2548,6 @@ skMesh.renderOrder=1;
 scene.add(skMesh);
 
 
-//const SK_COL=[[.03,.03,.035],[.10,.075,.05],[.09,.06,.035]];   // asfalto, sterrato, fuori strada
-//const SK_ALPHA=[.65,.5,.45];
-
 //            asfalto        gravel chiaro  fango scuro    roccioso       offroad
 const SK_COL=[[.03,.03,.035],[.34,.26,.17],[.14,.10,.065],[.26,.27,.29],[.22,.16,.09]];
 const SK_ALPHA=[.65,.55,.6,.5,.5];
@@ -2608,9 +2627,10 @@ function updSkids(dt){
 let AC,E={};
 const SAMPLES=[
  {url:'evo-engine-idle.mp3',rpm:800},
- {url:'evo-engine-low.mp3', rpm:2000},
+// {url:'evo-engine-low.mp3', rpm:2000},
  {url:'evo-engine-mid.mp3', rpm:4000},
- {url:'evo-engine-high.mp3',rpm:8000}];
+// {url:'evo-engine-high.mp3',rpm:8000}
+ ];
 
 
 
@@ -2623,6 +2643,7 @@ function initAudio(){try{
  const dd=E.buf.getChannelData(0);for(let i=0;i<dd.length;i++)dd[i]=Math.random()*2-1;
  const noise=(f,q,type)=>{const s=AC.createBufferSource();s.buffer=E.buf;s.loop=true;
   const b=AC.createBiquadFilter();b.type=type;b.frequency.value=f;b.Q.value=q;s.connect(b);s.start();return b;};
+ 
  // motore: armoniche della frequenza di scoppio -> saturazione -> passa-basso
  E.bus=AC.createGain();
  const ws=AC.createWaveShaper(),cv=new Float32Array(256);
@@ -2632,13 +2653,45 @@ function initAudio(){try{
  const mk=(type,g)=>{const o=AC.createOscillator();o.type=type;const og=AC.createGain();og.gain.value=g;o.connect(og);og.connect(E.bus);o.start();return o;};
  E.o1=mk('sawtooth',.5);E.o2=mk('square',.18);E.o3=mk('sine',.5);E.o4=mk('sawtooth',.12);
  const lfo=AC.createOscillator(),lg=AC.createGain();lfo.frequency.value=8;lg.gain.value=1.5;lfo.connect(lg);lg.connect(E.o1.frequency);lfo.start(); // irregolarità
+ 
  // scarico (soffio grave)
  E.exh=noise(500,.8,'lowpass');E.exhG=AC.createGain();E.exhG.gain.value=0;E.exh.connect(E.exhG);E.exhG.connect(E.master);
+ 
  // turbina: fischio + soffio
  E.tw=AC.createOscillator();E.tw.type='sine';E.twG=AC.createGain();E.twG.gain.value=0;E.tw.connect(E.twG);E.twG.connect(E.master);E.tw.start();
  E.tn=noise(3500,3,'bandpass');E.tnG=AC.createGain();E.tnG.gain.value=0;E.tn.connect(E.tnG);E.tnG.connect(E.master);
+ 
  // rumore gomme/strada
- E.rd=noise(1100,.7,'bandpass');E.rdG=AC.createGain();E.rdG.gain.value=0;E.rd.connect(E.rdG);E.rdG.connect(E.master);
+ ////E.rd=noise(1100,.7,'bandpass');E.rdG=AC.createGain();E.rdG.gain.value=0;E.rd.connect(E.rdG);E.rdG.connect(E.master);
+ 
+  // rombo di rotolamento: solo grave, niente fruscio
+ E.rd=noise(220,.7,'lowpass');E.rdG=AC.createGain();E.rdG.gain.value=0;E.rd.connect(E.rdG);E.rdG.connect(E.master);
+ 
+ // stridio gomme (solo asfalto): rumore filtrato (non toni puri) + chatter stick-slip
+ E.sqSrc=AC.createBufferSource();E.sqSrc.buffer=E.buf;E.sqSrc.loop=true;E.sqSrc.start();
+ E.sqF=AC.createBiquadFilter();E.sqF.type='bandpass';E.sqF.frequency.value=1800;E.sqF.Q.value=11;
+ E.sqF2=AC.createBiquadFilter();E.sqF2.type='bandpass';E.sqF2.frequency.value=2650;E.sqF2.Q.value=9; // rapporto non armonico: resta aspro
+ E.sqG=AC.createGain();E.sqG.gain.value=0;
+ E.sqG2=AC.createGain();E.sqG2.gain.value=.55;
+ E.sqSrc.connect(E.sqF);E.sqSrc.connect(E.sqF2);
+ E.sqF.connect(E.sqG);E.sqF2.connect(E.sqG2);E.sqG2.connect(E.sqG);E.sqG.connect(E.master);
+ // chatter: lo stridio vero "sfarfalla" rapido e irregolare, non è un vibrato dolce
+ E.sqCh=AC.createOscillator();E.sqCh.type='square';E.sqCh.frequency.value=31;
+ E.sqChG=AC.createGain();E.sqChG.gain.value=.22;
+ E.sqCh.connect(E.sqChG);E.sqChG.connect(E.sqG.gain);E.sqCh.start();
+ // jitter lento e casuale sulle risonanze: il tono reale "scivola", non oscilla a sinusoide fissa
+ const sqJ=AC.createOscillator(),sqJg=AC.createGain(),sqJ2=AC.createOscillator(),sqJg2=AC.createGain();
+ sqJ.type='sawtooth';sqJ.frequency.value=5.3;sqJg.gain.value=180;sqJ.connect(sqJg);sqJg.connect(E.sqF.frequency);sqJ.start();
+ sqJ2.type='sawtooth';sqJ2.frequency.value=7.1;sqJg2.gain.value=260;sqJ2.connect(sqJg2);sqJg2.connect(E.sqF2.frequency);sqJ2.start();
+
+ // sterrato: crepitio morbido
+ E.gr=noise(1500,.5,'lowpass');E.grG=AC.createGain();E.grG.gain.value=0;E.gr.connect(E.grG);E.grG.connect(E.master);
+ 
+ 
+ 
+ 
+ 
+ 
  E.boost=0;E.popT=0;E.blowT=0;
  E.sampled=false;E.layers=[];
  E.sbus=AC.createGain();E.slp=AC.createBiquadFilter();E.slp.type='lowpass';E.slp.frequency.value=6000;
@@ -2655,6 +2708,7 @@ function initAudio(){try{
   }).catch(()=>{});                                                         // file mancanti: resta il motore sintetico
   }catch(e){AC=null;}
 }
+
 function burst(freq,type,peak,dur,q){
  const s=AC.createBufferSource();s.buffer=E.buf;
  const b=AC.createBiquadFilter();b.type=type;b.frequency.value=freq;b.Q.value=q||1;
@@ -2679,48 +2733,8 @@ function updAudio(skid,dt){
  if(E.boost>.5&&th<.1&&E.blowT<=0){
 	burst(2500,'bandpass',.35,.45,.8);
 	E.blowT=.8;
-	
-	/*
-	// Condizione per far partire la fiammata (es. gas rilasciato, contagiri alto e velocità > 5 km/h)
-    exhaustOffsets.forEach(offset => {
-      // Calcola la posizione mondiale dello scarico in base alla rotazione e posizione dell'auto
-      const fx = Math.sin(car.th), fz = Math.cos(car.th);
-      const lx = Math.cos(car.th), lz = -Math.sin(car.th);
-      
-      const worldX = car.x - fz * offset.z - lx * offset.x; // Adatta in base al sistema di riferimento
-      const worldY = car.yS + offset.y;
-      const worldZ = car.z - fx * offset.z - lz * offset.x;
-
-      // Emetti particelle di fiamma usando la funzione emit esistente
-      // Parametri: x, y, z, vx, vy, vz, r, g, b, vita, sizeInizio, sizeFine, alpha, gravità, drag
-      emit(
-        car.x - Math.sin(car.th)*2.2 + (offset.x * Math.cos(car.th)), 
-        car.yS + offset.y, 
-        car.z - Math.cos(car.th)*2.2 - (offset.x * Math.sin(car.th)),
-        //-Math.sin(car.th) * rnd(8, 12) + rnd(-1, 1), // spinta all'indietro
-        //rnd(-0.5, 0.5),
-        //-Math.cos(car.th) * rnd(8, 12) + rnd(-1, 1),
-		Math.sin(car.th)*1.2, 	//vx
-		rnd(-0.5, 0.5),			//vy
-		Math.cos(car.th)*1.2,	//vz
-        0,0,0,  //RGB (nero)
-        0.5,    // Durata brevissima della fiammata
-        0.2, 	//size inizio
-		0.1,	//size fine
-        0.9,    //opaca
-        0, 		//gravita
-		2       //attrito
-      );
-    });
-	*/
-	
-	
-	
-	
-	
-	
-	
-}   // pssh
+}
+  // pssh
  if(E.sampled){
   const L=E.layers;
   for(let i=0;i<L.length;i++){
@@ -2745,61 +2759,36 @@ function updAudio(skid,dt){
  
  E.tw.frequency.setTargetAtTime(1600+E.boost*3800,t,.1);
  E.twG.gain.setTargetAtTime(E.boost*.035,t,.1);E.tnG.gain.setTargetAtTime(E.boost*.05,t,.1);
- E.rdG.gain.setTargetAtTime(clamp(skid,0,1)*.3+clamp(Math.abs(car.u)/60,0,1)*.04,t,.06);
+ //rumore gomme/strada
+ ////////////E.rdG.gain.setTargetAtTime(clamp(skid,0,1)*.3+clamp(Math.abs(car.u)/60,0,1)*.04,t,.06);
+ 
+ const rw=wheelDat[2];
+ const asph=Math.abs(rw.d)<=5.4&&rw.surf<4;           // ruota posteriore su asfalto?
+ 
+ const skMark=Math.max(skW[2].k,skW[3].k);
+ const sk=clamp(Math.max(skid,skMark),0,1), spdN=clamp(Math.abs(car.u)/60,0,1);
+ const squeal=(asph&&!car.air)?clamp((sk-.1)/.4,0,1):0;
+ const pitch=1500+spdN*700+sk*400;
+ E.sqG.gain.setTargetAtTime(squeal*1.1,t,.03);          // il rumore vuole più gain dei toni puri
+ E.sqF.frequency.setTargetAtTime(pitch,t,.09);
+ E.sqF2.frequency.setTargetAtTime(pitch*1.42,t,.09);     // rapporto non armonico mantenuto anche in movimento
+ E.sqF.Q.setTargetAtTime(8+squeal*6,t,.1);               // più forte = risonanza più stretta/acuta
+ E.sqCh.frequency.setTargetAtTime(22+spdN*18,t,.15);     // il chatter accelera con la velocità
+ 
+ E.grG.gain.setTargetAtTime((asph||car.air)?0:clamp(sk*.6+spdN*.4,0,1)*.5,t,.05);   // era .35
+ E.rdG.gain.setTargetAtTime(spdN*.15,t,.06);
+ 
+ 
+ 
  
  if(th<.05&&rn>.45&&car.u>5){                                                       // scoppiettii in rilascio
   E.popT-=dt;
   if(E.popT<=0){
-	
-	/*
-	if(Math.random()<.6){
-	  burst(220,'lowpass',.5,.1,1);
-	  burst(1800,'bandpass',.22,.04,1);
-	
-	
-	
-	
-	  // Condizione per far partire la fiammata (es. gas rilasciato, contagiri alto e velocità > 5 km/h)
-	  const isDecelerating = (ctl.gas < 0.05 && car.rpm > 0.45 && Math.abs(car.u) > 5);
-
-	  if (isDecelerating) {
-		exhaustOffsets.forEach(offset => {
-		  // Calcola la posizione mondiale dello scarico in base alla rotazione e posizione dell'auto
-		  const fx = Math.sin(car.th), fz = Math.cos(car.th);
-		  const lx = Math.cos(car.th), lz = -Math.sin(car.th);
-		  
-		  const worldX = car.x - fz * offset.z - lx * offset.x; // Adatta in base al sistema di riferimento
-		  const worldY = car.yS + offset.y;
-		  const worldZ = car.z - fx * offset.z - lz * offset.x;
-
-		  // Emetti particelle di fiamma usando la funzione emit esistente
-		  // Parametri: x, y, z, vx, vy, vz, r, g, b, vita, sizeInizio, sizeFine, alpha, gravità, drag
-		  emit(
-			car.x - Math.sin(car.th)*2.2 + (offset.x * Math.cos(car.th)), 
-			car.yS + offset.y, 
-			car.z - Math.cos(car.th)*2.2 - (offset.x * Math.sin(car.th)),
-			//-Math.sin(car.th) * rnd(8, 12) + rnd(-1, 1), // spinta all'indietro
-			//rnd(-0.5, 0.5),
-			//-Math.cos(car.th) * rnd(8, 12) + rnd(-1, 1),
-			Math.sin(car.th)*1.2, 	//vx
-			rnd(-0.5, 0.5),			//vy
-			Math.cos(car.th)*1.2,	//vz
-			1.0, 0.85, 0.5, //RGB (arancione)
-			0.1,    // Durata brevissima della fiammata
-			0.8, 	//size inizio
-			0.1,	//size fine
-			0.9,    //opaca
-			0, 		//gravita
-			2       //attrito
-		  );
-		});
-	  }
-    }*/
-	
-	
-	if(Math.random()<.6){
-	 burst(220,'lowpass',.5,.1,1);
-	 burst(1800,'bandpass',.22,.04,1);
+		
+	if(Math.random()<.5){
+	 //burst(220,'lowpass',.5,.1,1);
+	 //burst(1800,'bandpass',.22,.04,1);
+	 pop(rnd(.7,1.5)*.8);
 	 exhaustFlames(rnd(.7,1.5));   // il botto e la fiamma partono insieme
 	}
 	
@@ -2809,7 +2798,22 @@ function updAudio(skid,dt){
  }
 }
 
-
+//scoppio
+function pop(power){
+ const t=AC.currentTime;
+ // schiocco: rumore passa-banda, medio-alto
+ const s=AC.createBufferSource();s.buffer=E.buf;
+ const b=AC.createBiquadFilter();b.type='bandpass';b.frequency.value=rnd(900,1800);b.Q.value=.9;
+ const g=AC.createGain();
+ g.gain.setValueAtTime(1.2*power,t);g.gain.exponentialRampToValueAtTime(.001,t+.09);
+ s.connect(b);b.connect(g);g.connect(E.master);s.start(t,Math.random()*1.5,.15);
+ // colpo: tono che scende, si sente anche sugli speaker piccoli
+ const o=AC.createOscillator();o.type='triangle';
+ o.frequency.setValueAtTime(rnd(140,200),t);o.frequency.exponentialRampToValueAtTime(50,t+.12);
+ const og=AC.createGain();
+ og.gain.setValueAtTime(.9*power,t);og.gain.exponentialRampToValueAtTime(.001,t+.14);
+ o.connect(og);og.connect(E.master);o.start(t);o.stop(t+.16);
+}
 
 
 /* ============ COLLISIONI OSTACOLI + DETRITI ============ */
@@ -2841,13 +2845,13 @@ function crash(cf,cl,sp){
   let bd=1e9;
   for(let w=0;w<4;w++){
     if(dmg.lost[w])continue;
-    const d=Math.hypot(cl-WO[w][0],cf-WO[w][1]);   // distanza contatto -> ruota
+    const d=Math.hypot(cl-WO[w][0],cf-WO[w][1]);
     if(d<bd){bd=d;best=w;}
   }
-  // ruota persa solo ad alta velocità, contatto vicino alla ruota, e con probabilità contenuta
   if(best>=0 && bd<1.05 && sev>.42 && Math.random() < (sev-.42)*1.2) loseWheel(best);
-  if(Math.abs(cf)>.5) dent(cl,cf,1.4+sev*.9,.52+sev*.45);//deve partire a prescindere l'ammaccatura!(X,Z,R,DEPTH)
+  dent(cl,cf,1.4+sev*.9,.52+sev*.45);   // tolta la soglia: ammacca sempre, anche sugli sportelli
 }
+
 const flyW=[];
 function loseWheel(w){
   if(dmg.lost[w])return; dmg.lost[w]=true;
@@ -2857,6 +2861,7 @@ function loseWheel(w){
   const s=Math.sin(car.th),c=Math.cos(car.th),side=(w%2?-1:1);
   flyW.push({m,vx:car.u*s+c*side*rnd(3,7),vy:rnd(4,8),vz:car.u*c-s*side*rnd(3,7),age:0});
 }
+
 function updFlyW(dt){
   for(let k=flyW.length-1;k>=0;k--){
     const d=flyW[k],m=d.m; d.age+=dt;
@@ -2909,6 +2914,8 @@ function hitObstacles(){
   if (o.type === 'post' || o.type === 'sign') {
     // paletto: si rompe, nessun rallentamento
 	destroyObs(o);
+	sfx(o.type, crashVol(sp), 80); 
+	
 	if (o.type === 'sign') spawnDebris(o,5,0.10,2);
 	else spawnDebris(o,3,0.10,2);
 	car.shake=Math.max(car.shake,.12);
@@ -2916,6 +2923,8 @@ function hitObstacles(){
   else if(o.type==='rock'){
     // roccia: si rompe, rallenta
 	destroyObs(o);
+	sfx('rock', crashVol(sp));
+	
 	spawnDebris(o,4+(Math.random()<.5?1:0),clamp(o.r*.33,.3,.7),3);
 	
 	crash(cf,cl,sp);//danneggiamento
@@ -2929,9 +2938,10 @@ function hitObstacles(){
   else if(o.type==='jersey'){
     // new jersey ferma l'auto se vado piano (sp == 20 circa 70kmh), si distrugge altrimenti
 	if (sp < 20) {
+		if(sp>1.5) sfx('jersey', crashVol(sp), 500);
 		
 		crash(cf,cl,sp);//danneggiamento
-	
+		
 		let d=Math.sqrt(d2);
 		let na=a;
 		let nb=b;
@@ -2951,6 +2961,8 @@ function hitObstacles(){
 	} else {
 		// Albero: ora si distrugge e genera detriti, rallentando l'auto
 		destroyObs(o);
+		sfx('jersey', 1);
+		
 		spawnDebris(o,8,clamp(o.r*.33,0.8,1.8),3);
 		
 		crash(cf,cl,sp);//danneggiamento
@@ -2965,9 +2977,10 @@ function hitObstacles(){
   else {
     // albero: ferma l'auto se vado piano (sp == 20 circa 70kmh), si distrugge altrimenti
 	if (sp < 20) {
+		if(sp>1.5) sfx('tree', crashVol(sp), 500);
 		
 		crash(cf,cl,sp);//danneggiamento
-	
+		
 		let d=Math.sqrt(d2);
 		let na=a;
 		let nb=b;
@@ -2987,6 +3000,8 @@ function hitObstacles(){
 	} else {
 		// Albero: ora si distrugge e genera detriti, rallentando l'auto
 		destroyObs(o);
+		sfx('tree', 1); 
+		
 		spawnDebris(o,8,clamp(o.r*.33,0.8,1.8),3);
 		
 		crash(cf,cl,sp);//danneggiamento
@@ -3123,7 +3138,9 @@ function updateWorld(dt){
 
  car.odo+=Math.abs(car.u)*dt;
  
- const c=terrain(car.x,car.z,S0);if(c.i>=0)car.idx=c.i;
+ const c=terrain(car.x,car.z,S0);
+ if(c.i>=0)car.idx=c.i;
+ 
  hitObstacles();
  updDebris(dt);
  updFlyW(dt);
@@ -3161,6 +3178,7 @@ function updateWorld(dt){
   //danneggiamento!
   if(dmg.lost[w]){ mu[w]*=.25; rr+=.12; }
  }
+ 
  car.muF=(mu[0]+mu[1])/2;
  car.muR=(mu[2]+mu[3])/2;
  car.stF=(st[0]+st[1])/2;
@@ -3215,7 +3233,7 @@ function updateWorld(dt){
  if(dmg.lost[3]){ car.pitchT+=0.08; car.rollT-=0.12; }
  
  
-  const GRAV=13;
+  const GRAV=13;//PERCHE' 13!?!
   const gy=ym/4;
   if(car.gy===null){
     car.gy=gy;
@@ -3390,7 +3408,7 @@ function updateWorld(dt){
  
  // audio & HUD
  const kmh=car.u*3.6;
- const tops=[40,70,100,135,170,215];
+ const tops=[55,85,115,145,180,215];
  let gi=0;
  while(gi<5&&Math.abs(kmh)>tops[gi])gi++;
  const low=gi?tops[gi-1]*.55:0;
@@ -3433,8 +3451,15 @@ function updateWorld(dt){
   const n=$('note');n.innerHTML=lastPace?`${lastPace.left?'◀':'▶'} ${sev(lastPace.R)} <small>${Math.max(0,Math.round(lastPace.dist-(car.idx-lastPace.from)*DS))} m</small>`:'';
  }
 }
-///const sev=R=>R<21?'TORNANTE':R<34?'1':R<52?'2':R<80?'3':R<125?'4':'5';
-const sev=R=>R<40?'TORNANTE​':R<55?'1':R<75?'2':R<100?'3':R<150?'4':'5';
+
+const sev = (R) => {
+  if (R < 40) return 'TORNANTE';
+  if (R < 55) return '1';
+  if (R < 75) return '2';
+  if (R < 100) return '3';
+  if (R < 150) return '4';
+  return '5';
+};
 
 function pace(){
  ensurePoints(car.idx+80);let i=car.idx+1;const end=i+55;
@@ -3449,7 +3474,6 @@ function pace(){
 const tach=(()=>{
  const el=$('rpm');
  const Y='currentColor';//#f5c518
- const YLancetta='#ffdd11';//piu chiara di #f5c518
  const Y_OFF='#775511';//f5c518
  const RED='#ee3311';
  const RED_OFF='#772211';//
@@ -3486,10 +3510,10 @@ const tach=(()=>{
  
  //MARCIA E KMH AL CENTRO
  h+=`<rect                    x="120" y="28" width="44" height="44" rx="3" ry="3" fill="#111111" stroke="${Y}" stroke-width="1"/>`;
- h+=`<text id="tachGearText"  x="140" y="50" fill="#ffffff" font-size="44" font-weight="900" text-anchor="middle" dominant-baseline="central" font-family="monospace">N</text>`;
+ h+=`<text id="tachGearText"  x="140" y="50" fill="${Y}" font-size="44" font-weight="900" text-anchor="middle" dominant-baseline="central" font-family="monospace">N</text>`;
  
  h+=`<rect                    x="58"  y="113" width="84" height="22"  rx="3" ry="3" fill="#111111" stroke="${Y}" stroke-width="1"/>`;
- h+=`<text id="tachSpeedText" x="138" y="124" fill="#ffffff" font-size="20" font-weight="700" text-anchor="end" dominant-baseline="central" font-family="monospace">0</text>`;
+ h+=`<text id="tachSpeedText" x="138" y="124" fill="${Y}" font-size="20" font-weight="700" text-anchor="end" dominant-baseline="central" font-family="monospace">0</text>`;
    
  //scritte contorno
  h+=`<text x="100" y="70" fill="${Y}" font-size="6" font-weight="700" text-anchor="middle" font-family="sans-serif">VEGLIA</text>`
@@ -3505,7 +3529,7 @@ const tach=(()=>{
   h+=`<circle class="td" cx="${x}" cy="${y}" r="${big?4:2}" fill="${v>=REDLINE?RED_OFF:Y_OFF}"/>`;
   dots.push({v,red:v>=REDLINE,on:false});
  }
- h+=`<polygon id="tachNeedle" points="-30,-5 82,-1 82,1 -30,5" fill="${YLancetta}" transform="translate(100 100)"/>`
+ h+=`<polygon id="tachNeedle" points="-30,-5 82,-1 82,1 -30,5" fill="${Y}" transform="translate(100 100)"/>`
    +`<circle cx="100" cy="100" r="9" fill="#111111"/></svg>`;
  el.innerHTML=h;
  const cs=el.querySelectorAll('.td');
@@ -3538,6 +3562,7 @@ function startGame(){
  running=true;
  $('start').style.display='none';
  initAudio();
+ sfxPreload();//crash
  if(AC&&AC.state==='suspended')AC.resume();
 }
 $('start').addEventListener('pointerdown',e=>{e.preventDefault();startGame();});
