@@ -1,9 +1,9 @@
-/* TODO:
+<!--
+TODO:
 ODO distanza percorsa in alto 
-MAPPA in alto a destra
 AUDIO di m
 FPS / GEOM
-*/
+-->
 
 <!DOCTYPE html>
 <html lang="it">
@@ -70,6 +70,21 @@ FPS / GEOM
 	  
 	  #rpm svg { display: block; }
 	  
+	  
+	  #rpm{ left:max(8px,env(safe-area-inset-left)); top:max(8px,env(safe-area-inset-top)); }
+
+	  #minimap{
+	    position:absolute;
+	    left:max(8px,env(safe-area-inset-left));
+	    top:calc(max(8px,env(safe-area-inset-top)) + 210px);
+	    width:150px;height:150px;
+	    border-radius:14px;
+	    background:rgba(10,25,10,.4);
+	    border:2px solid rgba(255,255,255,.35);
+	    backdrop-filter:blur(2px);
+	    filter:drop-shadow(0 2px 6px rgba(0,0,0,.6));
+	  }
+	  
 
       #top {
         left: 50%;
@@ -108,6 +123,25 @@ FPS / GEOM
         font-size: 18px;
         font-weight: 700;
       }
+	  
+	  #fps{
+	    left:max(16px,env(safe-area-inset-left));
+	    top:max(4px,env(safe-area-inset-top));
+	    font-size:10px;
+	    opacity:.5;
+	  }
+	  #tris{
+	    left:max(16px,env(safe-area-inset-left));
+	    top:calc(max(4px,env(safe-area-inset-top)) + 10px); /* sotto #fps */
+	    font-size:10px;
+	    opacity:.5;
+	  }
+	  #geom{
+	    left:max(16px,env(safe-area-inset-left));
+	    top:calc(max(4px,env(safe-area-inset-top)) + 20px); /* sotto #fps */
+	    font-size:10px;
+	    opacity:.5;
+	  }
 
       #resetBtn {
 	    position: fixed;
@@ -350,11 +384,16 @@ FPS / GEOM
     <div id="hud">
       <div id="rpm"></div>
 	  
+	  <canvas id="minimap" width="150" height="150"></canvas>
+	  
       <div id="top"><span id="surf">ASFALTO</span>
         <div id="note"></div>
       </div>
 	  
       <div id="dist">0.00 km</div>
+	  <div id="fps">60 FPS</div>
+	  <div id="tris">0 TRIANGLES</div>
+	  <div id="geom">0 GEOMETRIES</div>
 	  
 	  <div id="camBox">
 		  <button class="btn toggled-blue" data-hold="zoomIn">+</button>
@@ -428,6 +467,7 @@ let headlightsOn = false;//luci accese anche di giorno, e prudenza... sempre!
 let shadowsOn=true;
 let camInside = false;
 let glassInside = null;   // ultimo stato applicato
+let fpsSmooth=60;
 
 //danneggiamento!
 const dmg={toe:[0,0,0,0],camber:[0,0,0,0],lost:[false,false,false,false],pull:0};
@@ -1146,7 +1186,7 @@ const grassMatMobile = new THREE.ShaderMaterial({
 
 //erba ciuffo!
 const IS_MOBILE = matchMedia('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-const GRASS_N = IS_MOBILE ? 10000 : 30000; // tentativi per tile
+const GRASS_N = IS_MOBILE ? 5000 : 50000; // tentativi per tile
 const GRASS_WIDTH  = 0.05;                // semi-larghezza alla base del filo
 const GRASS_NUMBER = IS_MOBILE ? 3 : 5;   // fili per ciuffo
 const GRASS_HEIGHT = 0.5;   // altezza del filo
@@ -1323,6 +1363,26 @@ function makeSign(type) {
 
 
 
+/* ===== TRANSIZIONE TRA SUPERFICI ===== */
+const TRANS_PTS=4;                       // 4 punti x 3 m = 12 m (una ripetizione di texture)
+const transMats={};
+function transMat(surf){
+ if(transMats[surf])return transMats[surf];
+ const src=roadMats[surf].map.image;     // canvas della texture del tratto precedente
+ const c=document.createElement('canvas');c.width=src.width;c.height=src.height;
+ const g=c.getContext('2d');
+ g.drawImage(src,0,0);
+ g.globalCompositeOperation='destination-in';   // maschera alpha: opaco all'inizio, trasparente alla fine
+ const gr=g.createLinearGradient(0,c.height,0,0);
+ gr.addColorStop(0,'rgba(0,0,0,1)');gr.addColorStop(1,'rgba(0,0,0,0)');
+ g.fillStyle=gr;g.fillRect(0,0,c.width,c.height);
+ const t=new THREE.CanvasTexture(c);
+ t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=4;
+ return transMats[surf]=new THREE.MeshLambertMaterial({
+  map:t,transparent:true,depthWrite:false,
+  polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4});
+}
+
 
 /* ============ CHUNK STRADA (nastro + paletti) ============ */
 function buildChunk(c){
@@ -1356,6 +1416,28 @@ function buildChunk(c){
  scene.add(road);
  ch.objs.push(road);
  ch.geos.push(rg);
+ 
+ // transizione: la superficie precedente sfuma sopra l'inizio di questo chunk
+ if(c>0){
+  const ps=surfOf(c-1);
+  if(ps!==surf){
+   const tn=TRANS_PTS+1;
+   const tp=new Float32Array(tn*6),tu=new Float32Array(tn*4),ti=[];
+   for(let j=0;j<tn;j++){
+    const p=P[i0+j],lx=Math.cos(p.h),lz=-Math.sin(p.h),y=p.y+.062;
+    tp.set([p.x+lx*HALF,y,p.z+lz*HALF,p.x-lx*HALF,y,p.z-lz*HALF],j*6);
+    tu.set([0,p.s/12,1,p.s/12],j*4);
+    if(j<tn-1){const a=j*2;ti.push(a,a+1,a+2,a+1,a+3,a+2);}
+   }
+   const tg=new THREE.BufferGeometry();
+   tg.setAttribute('position',new THREE.BufferAttribute(tp,3));
+   tg.setAttribute('uv',new THREE.BufferAttribute(tu,2));
+   tg.setIndex(ti);tg.computeVertexNormals();
+   const tm=new THREE.Mesh(tg,transMat(ps));
+   tm.receiveShadow=true;
+   scene.add(tm);ch.objs.push(tm);ch.geos.push(tg);
+  }
+ }
 
 
  
@@ -3134,7 +3216,10 @@ function resetCar(){
  //danneggiamento rimosso
  repairCar();
 }
+
+
 function updateWorld(dt){
+ fpsSmooth+=((dt>0?1/dt:fpsSmooth)-fpsSmooth)*.1;//fps
 
  car.odo+=Math.abs(car.u)*dt;
  
@@ -3420,6 +3505,11 @@ function updateWorld(dt){
   updAudio(running?slip:0,dt);
   
  if(++hudTick%3===0){
+  drawMinimap();//minimappa
+  $('fps').textContent=Math.round(fpsSmooth)+' FPS';//fps
+  $('geom').textContent=renderer.info.memory.geometries+' GEOMETRIES';//geometrie
+  $('tris').textContent=renderer.info.render.triangles+' TRIANGLES';//triangoli
+ 
   const kmhVal = Math.max(0,Math.round(Math.abs(kmh)));
   const geaVal = car.u<-.5?'R':(Math.abs(kmh)<1&&ctl.gas<.1)?'N':gi+1;
   
@@ -3554,6 +3644,49 @@ const tach=(()=>{
 
 
 
+//minimappa!
+const mm=$('minimap');
+const mmCtx=mm.getContext('2d');
+const MM_RADIUS=1000; // metri di raggio visibile: più alto = mappa più dezoomata
+
+function drawMinimap(){
+ const W=mm.width,H=mm.height,scale=Math.min(W,H)/(MM_RADIUS*2);
+ mmCtx.clearRect(0,0,W,H);
+
+ // griglia ogni 100m
+ const GRID=100;
+ const halfW=W/2/scale,halfH=H/2/scale;
+ const xStart=Math.floor((car.x-halfW)/GRID)*GRID;
+ const zStart=Math.floor((car.z-halfH)/GRID)*GRID;
+ mmCtx.strokeStyle='rgba(255,255,255,.15)';mmCtx.lineWidth=1;mmCtx.beginPath();
+ for(let x=xStart;x<=car.x+halfW;x+=GRID){
+  const px=W/2+(x-car.x)*scale;
+  mmCtx.moveTo(px,0);mmCtx.lineTo(px,H);
+ }
+ for(let z=zStart;z<=car.z+halfH;z+=GRID){
+  const py=H/2-(z-car.z)*scale;
+  mmCtx.moveTo(0,py);mmCtx.lineTo(W,py);
+ }
+ mmCtx.stroke();
+
+ // strada
+ const back=Math.min(car.idx,Math.round(MM_RADIUS/DS));
+ const fwd=Math.round(MM_RADIUS/DS);
+ const i0=car.idx-back,i1=Math.min(P.length-1,car.idx+fwd);
+ ensurePoints(i1);
+ mmCtx.strokeStyle='#ffdd55';mmCtx.lineWidth=2;mmCtx.beginPath();
+ for(let i=i0;i<=i1;i++){
+  const p=P[i],px=W/2+(p.x-car.x)*scale,py=H/2-(p.z-car.z)*scale;
+  i===i0?mmCtx.moveTo(px,py):mmCtx.lineTo(px,py);
+ }
+ mmCtx.stroke();
+
+ // marcatore auto
+ mmCtx.save();mmCtx.translate(W/2,H/2);mmCtx.rotate(car.th);
+ mmCtx.fillStyle='#ff3333';mmCtx.beginPath();
+ mmCtx.moveTo(0,-7);mmCtx.lineTo(5,6);mmCtx.lineTo(-5,6);mmCtx.closePath();mmCtx.fill();
+ mmCtx.restore();
+}
 
 
 /* ============ AVVIO / LOOP ============ */
