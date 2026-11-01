@@ -1185,7 +1185,13 @@ const grassMatMobile = new THREE.ShaderMaterial({
 
 
 //erba ciuffo!
-const IS_MOBILE = matchMedia('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+const params = new URLSearchParams(location.search);
+const USE_MOBILE = params.get('mobile') === '1';
+const USE_DESKTOP = params.get('mobile') === '0';
+const IS_MOBILE = !USE_DESKTOP && (USE_MOBILE || matchMedia('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+
+console.log(USE_DESKTOP, USE_MOBILE, '--> ' + IS_MOBILE);
+
 const GRASS_N = IS_MOBILE ? 5000 : 50000; // tentativi per tile
 const GRASS_WIDTH  = 0.05;                // semi-larghezza alla base del filo
 const GRASS_NUMBER = IS_MOBILE ? 3 : 5;   // fili per ciuffo
