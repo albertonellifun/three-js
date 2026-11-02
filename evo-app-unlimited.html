@@ -1,10 +1,3 @@
-<!--
-TODO:
-ODO distanza percorsa in alto 
-AUDIO di m
-FPS / GEOM
--->
-
 <!DOCTYPE html>
 <html lang="it">
 
@@ -52,12 +45,28 @@ FPS / GEOM
         text-shadow: 0 2px 6px rgba(0, 0, 0, .6);
       }
 
+	  #gauges{
+	    /*
+		position:absolute;
+	    left:max(4px,env(safe-area-inset-left));
+	    top:max(4px,env(safe-area-inset-top));
+	    display:flex;
+	    align-items:flex-start;
+		justify-content: flex-start;
+	    gap:0px;
+		*/
+	  }
+
 	  #rpm {
 	    width: 150px;
 	    height: 150px;
 	    margin-top: 6px;
 	    filter: drop-shadow(0 2px 6px rgba(0,0,0,.6));
 		color: #f5c518;
+		z-index: 999;
+		position:absolute;
+	    left:max(4px,env(safe-area-inset-left));
+	    top:max(4px,env(safe-area-inset-top));
 	  }
 	  #rpm #tachNeedle { color: #ffee11; }
 	  #rpm #tachGearText { color: #ffffff; }
@@ -69,28 +78,47 @@ FPS / GEOM
 	  #rpm.night #tachSpeedText { color: #ffee11; }
 	  
 	  #rpm svg { display: block; }
-	  
-	  
-	  #rpm{ left:max(8px,env(safe-area-inset-left)); top:max(8px,env(safe-area-inset-top)); }
+
+	  #spd {
+	    width: 110px;
+	    height: 110px;
+	    filter: drop-shadow(0 2px 6px rgba(0,0,0,.6));
+	    color: #f5c518;
+		z-index: 888;
+		position:absolute;
+	    left:max(4px,env(safe-area-inset-left) + 120px);
+	    top:max(4px,env(safe-area-inset-top));
+	  }
+	  #spd #spdNeedle { color: #ffee11; }
+	  #spd #tachOdoText { color: #ffffff; }
+
+	  #spd.night { color: #ff8811; }
+	  #spd.night #spdNeedle { color: #ffff33; }
+	  #spd.night #tachOdoText { color: #ffee11; }
+
+	  #spd svg { display: block; }
 
 	  #minimap{
 	    position:absolute;
-	    left:max(8px,env(safe-area-inset-left));
-	    top:calc(max(8px,env(safe-area-inset-top)) + 210px);
-	    width:150px;height:150px;
-	    border-radius:14px;
+	    left:max(4px,env(safe-area-inset-left));
+	    top:calc(max(4px,env(safe-area-inset-top)) + 160px);
+	    width:150px;
+		height:150px;
+	    border-radius:50%;
 	    background:rgba(10,25,10,.4);
 	    border:2px solid rgba(255,255,255,.35);
 	    backdrop-filter:blur(2px);
 	    filter:drop-shadow(0 2px 6px rgba(0,0,0,.6));
+		display:none;
 	  }
 	  
 
       #top {
         left: 50%;
-        top: max(8px, env(safe-area-inset-top));
+        top: max(4px, env(safe-area-inset-top));
         transform: translateX(-50%);
         text-align: center;
+		z-index: 1111;
       }
 
       #surf {
@@ -100,7 +128,7 @@ FPS / GEOM
         letter-spacing: .08em;
         padding: 3px 12px;
         border-radius: 12px;
-        background: rgba(0, 0, 0, .4);
+        background: rgba(0, 0, 0, .75);
       }
 
       #note {
@@ -109,6 +137,9 @@ FPS / GEOM
         font-weight: 800;
         min-height: 28px;
         color: #fde047;
+		padding: 3px 12px;
+        border-radius: 12px;
+        background: rgba(0, 0, 0, .75);
       }
 
       #note small {
@@ -117,42 +148,39 @@ FPS / GEOM
         font-weight: 600;
       }
 
-      #dist {
-        right: max(16px, env(safe-area-inset-right));
-        top: max(10px, env(safe-area-inset-top));
-        font-size: 18px;
-        font-weight: 700;
-      }
-	  
+	  #showCamBoxBtn {
+	    right:max(4px,env(safe-area-inset-right));
+	    top:max(4px,env(safe-area-inset-top));
+	    position:absolute;
+		z-index: 999;
+	  }
+
 	  #fps{
-	    left:max(16px,env(safe-area-inset-left));
+	    right:max(4px,env(safe-area-inset-right) + 50px);
 	    top:max(4px,env(safe-area-inset-top));
 	    font-size:10px;
-	    opacity:.5;
 	  }
 	  #tris{
-	    left:max(16px,env(safe-area-inset-left));
+	    right:max(4px,env(safe-area-inset-right) + 50px);
 	    top:calc(max(4px,env(safe-area-inset-top)) + 10px); /* sotto #fps */
 	    font-size:10px;
-	    opacity:.5;
 	  }
 	  #geom{
-	    left:max(16px,env(safe-area-inset-left));
+	    right:max(4px,env(safe-area-inset-right) + 50px);
 	    top:calc(max(4px,env(safe-area-inset-top)) + 20px); /* sotto #fps */
 	    font-size:10px;
-	    opacity:.5;
 	  }
 
       #resetBtn {
 	    position: fixed;
-	    right: max(14px, env(safe-area-inset-right));
-	    bottom: calc(max(14px, env(safe-area-inset-bottom)) + 158px);  /* sopra i pedali (gas 150px + 8px) */
+	    right: max(4px, env(safe-area-inset-right));
+	    bottom: calc(max(4px, env(safe-area-inset-bottom)) + 158px);  /* sopra i pedali (gas 150px + 8px) */
 	    width: 160px;            /* stessa larghezza di freno + gas (85 + 75) */
 	    height: 40px;
 	    border-radius: 18px;
 	    border: 2px solid rgba(255, 255, 255, .4);
 	    background: rgba(255, 255, 255, .14);
-	    backdrop-filter: blur(3px);
+	    backdrop-filter: blur(2px);
 	    color: #fff;
 	    font-size: 15px;
 	    font-weight: 800;
@@ -162,14 +190,14 @@ FPS / GEOM
 
       #pad {
         position: fixed;
-        left: max(14px, env(safe-area-inset-left));
-        bottom: max(14px, env(safe-area-inset-bottom));
+        left: max(4px, env(safe-area-inset-left));
+        bottom: max(4px, env(safe-area-inset-bottom));
         width: min(48vw, 320px);
         height: 110px;
         border-radius: 55px;
         background: rgba(255, 255, 255, .14);
         border: 2px solid rgba(255, 255, 255, .35);
-        backdrop-filter: blur(3px);
+        backdrop-filter: blur(2px);
       }
 
       #pad span {
@@ -207,7 +235,7 @@ FPS / GEOM
         letter-spacing: .06em;
         background: rgba(255, 255, 255, .14);
         border: 2px solid rgba(255, 255, 255, .4);
-        backdrop-filter: blur(3px);
+        backdrop-filter: blur(2px);
       }
 
       .btn.on {
@@ -215,8 +243,8 @@ FPS / GEOM
       }
 
       #bGas {
-        right: max(14px, env(safe-area-inset-right));
-        bottom: max(14px, env(safe-area-inset-bottom));
+        right: max(4px, env(safe-area-inset-right));
+        bottom: max(4px, env(safe-area-inset-bottom));
         width: 75px;
         height: 150px;
         border-color: #4ade80;
@@ -224,8 +252,8 @@ FPS / GEOM
       }
 
       #bBrake {
-        right: calc(max(14px, env(safe-area-inset-right)) + 85px);
-        bottom: max(14px, env(safe-area-inset-bottom));
+        right: calc(max(4px, env(safe-area-inset-right)) + 85px);
+        bottom: max(4px, env(safe-area-inset-bottom));
         width: 75px;
         height: 80px;
         border-color: #f87171;
@@ -233,8 +261,8 @@ FPS / GEOM
       }
 
       #bHB {
-        right: calc(max(14px, env(safe-area-inset-right)) + 85px);
-        bottom: calc(max(14px, env(safe-area-inset-bottom)) + 88px);
+        right: calc(max(4px, env(safe-area-inset-right)) + 85px);
+        bottom: calc(max(4px, env(safe-area-inset-bottom)) + 88px);
         width: 75px;
         height: 60px;
         border-color: #fb923c;
@@ -317,12 +345,13 @@ FPS / GEOM
 	  
 	#camBox{
 	  position:fixed;
-	  right:max(12px,env(safe-area-inset-right));
-	  top:calc(max(8px,env(safe-area-inset-top)) + 34px);
+	  right:max(4px,env(safe-area-inset-right));
+	  top:calc(max(4px,env(safe-area-inset-top)) + 34px);
 	  display:grid;
 	  grid-template-columns:repeat(2,44px);
 	  gap:6px;
 	  z-index:4;
+	  display:none;
 	}
     #camBox .btn{
 	  position:static;
@@ -382,7 +411,10 @@ FPS / GEOM
 
   <body>
     <div id="hud">
-      <div id="rpm"></div>
+      <div id="gauges">
+        <div id="rpm"></div>
+        <div id="spd"></div>
+      </div>
 	  
 	  <canvas id="minimap" width="150" height="150"></canvas>
 	  
@@ -390,7 +422,6 @@ FPS / GEOM
         <div id="note"></div>
       </div>
 	  
-      <div id="dist">0.00 km</div>
 	  <div id="fps">60 FPS</div>
 	  <div id="tris">0 TRIANGLES</div>
 	  <div id="geom">0 GEOMETRIES</div>
@@ -411,17 +442,23 @@ FPS / GEOM
 		  <button class="btn"              id="hoodBtn"     title="Camera cofano">🚘</button>
 		  <button class="btn"              id="cockpitBtn"  title="Camera abitacolo">💺</button>
 		  <button class="btn"              id="camResetBtn" title="Reset Visuale">👁️</button>
+		  <button class="btn"              id="showMapBtn"  title="Mappa">🗺️</button>
 		  <button class="btn"              id="muteBtn"     title="Interruttore Altoparlante">🔇</button>
 		</div>
     </div>
-    <button id="resetBtn" title="Rimetti in strada">🧑‍🔧 RESET 🔧</button>
+    
+	<button class="btn" id="showCamBoxBtn" title="Configura">⚙️</button>
+	<button id="resetBtn" title="Rimetti in strada">🧑‍🔧 RESET 🔧</button>
+	
     <div id="pad"><span>◀ STERZO ▶</span>
       <div id="knob"></div>
     </div>
+	
     <div class="btn" id="bHB">F. MANO</div>
     <div class="btn" id="bBrake">FRENO</div>
     <div class="btn" id="bGas">ACCEL</div>
-    <div id="start">
+    
+	<div id="start">
       <h1>RALLY EVO <span class="tricolore">Tricolore</span></h1>
 	  <div class="stamp">UNLIMITED</div>
       <p>
@@ -587,6 +624,46 @@ function toggleShadows(){
 }
 shadowBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();toggleShadows();});
 
+
+//menu cambox
+const showCamBoxBtn = $('showCamBoxBtn');//menu on/off
+let showCamBox = false;
+function toggleShowCamBoxBtn() {
+  showCamBox = !showCamBox;
+  if (showCamBox) {
+    $('camBox').style.display = 'grid';
+    showCamBoxBtn.classList.add('toggled-red');
+  } else {
+    $('camBox').style.display = 'none';
+    showCamBoxBtn.classList.remove('toggled-red');
+  }
+}
+showCamBoxBtn.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  e.stopPropagation();
+  toggleShowCamBoxBtn();
+});
+
+
+
+//minimappa
+const showMapBtn = $('showMapBtn');//mappa on/off
+let showMap = false;
+function toggleMapBtn() {
+  showMap = !showMap;
+  if (showMap) {
+    $('minimap').style.display = 'block';
+    showMapBtn.classList.add('toggled-red');
+  } else {
+    $('minimap').style.display = 'none';
+    showMapBtn.classList.remove('toggled-red');
+  }
+}
+showMapBtn.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  e.stopPropagation();
+  toggleMapBtn();
+});
 
 
 const lightsBtn = $('lightsBtn');//fari
@@ -3583,7 +3660,7 @@ function updateWorld(dt){
   updAudio(running?slip:0,dt);
   
  if(++hudTick%3===0){
-  drawMinimap();//minimappa
+  if(showMap) drawMinimap();//minimappa
   $('fps').textContent=Math.round(fpsSmooth)+' FPS';//fps
   $('geom').textContent=renderer.info.memory.geometries+' GEOMETRIES';//geometrie
   $('tris').textContent=renderer.info.render.triangles+' TRIANGLES';//triangoli
@@ -3591,12 +3668,13 @@ function updateWorld(dt){
   const kmhVal = Math.max(0,Math.round(Math.abs(kmh)));
   const geaVal = car.u<-.5?'R':(Math.abs(kmh)<1&&ctl.gas<.1)?'N':gi+1;
   
-  //$('spd').textContent=kmhVal;
-  //$('gear').textContent=geaVal;
-  
   //veglia borletti
-  tach(car.rpm,kmhVal,geaVal);
+  tach(car.rpm,kmhVal,geaVal,car.odo/1000);
   $('rpm').classList.toggle('night',headlightsOn);
+  
+  //tachimetro velocita secondo quadrante
+  tachSpeed(kmhVal, car.odo/1000);
+  $('spd').classList.toggle('night',headlightsOn);
   
   const off=Math.abs(c.d)>5.4;
   const mode=modeArr[Math.floor(car.idx/CH)];
@@ -3614,7 +3692,6 @@ function updateWorld(dt){
 
   $('surf').textContent=off?'​⚡ FUORI STRADA ​⚡':surfText;
   
-  $('dist').textContent=(car.odo/1000).toFixed(1)+' km';
   if(hudTick%12===0)lastPace=pace();
   const n=$('note');n.innerHTML=lastPace?`${lastPace.left?'◀':'▶'} ${sev(lastPace.R)} <small>${Math.max(0,Math.round(lastPace.dist-(car.idx-lastPace.from)*DS))} m</small>`:'';
  }
@@ -3663,7 +3740,7 @@ const tach=(()=>{
  const TICK_OUT=64;
  const tk=v=>{const [x1,y1]=pt(v,TICK_IN),[x2,y2]=pt(v,TICK_OUT);return `M${x1} ${y1}L${x2} ${y2}`;};
  
- let h=`<svg viewBox="0 0 200 200" width="${IS_MOBILE ? 150 : 200}" height="${IS_MOBILE ? 150 : 200}">`
+ let h=`<svg viewBox="0 0 200 200" width="${IS_MOBILE ? 150 : 150}" height="${IS_MOBILE ? 150 : 150}">`
   +`<circle cx="100" cy="100" r="98" fill="#1b1b1b" stroke="#666" stroke-width="2"/>`//esterno grigio
   +`<circle cx="100" cy="100" r="92" fill="none"    stroke="#c8892a" stroke-width="1.5"/>`//esterno giallo
   +`<path d="M${ax} ${ay}A${ARC_R} ${ARC_R} 0 1 1 ${bx} ${by}" fill="none" stroke="#c8892a" stroke-width="3"/>`//interno giallo
@@ -3705,7 +3782,7 @@ const tach=(()=>{
  const speedText=el.querySelector('#tachSpeedText');
  const gearText=el.querySelector('#tachGearText');
  
- return function(r,kmh,gea){                        // r = car.rpm (0.22..1)
+ return function(r,kmh,gea,odo){                        // r = car.rpm (0.22..1)
   const rpm=900+clamp((r-.22)/.78,0,1)*6600;  // stessa scala dell'audio
   needle.setAttribute('transform',`translate(100 100) rotate(${rpm/6000*180})`);
   for(let i=0;i<dots.length;i++){
@@ -3715,8 +3792,63 @@ const tach=(()=>{
    d.on=on;
    cs[i].setAttribute('fill',on?(d.red?RED:Y):(d.red?RED_OFF:Y_OFF));
   }
-  if(speedText) speedText.textContent = kmh + ' kmh';
+  if(speedText) speedText.textContent = odo.toFixed(1).padStart(7,'0');//kmh + ' kmh';
   if(gearText) gearText.textContent = gea;
+ };
+})();
+
+/* ============ TACHIMETRO VELOCITÀ - 2° QUADRANTE (SVG) ============ */
+const tachSpeed=(()=>{
+ const el=$('spd');
+ const Y='currentColor';
+ const MAXSPD=200;             // scala 0-240 km/h, come un vero tachimetro
+ const SWEEP=240;              // gradi totali di scala, stessa impostazione del contagiri
+ const START_ANGLE = 220;
+ const a = (v) => (START_ANGLE + (v/MAXSPD)*SWEEP) * Math.PI/180;
+ const CXY = 100;
+ const pt=(v,r)=>[CXY+Math.cos(a(v))*r,CXY+Math.sin(a(v))*r];
+
+ const ARC_R=55;
+ const [ax,ay]=pt(0,ARC_R);
+ const [bx,by]=pt(MAXSPD,ARC_R);
+
+ //no righe sul tachimetro velocita
+ const TICK_IN=54;
+ const TICK_OUT=64;
+ const tk=v=>{const [x1,y1]=pt(v,TICK_IN),[x2,y2]=pt(v,TICK_OUT);return `M${x1} ${y1}L${x2} ${y2}`;};
+
+ let h=`<svg viewBox="0 0 200 200" width="${IS_MOBILE ? 110 : 110}" height="${IS_MOBILE ? 110 : 110}">`
+  +`<circle cx="100" cy="100" r="98" fill="#1b1b1b" stroke="#666" stroke-width="2"/>`
+  +`<circle cx="100" cy="100" r="92" fill="none"    stroke="#c8892a" stroke-width="1.5"/>`
+  +`<path d="M${ax} ${ay}A${ARC_R} ${ARC_R} 0 1 1 ${bx} ${by}" fill="none" stroke="#c8892a" stroke-width="3"/>`;
+
+ //scritte km/h
+ for(let n=0;n<=MAXSPD;n+=20){
+  const [x,y]=pt(n,75);
+  h+=`<text x="${x}" y="${y}" fill="${Y}" font-size="15" font-weight="900" text-anchor="middle" dominant-baseline="central" font-family="monospace">${n}</text>`
+  + `<path d="${tk(n)}"    stroke="${Y}" stroke-width="3"/>`;
+ }
+
+ //scritte contorno
+ h+=`<text x="100" y="70" fill="${Y}" font-size="6" font-weight="700" text-anchor="middle" font-family="sans-serif">VEGLIA</text>`
+   +`<text x="100" y="80" fill="${Y}" font-size="5" font-weight="700" text-anchor="middle" font-family="sans-serif">BORLETTI</text>`
+   +`<text x="100" y="140" fill="${Y}" font-size="8" font-weight="700" text-anchor="middle" font-family="sans-serif">KM/H</text>`;
+
+ //contachilometri in basso (distanza percorsa)
+ //h+=`<rect                   x="54" y="148" width="92" height="22" rx="3" ry="3" fill="#111111" stroke="${Y}" stroke-width="1"/>`;
+ //h+=`<text id="tachOdoText"  x="140" y="159" fill="${Y}" font-size="15" font-weight="700" text-anchor="end" dominant-baseline="central" font-family="monospace">0000.0</text>`;
+
+ h+=`<polygon id="spdNeedle" points="-26,-4 72,-1 72,1 -26,4" fill="${Y}" transform="translate(100 100)"/>`
+   +`<circle cx="100" cy="100" r="8" fill="#111111"/></svg>`;
+ el.innerHTML=h;
+
+ const needle=el.querySelector('#spdNeedle');
+ const odoText=el.querySelector('#tachOdoText');
+
+ return function(kmh,odoKm){                        // kmh = velocità, odoKm = distanza percorsa in km
+  const ang=START_ANGLE + clamp(kmh,0,MAXSPD)/MAXSPD*SWEEP;
+  needle.setAttribute('transform',`translate(100 100) rotate(${ang})`);
+  //if(odoText) odoText.textContent=odoKm.toFixed(1).padStart(5,'0')+' ODO';
  };
 })();
 
