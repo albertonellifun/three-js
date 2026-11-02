@@ -1287,6 +1287,11 @@ const GRASS_TUFT_WIDTH  = 0.08;                // semi-larghezza alla base del f
 const GRASS_TUFT_NUMBER = 8;
 const GRASS_TUFT_LEAN   = 0.2;   // inclinazione della punta verso l'esterno
 
+//densita mobile minore di desktop!!!
+const TREES_NUMBER = IS_MOBILE ? 50 : 100;
+const ROCKS_NUMBER = IS_MOBILE ? 25 : 45;
+const PUDDLES_NUMBER = IS_MOBILE ? 5 : 10;
+ 
 const makeGrassGeo = (number, width, height, spread, lean) => {
   const p = [];
   const step = (Math.PI * 2) / number;
@@ -1318,7 +1323,9 @@ grassTuftMatMobile.fragmentShader = grassTuftMatMobile.fragmentShader.replace(
 grassTuftMatMobile.needsUpdate = true;
 
 function addGrass(tile,R){
-  const {hs,ads,x0,z0}=tile, M=N+2, pts=[];
+  const {hs,ads,x0,z0}=tile;
+  const M=N+2;
+  const pts=[];
   const puddles=tile.obs.filter(o=>o.type==='puddle');//
   const smp=(arr,x,z)=>{
     const fx=clamp((x-x0)/CS,0,N-1.001);
@@ -1822,8 +1829,9 @@ function buildDetail(tile){
  const PR=(a,b)=>a+puddleRng()*(b-a);
  const trees=[];
  const rocks=[];
+ 
  //densità alberi (100 tentativi)
- for(let k=0;k<100;k++){
+ for(let k=0;k<TREES_NUMBER;k++){
   const x=tile.x0+R(0,TILE);
   const z=tile.z0+R(0,TILE);
 	terrain(x,z,TQ);
@@ -1831,8 +1839,9 @@ function buildDetail(tile){
 	const dens=clamp((vnoise(x*.008+100,z*.008)-.3)*3,0,1);
   if(R(0,1)<.1+dens*.9)trees.push([x,TQ.y-.2,z,R(.8,1.7)]);
  }
+ 
  //densita rocce (45 tentativi)
- for(let k=0;k<45;k++){
+ for(let k=0;k<ROCKS_NUMBER;k++){
   const x=tile.x0+R(0,TILE);
   const z=tile.z0+R(0,TILE);
 	terrain(x,z,TQ);
@@ -1841,7 +1850,7 @@ function buildDetail(tile){
  }
 
  const puddles=[];
- for(let k=0;k<10;k++){
+ for(let k=0;k<PUDDLES_NUMBER;k++){
   const x=tile.x0+PR(0,TILE);
   const z=tile.z0+PR(0,TILE);
   terrain(x,z,TQ);
@@ -1868,27 +1877,29 @@ function buildDetail(tile){
   
  
  inst(pineGeo,pineMat,trees,(t,i,im)=>{
-	dummy.position.set(t[0],t[1],t[2]);
+  dummy.position.set(t[0],t[1],t[2]);
   dummy.rotation.set(0,R(0,6.28),0);
   dummy.scale.set(t[3]*R(.85,1.15),t[3],t[3]*R(.85,1.15));
-	dummy.updateMatrix();
-	im.setMatrixAt(i,dummy.matrix);
+  dummy.updateMatrix();
+  im.setMatrixAt(i,dummy.matrix);
   const b=R(.7,1.2);
   im.setColorAt(i,tmpCol.setRGB(b,b*R(.95,1.1),b));
     tile.obs.push({type:'tree',x:t[0],y:t[1],z:t[2],r:.35*t[3]+.1,col: [0.10, 0.28, 0.13],im,i});
  });
+ 
  inst(rockGeo,rockMat,rocks,(t,i,im)=>{
-  const sx=t[3]*R(.8,1.4);
-  const sz=t[3]*R(.8,1.3);
-	dummy.position.set(t[0],t[1]+t[3]*.2,t[2]);
+  const sx=t[3]*R(.6,1.0);
+  const sz=t[3]*R(.6,1.0);
+  dummy.position.set(t[0],t[1]+t[3]*.2,t[2]);
   dummy.rotation.set(R(0,3),R(0,3),R(0,3));
   dummy.scale.set(sx,t[3]*R(.6,1),sz);
-	dummy.updateMatrix();
-	im.setMatrixAt(i,dummy.matrix);
+  dummy.updateMatrix();
+  im.setMatrixAt(i,dummy.matrix);
   const g=R(.4,.62);
 	im.setColorAt(i,tmpCol.setRGB(g,g*.97,g*.92));
     tile.obs.push({type:'rock',x:t[0],y:t[1]+.3,z:t[2],r:Math.max(sx,sz)*.85,col:[g,g*.97,g*.92],im,i});
  });
+ 
    if(puddles.length){
       for(const puddle of puddles){
        const rotation=PR(0,Math.PI*2);
@@ -1902,8 +1913,10 @@ function buildDetail(tile){
        tile.obs.push({type:'puddle',x:puddle.x,y:puddle.y+PUDDLE_SURFACE_OFFSET,z:puddle.z,r:Math.max(puddle.rx,puddle.rz),armed:true});
       }
    }
+   
  const tufts=[];
- for(let k=0;k<70;k++){
+ const TUFTS_NUMBER = IS_MOBILE ? 40 : 70;
+ for(let k=0;k<TUFTS_NUMBER;k++){
   const x=tile.x0+R(0,TILE);
   const z=tile.z0+R(0,TILE);
 	if(overlapsPuddle(x,z,puddles))continue;
@@ -3782,7 +3795,7 @@ function updateWorld(dt){
   if(showMap) drawMinimap();//minimappa
   $('fps').textContent=Math.round(fpsSmooth)+' FPS';//fps
   $('geom').textContent=renderer.info.memory.geometries+' GEOMETRIES';//geometrie
-  $('tris').textContent=renderer.info.render.triangles+' TRIANGLES';//triangoli
+  $('tris').textContent=((renderer.info.render.triangles*0.001)|0)+'K TRIANGLES';//triangoli
  
   const kmhVal = Math.max(0,Math.round(Math.abs(kmh)));
   const geaVal = car.u<-.5?'R':(Math.abs(kmh)<1&&ctl.gas<.1)?'N':gi+1;
@@ -4006,6 +4019,11 @@ function drawMinimap(){
  const W=mm.width,H=mm.height,scale=Math.min(W,H)/(MM_RADIUS*2);
  mmCtx.clearRect(0,0,W,H);
  
+ //fix mappa specchiata
+ mmCtx.save();
+ mmCtx.translate(W,0);
+ mmCtx.scale(-1,1);
+ 
  updateMinimapTerrain();
  const span=MM_RADIUS*2*scale;
  const tdx=W/2+(mmTerrCX-MM_RADIUS-car.x)*scale;
@@ -4046,6 +4064,8 @@ function drawMinimap(){
  mmCtx.fillStyle='#ff3333';mmCtx.beginPath();
  mmCtx.moveTo(0,-7);mmCtx.lineTo(5,6);mmCtx.lineTo(-5,6);mmCtx.closePath();mmCtx.fill();
  mmCtx.restore();
+ 
+ mmCtx.restore();//restora lo specchiato
 }
 
 
