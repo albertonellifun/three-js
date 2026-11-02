@@ -1176,47 +1176,6 @@ const rockGeo=new THREE.IcosahedronGeometry(1,0),rockMat=new THREE.MeshLambertMa
 
 
 
-function colorizeShade(geo,r,g,b,jit){
- const k=1-jit+Math.random()*jit*2;
- return colorize(geo,r*k,g*k,b*k);
-}
-
-function buildBushGeo(){
- const parts=[];
-
- // zeppetti marroni alla base (2-4 tronchetti divergenti)
- const nTrunks=2+Math.floor(Math.random()*3);
- for(let i=0;i<nTrunks;i++){
-  const a=Math.random()*Math.PI*2,lean=.15+Math.random()*.25;
-  const h=.16+Math.random()*.12,rBase=.05+Math.random()*.07;
-  const g=new THREE.CylinderGeometry(.03,.055,h,5).translate(0,h/2,0);
-  g.rotateZ(lean);g.rotateY(a);
-  g.translate(Math.cos(a)*rBase,0,Math.sin(a)*rBase);
-  parts.push(colorizeShade(g,.30,.20,.13,.15));
- }
-
- // ammasso di triangoli verdi (tetraedri sparsi, più fitti al centro)
- const nLeaves=18+Math.floor(Math.random()*8);
- for(let i=0;i<nLeaves;i++){
-  const a=Math.random()*Math.PI*2,rad=Math.pow(Math.random(),1.4)*.55;
-  const h=.22+Math.random()*.68,size=.14+Math.random()*.17;
-  const g=new THREE.TetrahedronGeometry(size,0);
-  g.rotateX(Math.random()*Math.PI);g.rotateY(Math.random()*Math.PI);g.rotateZ(Math.random()*Math.PI);
-  g.translate(Math.cos(a)*rad,h,Math.sin(a)*rad);
-  parts.push(colorizeShade(g,.14,.33,.14,.3));
- }
-
- // fiori di ginestra
- const nFlowers=4+Math.floor(Math.random()*4);
- for(let i=0;i<nFlowers;i++){
-  const a=Math.random()*Math.PI*2,rad=.15+Math.random()*.42;
-  const h=.35+Math.random()*.62,size=.045+Math.random()*.025;
-  parts.push(colorize(new THREE.IcosahedronGeometry(size,0).translate(Math.cos(a)*rad,h,Math.sin(a)*rad),1,.82,.15));
- }
- return mergeGeos(parts);
-}
-const bushGeo=buildBushGeo();
-const bushMat=new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true});
 
 
 
@@ -1317,32 +1276,50 @@ const IS_MOBILE = !USE_DESKTOP && (USE_MOBILE || matchMedia('(pointer: coarse)')
 
 console.log(USE_DESKTOP, USE_MOBILE, '--> ' + IS_MOBILE);
 
-const GRASS_N = IS_MOBILE ? 6000 : 36000; // tentativi per tile
+const GRASS_N = IS_MOBILE ? 5000 : 30000; // tentativi per tile
 const GRASS_WIDTH  = 0.05;                // semi-larghezza alla base del filo
 const GRASS_NUMBER = IS_MOBILE ? 3 : 5;   // fili per ciuffo
 const GRASS_HEIGHT = 0.5;   // altezza del filo
 const GRASS_SPREAD = 0.2;   // raggio di dispersione dei fili alla base
 const GRASS_LEAN   = 0.1;   // inclinazione della punta verso l'esterno
+const GRASS_TUFT_BASE_WIDTH = 0.15;
+const GRASS_TUFT_WIDTH  = 0.08;                // semi-larghezza alla base del filo
+const GRASS_TUFT_NUMBER = 8;
+const GRASS_TUFT_LEAN   = 0.2;   // inclinazione della punta verso l'esterno
 
-const grassGeo = (() => {
+const makeGrassGeo = (number, width, height, spread, lean) => {
   const p = [];
-  const step = (Math.PI * 2) / GRASS_NUMBER;
-  for (let i = 0; i < GRASS_NUMBER; i++) {
+  const step = (Math.PI * 2) / number;
+  for (let i = 0; i < number; i++) {
     const a = i * step, c = Math.cos(a), s = Math.sin(a);
-    const ox = s * GRASS_SPREAD, oz = c * GRASS_SPREAD;
+    const ox = s * spread, oz = c * spread;
     p.push(
-      ox - GRASS_WIDTH * c, 0,            oz + GRASS_WIDTH * s,
-      ox + GRASS_WIDTH * c, 0,            oz - GRASS_WIDTH * s,
-      ox + s * GRASS_LEAN,  GRASS_HEIGHT, oz + c * GRASS_LEAN
+      ox - width * c, 0,       oz + width * s,
+      ox + width * c, 0,       oz - width * s,
+      ox + s * lean,   height, oz + c * lean
     );
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
   return g;
-})();
+};
+const grassGeo = makeGrassGeo(GRASS_NUMBER, GRASS_WIDTH, GRASS_HEIGHT, GRASS_SPREAD, GRASS_LEAN);
+const grassTuftGeo = makeGrassGeo(GRASS_TUFT_NUMBER, GRASS_WIDTH, GRASS_HEIGHT, GRASS_TUFT_BASE_WIDTH, GRASS_TUFT_LEAN);
+const grassTuftMat = grassMat.clone();
+grassTuftMat.fragmentShader = grassTuftMat.fragmentShader
+  .replace('vec3 base=mix(vec3(.10,.22,.07),vec3(.20,.34,.10),vT);', 'vec3 base=mix(vec3(.18,.13,.06),vec3(.30,.22,.10),vT);')
+  .replace('vec3 tip=mix(vec3(.35,.55,.18),vec3(.55,.60,.25),vT);', 'vec3 tip=mix(vec3(.42,.30,.13),vec3(.60,.42,.20),vT);');
+grassTuftMat.needsUpdate = true;
+const grassTuftMatMobile = grassMatMobile.clone();
+grassTuftMatMobile.fragmentShader = grassTuftMatMobile.fragmentShader.replace(
+  'vec3 grassColor = vec3(0.22, 0.40, 0.11);',
+  'vec3 grassColor = vec3(0.35, 0.24, 0.10);'
+);
+grassTuftMatMobile.needsUpdate = true;
 
 function addGrass(tile,R){
   const {hs,ads,x0,z0}=tile, M=N+2, pts=[];
+  const puddles=tile.obs.filter(o=>o.type==='puddle');//
   const smp=(arr,x,z)=>{
     const fx=clamp((x-x0)/CS,0,N-1.001);
 	const fz=clamp((z-z0)/CS,0,N-1.001);
@@ -1359,6 +1336,7 @@ function addGrass(tile,R){
   for(let k=0;k<GRASS_N;k++){
     const x=x0+R(0,TILE);
     const z=z0+R(0,TILE);
+    if(overlapsPuddle(x,z,puddles))continue;//
     if(smp(ads,x,z)<5.5)continue;   // più vicino alla strada
     const y=smp(hs,x,z);
 	//if(y>52)continue;		  		// no erba oltre 52m di altitudine
@@ -1477,6 +1455,13 @@ const SIGN_H = 3.0;      // altezza del palo (un po piu alti, vengono interrati 
 const SIGN_SIZE = 1.5;   // lato del cartello
 const signPoleGeo = new THREE.CylinderGeometry(.035, .035, SIGN_H, 6).translate(0, SIGN_H / 2, 0);
 const signPlaneGeo = new THREE.PlaneGeometry(SIGN_SIZE, SIGN_SIZE);
+const signCircleGeo = new THREE.CircleGeometry(SIGN_SIZE / 2, 32);
+const signTriangleShape = new THREE.Shape();
+signTriangleShape.moveTo(0, SIGN_SIZE / 2);
+signTriangleShape.lineTo(SIGN_SIZE / 2, -SIGN_SIZE / 2);
+signTriangleShape.lineTo(-SIGN_SIZE / 2, -SIGN_SIZE / 2);
+signTriangleShape.closePath();
+const signTriangleGeo = new THREE.ShapeGeometry(signTriangleShape);
 const SIGN_FACE_Y = SIGN_H - SIGN_SIZE / 2 - .1;
 const signPoleMat = new THREE.MeshLambertMaterial({ color: 0x8a9096 });
 const signBackMat = new THREE.MeshBasicMaterial({ color: 0x555a60, alphaTest: .5 });
@@ -1485,8 +1470,8 @@ function makeSign(type) {
   const g = new THREE.Group();
   const pole = new THREE.Mesh(signPoleGeo, signPoleMat);
   const face = new THREE.Mesh(signPlaneGeo, signMat(type)); face.position.set(0, SIGN_FACE_Y, .04);
-  const back = new THREE.Mesh(signPlaneGeo, signBackMat);  back.position.set(0, SIGN_FACE_Y, .03); back.rotation.y = Math.PI;
-  back.material.map = signTexture(type);
+  const backGeo = type === 'limit50' ? signCircleGeo : signTriangleGeo;
+  const back = new THREE.Mesh(backGeo, signBackMat);  back.position.set(0, SIGN_FACE_Y, .03); back.rotation.y = Math.PI;
   pole.castShadow = true;
   g.add(pole, face, back);
   return g;
@@ -1753,31 +1738,122 @@ function buildTile(tx,tz){
  return{tx,tz,x0,z0,mesh,detail:false,obs:[],objs:[],hs,ads,born:performance.now(),dirty:false};//LA FIX?
 }
 
+//pozze d'acqua!!!
+const puddleGeo=(()=>{
+ const g=new THREE.CircleGeometry(1,32).rotateX(-Math.PI/2);
+ const pos=g.attributes.position;
+ for(let i=1;i<pos.count-1;i++){
+  const angle=Math.atan2(pos.getZ(i),pos.getX(i));
+  const radius=.88+hash2(i,73)*.16;
+  pos.setXYZ(i,Math.cos(angle)*radius,0,Math.sin(angle)*radius);
+ }
+ g.computeVertexNormals();
+ return g;
+})();
+
+const puddleTexture=(()=>{
+ const c=document.createElement('canvas');c.width=c.height=128;
+ const g=c.getContext('2d');
+ g.save();
+ g.beginPath();g.ellipse(64,64,63,63,0,0,Math.PI*2);g.clip();
+ const gr=g.createRadialGradient(56,50,4,64,64,68);
+ gr.addColorStop(0,'rgba(205,241,249,.78)');
+ gr.addColorStop(.38,'rgba(101,164,183,.76)');
+ gr.addColorStop(.78,'rgba(46,91,110,.65)');
+ gr.addColorStop(1,'rgba(35,70,88,0)');
+ g.fillStyle=gr;g.fillRect(0,0,128,128);
+ g.lineCap='round';
+ g.strokeStyle='rgba(237,251,255,.82)';g.lineWidth=3;
+ g.beginPath();g.ellipse(58,47,25,6,-.18,Math.PI*1.05,Math.PI*1.85);g.stroke();
+ g.strokeStyle='rgba(195,232,241,.6)';g.lineWidth=2;
+ g.beginPath();g.moveTo(77,72);g.quadraticCurveTo(89,69,96,63);g.stroke();
+ g.restore();
+ const t=new THREE.CanvasTexture(c);t.anisotropy=4;
+ return t;
+})();
+
+const puddleMat=new THREE.MeshPhongMaterial({
+ map:puddleTexture,color:0xffffff,specular:0xb9e8f4,shininess:100,
+ transparent:true,opacity:.88,depthWrite:false,side:THREE.DoubleSide,
+ polygonOffset:true,polygonOffsetFactor:-3,polygonOffsetUnits:-3
+});
+
+const PUDDLE_SURFACE_OFFSET=.055;
+
+function visibleGroundY(q){
+ const terrainY=q.y-(0.08+1.5*q.sl)*(1-sm(q.ad,5.2,8.5));
+ if(q.i<0||Math.abs(q.d)>=HALF)return terrainY;
+ const p=P[q.i],next=P[q.i+1];
+ return Math.max(terrainY,lerp(p.y,next.y,q.t)+.06);
+}
+
+function makePuddleGeometry(p,rotation){
+ const geometry=puddleGeo.clone();
+ const positions=geometry.attributes.position;
+ const c=Math.cos(rotation),s=Math.sin(rotation);
+ for(let i=0;i<positions.count;i++){
+  const localX=positions.getX(i),localZ=positions.getZ(i);
+  const worldX=p.x+(localX*c+localZ*s)*p.rx;
+  const worldZ=p.z+(-localX*s+localZ*c)*p.rz;
+  terrain(worldX,worldZ,TQ);
+  positions.setY(i,visibleGroundY(TQ)-p.y+PUDDLE_SURFACE_OFFSET);
+ }
+ positions.needsUpdate=true;
+ geometry.computeVertexNormals();
+ return geometry;
+}
+
+const PUDDLE_GRASS_CLEARANCE=.5;//distanza dall'erba
+
+function overlapsPuddle(x,z,puddles){
+ for(const puddle of puddles){
+  const radius=puddle.r+PUDDLE_GRASS_CLEARANCE;
+  const dx=x-puddle.x,dz=z-puddle.z;
+  if(dx*dx+dz*dz<radius*radius)return true;
+ }
+ return false;
+}
+
 function buildDetail(tile){
  tile.detail=true;
  const rng=mulberry((tile.tx*73856093)^(tile.tz*19349663));
  const R=(a,b)=>a+rng()*(b-a);
+ const puddleRng=mulberry(((tile.tx*73856093)^(tile.tz*19349663)^0x27d4eb2d)>>>0);
+ const PR=(a,b)=>a+puddleRng()*(b-a);
  const trees=[];
  const rocks=[];
  //densità alberi (100 tentativi)
  for(let k=0;k<100;k++){
-	const x=tile.x0+rng()*TILE;
-	const z=tile.z0+rng()*TILE;
+  const x=tile.x0+R(0,TILE);
+  const z=tile.z0+R(0,TILE);
 	terrain(x,z,TQ);
 	if(TQ.ad<9||TQ.y>58)continue;
 	const dens=clamp((vnoise(x*.008+100,z*.008)-.3)*3,0,1);
-	if(rng()<.1+dens*.9)trees.push([x,TQ.y-.2,z,R(.8,1.7)]);
+  if(R(0,1)<.1+dens*.9)trees.push([x,TQ.y-.2,z,R(.8,1.7)]);
  }
  //densita rocce (45 tentativi)
  for(let k=0;k<45;k++){
-	const x=tile.x0+rng()*TILE;
-	const z=tile.z0+rng()*TILE;
+  const x=tile.x0+R(0,TILE);
+  const z=tile.z0+R(0,TILE);
 	terrain(x,z,TQ);
 	if(TQ.ad<6.5)continue;
-	if(rng()<.35)rocks.push([x,TQ.y,z,R(.6,1.9)]);
+  if(R(0,1)<.35)rocks.push([x,TQ.y,z,R(.6,1.9)]);
+ }
+
+ const puddles=[];
+ for(let k=0;k<10;k++){
+  const x=tile.x0+PR(0,TILE);
+  const z=tile.z0+PR(0,TILE);
+  terrain(x,z,TQ);
+  const onAsphalt=TQ.surf<4&&Math.abs(TQ.d)<HALF-.6;
+  const onGreen=Math.abs(TQ.d)>HALF+1.5&&TQ.y<56;
+  if((!onAsphalt&&!onGreen)||PR(0,1)>(onAsphalt?.22:.09))continue;
+  const rx=1+PR(1,2);
+  const rz=1+PR(1,2);
+  puddles.push({x,y:visibleGroundY(TQ),z,rx,rz});
  }
  
-  const inst=(geo,mat,arr,fn,shadow=true)=>{   // era (geo,mat,arr,fn)
+  const inst=(geo,mat,arr,fn,shadow=true,grass=false)=>{
 	if(!arr.length)return;
 	const im=new THREE.InstancedMesh(geo,mat,arr.length);
 	arr.forEach((t,i)=>fn(t,i,im));
@@ -1785,6 +1861,7 @@ function buildDetail(tile){
 	if(im.instanceColor)im.instanceColor.needsUpdate=true;
 	im.frustumCulled=false;
 	im.castShadow=shadow;   // era sempre true
+  if(grass){im.userData.grass=true;im.visible=grassOn;}
 	scene.add(im);
 	tile.objs.push(im);
   };
@@ -1792,45 +1869,56 @@ function buildDetail(tile){
  
  inst(pineGeo,pineMat,trees,(t,i,im)=>{
 	dummy.position.set(t[0],t[1],t[2]);
-	dummy.rotation.set(0,rnd(0,6.28),0);
-	dummy.scale.set(t[3]*rnd(.85,1.15),t[3],t[3]*rnd(.85,1.15));
+  dummy.rotation.set(0,R(0,6.28),0);
+  dummy.scale.set(t[3]*R(.85,1.15),t[3],t[3]*R(.85,1.15));
 	dummy.updateMatrix();
 	im.setMatrixAt(i,dummy.matrix);
-	const b=rnd(.7,1.2);
-	im.setColorAt(i,tmpCol.setRGB(b,b*rnd(.95,1.1),b));
+  const b=R(.7,1.2);
+  im.setColorAt(i,tmpCol.setRGB(b,b*R(.95,1.1),b));
     tile.obs.push({type:'tree',x:t[0],y:t[1],z:t[2],r:.35*t[3]+.1,col: [0.10, 0.28, 0.13],im,i});
  });
  inst(rockGeo,rockMat,rocks,(t,i,im)=>{
-	const sx=t[3]*rnd(.8,1.4);
-	const sz=t[3]*rnd(.8,1.3);
+  const sx=t[3]*R(.8,1.4);
+  const sz=t[3]*R(.8,1.3);
 	dummy.position.set(t[0],t[1]+t[3]*.2,t[2]);
-	dummy.rotation.set(rnd(0,3),rnd(0,3),rnd(0,3));
-	dummy.scale.set(sx,t[3]*rnd(.6,1),sz);
+  dummy.rotation.set(R(0,3),R(0,3),R(0,3));
+  dummy.scale.set(sx,t[3]*R(.6,1),sz);
 	dummy.updateMatrix();
 	im.setMatrixAt(i,dummy.matrix);
-	const g=rnd(.4,.62);
+  const g=R(.4,.62);
 	im.setColorAt(i,tmpCol.setRGB(g,g*.97,g*.92));
     tile.obs.push({type:'rock',x:t[0],y:t[1]+.3,z:t[2],r:Math.max(sx,sz)*.85,col:[g,g*.97,g*.92],im,i});
  });
-  //densità cespugli (leggeri, niente collisione)
- const bushes=[];
+   if(puddles.length){
+      for(const puddle of puddles){
+       const rotation=PR(0,Math.PI*2);
+       const mesh=new THREE.Mesh(makePuddleGeometry(puddle,rotation),puddleMat);
+       mesh.position.set(puddle.x,puddle.y,puddle.z);
+       mesh.rotation.y=rotation;
+       mesh.scale.set(puddle.rx,1,puddle.rz);
+       mesh.frustumCulled=false;
+       scene.add(mesh);
+       tile.objs.push(mesh);
+       tile.obs.push({type:'puddle',x:puddle.x,y:puddle.y+PUDDLE_SURFACE_OFFSET,z:puddle.z,r:Math.max(puddle.rx,puddle.rz),armed:true});
+      }
+   }
+ const tufts=[];
  for(let k=0;k<70;k++){
-	const x=tile.x0+rng()*TILE;
-	const z=tile.z0+rng()*TILE;
+  const x=tile.x0+R(0,TILE);
+  const z=tile.z0+R(0,TILE);
+	if(overlapsPuddle(x,z,puddles))continue;
 	terrain(x,z,TQ);
 	if(TQ.ad<5.5||TQ.y>56)continue;
 	const dens=clamp((vnoise(x*.02+300,z*.02)-.25)*3,0,1);
-	if(rng()<.18+dens*.7)bushes.push([x,TQ.y-.1,z,R(.6,1.3)]);
+  if(R(0,1)<.18+dens*.7)tufts.push([x,TQ.y-.1,z,R(.6,1.3)]);
  }
- inst(bushGeo,bushMat,bushes,(t,i,im)=>{
+  inst(grassTuftGeo,IS_MOBILE?grassTuftMatMobile:grassTuftMat,tufts,(t,i,im)=>{
 	dummy.position.set(t[0],t[1],t[2]);
-	dummy.rotation.set(0,rnd(0,6.28),0);
-	dummy.scale.set(t[3]*rnd(.85,1.15),t[3]*rnd(.8,1.1),t[3]*rnd(.85,1.15));
+  dummy.rotation.set(0,R(0,6.28),0);
+  dummy.scale.set(t[3]*R(.85,1.15),t[3]*2.25,t[3]*R(.85,1.15));
 	dummy.updateMatrix();
 	im.setMatrixAt(i,dummy.matrix);
-	const b=rnd(.75,1.15);
-	im.setColorAt(i,tmpCol.setRGB(b,b*rnd(.95,1.08),b));
- },false);   // false = niente ombra
+  },false,true);
  
  
  addGrass(tile,R);//erba
@@ -1839,7 +1927,11 @@ function buildDetail(tile){
 function disposeTile(t){
   scene.remove(t.mesh);
   t.mesh.geometry.dispose();
-  t.objs.forEach(o=>{scene.remove(o);o.dispose();});
+  t.objs.forEach(o=>{
+    scene.remove(o);
+    if(o.isInstancedMesh)o.dispose();
+    else if(o.geometry)o.geometry.dispose();
+  });
 }
 
 
@@ -1893,7 +1985,7 @@ function manageTiles(){
 }
 
 /* ============ AUTO ============ */
-const car={x:0,z:0,th:0,u:0,v:0,r:0,steer:0,idx:3,yS:0,pitch:0,roll:0,pitchT:0,rollT:0,axF:0,ayF:0,muF:1.4,muR:1.4,stF:1,stR:1,rr:.015,spin:0,rpm:0,camYaw:0,camY:0,shake:0,brkLatch:false,odo:0,vy:0,gvy:0,gy:null,air:false,cool:0};
+const car={x:0,z:0,th:0,u:0,v:0,r:0,steer:0,idx:3,yS:0,pitch:0,roll:0,pitchT:0,rollT:0,axF:0,ayF:0,muF:1.4,muR:1.4,brakeF:1,brakeR:1,stF:1,stR:1,rr:.015,spin:0,rpm:0,camYaw:0,camY:0,shake:0,brkLatch:false,odo:0,vy:0,gvy:0,gy:null,air:false,cool:0};
 const carG=new THREE.Group();
 const wheelPivots=[],wheelMeshes=[];
 
@@ -2357,6 +2449,7 @@ const WO=[[SEMI_CARREGGIATA, SEMI_PASSO], [-SEMI_CARREGGIATA, SEMI_PASSO], [SEMI
 const MU = [1.35,  1.30,  1.40,  1.30,  0.95,  0.80,  0.85,  0.58]; // Aderenza per ogni materiale
 const ST = [1.05,  1.00,  1.10,  1.05,  0.95,  0.75,  0.85,  0.55]; // Sterzata
 const RR = [0.015, 0.015, 0.015, 0.015, 0.045, 0.10,  0.05,  0.07]; // Resistenza al rotolamento
+const BRAKE_GRIP = [1, 1, 1, 1, 0.85, 0.75, 0.80, 0.60];
 
 
 
@@ -2526,13 +2619,13 @@ function physics(dt){
  car.spin=clamp((Fd*.6)/FmR-1,0,1.5)*(u<22?1:.5);
  let Fxf=Fd*.4,Fxr=Fd*.6;
  const bf=Nf/(Nf+Nr);
- Fxf+=Math.max(Fb*bf,-.8*FmF);Fxr+=Math.max(Fb*(1-bf),-.8*FmR);   // ABS: max 80% di aderenza
+ Fxf+=Math.max(Fb*bf,-.8*FmF*car.brakeF);Fxr+=Math.max(Fb*(1-bf),-.8*FmR*car.brakeR);
  
  if(ctl.hb > .5){
   //freno a mano funziona sempre!
   // Se u è positivo frena verso l'indietro (-), se u è negativo frena in avanti (+)
   const dir = Math.sign(u) || 1;
-  Fxr = -dir * FmR * .95;
+  Fxr = -dir * FmR * car.brakeR * .95;
   FmR *= .9;
 }
  
@@ -2681,6 +2774,19 @@ function emit(x,y,z,vx,vy,vz,r,g,b,life,s0,s1,a0,grav,drag){
  const i=pHead;pHead=(pHead+1)%NP;
  pPos[i*3]=x;pPos[i*3+1]=y;pPos[i*3+2]=z;pVel[i*3]=vx;pVel[i*3+1]=vy;pVel[i*3+2]=vz;
  pCol[i*3]=r;pCol[i*3+1]=g;pCol[i*3+2]=b;pLife[i]=pMax[i]=life;pS0[i]=s0;pS1[i]=s1;pA0[i]=a0;pG[i]=grav;pD[i]=drag;
+}
+function splashWater(o,speed){
+ const count=Math.round(clamp(speed*.8,8,24));
+ const forward=Math.min(speed*.12,5);
+ for(let i=0;i<count;i++){
+  const angle=rnd(0,Math.PI*2),radius=rnd(0,o.r*.55);
+  const blue=Math.random()<.55;
+  emit(o.x+Math.cos(angle)*radius,o.y+.06,o.z+Math.sin(angle)*radius,
+   Math.cos(angle)*rnd(1.2,3)-Math.sin(car.th)*forward,
+   rnd(2.5,5.5)+Math.min(speed*.06,2),
+   Math.sin(angle)*rnd(1.2,3)-Math.cos(car.th)*forward,
+   blue?.42:.82,blue?.76:.94,1,rnd(.35,.65),.08,rnd(.18,.32),.9,9,1.2);
+ }
 }
 function updParticles(dt){
  for(let i=0;i<NP;i++){
@@ -3145,8 +3251,17 @@ function hitObstacles(){
   const a=lf-cf;
   const b=ll-cl;
   const d2=a*a+b*b;
-  if(d2>=o.r*o.r)continue;
   const sp=Math.hypot(car.u,car.v);//velocita
+
+  if(o.type==='puddle'){
+   if(d2>=o.r*o.r){o.armed=true;continue;}
+   if(o.armed){
+    o.armed=false;
+    if(!car.air&&sp>1.8)splashWater(o,sp);
+   }
+   continue;
+  }
+  if(d2>=o.r*o.r)continue;
   
   if (o.type === 'post' || o.type === 'sign') {
     // paletto: si rompe, nessun rallentamento
@@ -3390,6 +3505,7 @@ function updateWorld(dt){
  let ym=0;
  let mu=[0,0,0,0];
  let st=[0,0,0,0];
+ let brakeGrip=[1,1,1,1];
  let rr=0;
  
  let dusty=0;//sporco e' bello
@@ -3413,6 +3529,7 @@ function updateWorld(dt){
   
   mu[w]=MU[sf];
   st[w]=ST[sf];
+  brakeGrip[w]=BRAKE_GRIP[sf];
   rr+=RR[sf];
   
   //danneggiamento!
@@ -3421,6 +3538,8 @@ function updateWorld(dt){
  
  car.muF=(mu[0]+mu[1])/2;
  car.muR=(mu[2]+mu[3])/2;
+ car.brakeF=(brakeGrip[0]+brakeGrip[1])/2;
+ car.brakeR=(brakeGrip[2]+brakeGrip[3])/2;
  car.stF=(st[0]+st[1])/2;
  car.stR=(st[2]+st[3])/2;
  car.rr=rr/4;
@@ -3693,7 +3812,9 @@ function updateWorld(dt){
   $('surf').textContent=off?'​⚡ FUORI STRADA ​⚡':surfText;
   
   if(hudTick%12===0)lastPace=pace();
-  const n=$('note');n.innerHTML=lastPace?`${lastPace.left?'◀':'▶'} ${sev(lastPace.R)} <small>${Math.max(0,Math.round(lastPace.dist-(car.idx-lastPace.from)*DS))} m</small>`:'';
+  let difficolta = sev(lastPace.R);
+  
+  const n=$('note');n.innerHTML=lastPace?`${lastPace.left?'◀ '+difficolta : difficolta + ' ▶'} <small> in ${Math.max(0,Math.round(lastPace.dist-(car.idx-lastPace.from)*DS))} m</small>`:'';
  }
 }
 
