@@ -71,11 +71,13 @@
 	  #rpm #tachNeedle { color: #ffee11; }
 	  #rpm #tachGearText { color: #ffffff; }
 	  #rpm #tachSpeedText { color: #ffffff; }
+	  #rpm #tachClockText { color: #ffffff; }
 	  
 	  #rpm.night { color: #ff8811; }
 	  #rpm.night #tachNeedle { color: #ffff33; }
 	  #rpm.night #tachGearText { color: #ffee11; }
 	  #rpm.night #tachSpeedText { color: #ffee11; }
+	  #rpm.night #tachClockText { color: #ffee11; }
 	  
 	  #rpm svg { display: block; }
 
@@ -443,6 +445,7 @@
 		  <button class="btn"              id="cockpitBtn"  title="Camera abitacolo">💺</button>
 		  <button class="btn"              id="camResetBtn" title="Reset Visuale">👁️</button>
 		  <button class="btn"              id="showMapBtn"  title="Mappa">🗺️</button>
+		  <button class="btn"           id="changeTimeBtn"  title="Cambia orario">🕐</button>
 		  <button class="btn"              id="muteBtn"     title="Interruttore Altoparlante">🔇</button>
 		</div>
     </div>
@@ -775,21 +778,22 @@ scene.fog=new THREE.Fog(0xc4dcf2,140,470);
 const sky=(()=>{
  const CLOUDS_NUMBER = 15;
  const CLOUDS_SIZE = 0.5;
- const W=2048;
- const Hh=1024;
+ const W=2048, Hh=1024;
+ const css=h=>'#'+(h>>>0).toString(16).padStart(6,'0');
+
+ // cupola gradiente (piccola, ricolorata al cambio d'ora)
+ const gc=document.createElement('canvas'); gc.width=2; gc.height=256;
+ const gg=gc.getContext('2d');
+ const gradTex=new THREE.CanvasTexture(gc);
+ const dome=new THREE.Mesh(
+  new THREE.SphereGeometry(900,40,20),
+  new THREE.MeshBasicMaterial({map:gradTex,side:THREE.BackSide,fog:false,depthWrite:false})
+ );
+ dome.renderOrder=-2; dome.frustumCulled=false;
+
+ // nuvole: canvas trasparente, tinta tramite material.color
  const c=document.createElement('canvas'); c.width=W; c.height=Hh;
  const g=c.getContext('2d');
-
- // gradiente: zenit (alto) -> orizzonte (metà canvas) -> sotto orizzonte
- const gr=g.createLinearGradient(0,0,0,Hh);
- gr.addColorStop(0,   '#0f55c4');
- gr.addColorStop(.25, '#2b83e6');
- gr.addColorStop(.42, '#6fb4f2');
- gr.addColorStop(.5,  '#c4dcf2');
- gr.addColorStop(1,   '#c4dcf2');
- g.fillStyle=gr; g.fillRect(0,0,W,Hh);
-
- // nuvole: gruppi di "sbuffi" morbidi, schiacciati in orizzontale
  const puff=(x,y,r,a)=>{
   g.save(); g.translate(x,y); g.scale(2.3,1);
   const p=g.createRadialGradient(0,-r*.2,r*.1,0,0,r);
@@ -804,26 +808,29 @@ const sky=(()=>{
   const cy=Hh*(.30+Math.random()*.17);
   const scale= CLOUDS_SIZE + Math.random()* CLOUDS_SIZE;
   const parts=[];
-  
-  for(let k=0;k<9;k++) {
-    parts.push([rnd(-90,90)*scale, rnd(-14,14)*scale, rnd(22,50)*scale, rnd(.25, CLOUDS_SIZE)]);
-  }
-  for(const off of [-W,0,W]) {
-    // wrap orizzontale: niente giunzione
-    for(const p of parts) puff(cx+off+p[0],cy+p[1],p[2],p[3]);
-  }
+  for(let k=0;k<9;k++) parts.push([rnd(-90,90)*scale, rnd(-14,14)*scale, rnd(22,50)*scale, rnd(.25, CLOUDS_SIZE)]);
+  for(const off of [-W,0,W]) for(const p of parts) puff(cx+off+p[0],cy+p[1],p[2],p[3]);
  }
+ const cloudTex=new THREE.CanvasTexture(c); cloudTex.anisotropy=4;
+ const cloudMat=new THREE.MeshBasicMaterial({map:cloudTex,side:THREE.BackSide,fog:false,depthWrite:false,transparent:true});
+ const clouds=new THREE.Mesh(new THREE.SphereGeometry(890,40,20),cloudMat);
+ clouds.renderOrder=-1; clouds.frustumCulled=false;
 
- const tex=new THREE.CanvasTexture(c);
- tex.anisotropy=4;
- const m=new THREE.Mesh(
-  new THREE.SphereGeometry(900,40,20),
-  new THREE.MeshBasicMaterial({map:tex,side:THREE.BackSide,fog:false,depthWrite:false})
- );
- m.renderOrder=-1;
- m.frustumCulled=false;
- scene.add(m);
- return m;
+ const grp=new THREE.Group();
+ grp.add(dome,clouds);
+ grp.userData.setColors=(zen,hor,dayK)=>{
+  const gr=gg.createLinearGradient(0,0,0,256);
+  gr.addColorStop(0,   css(zen));
+  gr.addColorStop(.25, css(hexMix(zen,hor,.2)));
+  gr.addColorStop(.42, css(hexMix(zen,hor,.55)));
+  gr.addColorStop(.5,  css(hor));
+  gr.addColorStop(1,   css(hor));
+  gg.fillStyle=gr; gg.fillRect(0,0,2,256);
+  gradTex.needsUpdate=true;
+  cloudMat.color.setHex(hexMix(hor,0xffffff,dayK));   // di notte scure, al tramonto arancio
+ };
+ scene.add(grp);
+ return grp;
 })();
 
 
@@ -840,30 +847,135 @@ const sky=(()=>{
 
 //setup telecamera
 const camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,0.3,1400);
-scene.add(new THREE.HemisphereLight(0xcfe3f5,0x56644a,0.85));
+const hemi=new THREE.HemisphereLight(0xcfe3f5,0x56644a,0.85);
+scene.add(hemi);
 
-//setup sole
-const sun=new THREE.DirectionalLight(0xfff0d8,1.0);
-sun.position.set(80,120,50);
+
+const changeTimeBtn = $('changeTimeBtn');//orario+1
+let currentHoursDelta = 0;
+function pushChangeTimeBtn() {
+  currentHoursDelta = (currentHoursDelta + 1) % 24;
+}
+changeTimeBtn.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  e.stopPropagation();
+  pushChangeTimeBtn();
+});
+
+
+
+
+
+let nightK=0, skyZen=-1, skyHor=-1;
+function updateTimeLight(sx,sz,yS){
+  const now=new Date();
+  const h=(currentHoursDelta + now.getHours())%24 + now.getMinutes()/60;
+  const L=lightAt(h);
+  sun.color.setHex(L.color);
+  sun.intensity=L.sun;
+  hemi.intensity=L.amb;
+  const ang=(h-6)/12*Math.PI;
+  const x=-Math.cos(ang)*100;
+  const y=Math.max(Math.sin(ang)*130,8);
+  sun.target.position.set(sx,yS,sz);
+  sun.position.set(sx+x,yS+y,sz+50);
+
+  const dayK=clamp((L.sun-.12)/.73,0,1);
+  nightK=1-dayK;
+  if(L.zen!==skyZen||L.hor!==skyHor){          // ridisegna solo se il colore cambia
+    skyZen=L.zen; skyHor=L.hor;
+    sky.userData.setColors(L.zen,L.hor,dayK);
+    scene.fog.color.setHex(L.hor);
+    valley.material.color.setHex(0x8fa593).multiplyScalar(.15+.85*dayK);
+  }
+}
+//setup sole ereditato da crossy-app
+// Chiavi orarie: [ora, colore sole, intensità sole, intensità luce ambientale] + [cielo zenit, cielo orizzonte]]
+const LIGHT_KEYS=[
+ [0,    0x26305c, 0.12, 0.30, [0x050a1f, 0x141c3a]],
+ [5,    0x26305c, 0.12, 0.30, [0x050a1f, 0x141c3a]],
+ [6.5,  0xff8a3c, 0.55, 0.45, [0x3a5a9a, 0xff9a5c]],   // alba
+ [8,    0xffe6c0, 0.85, 0.70, [0x0f55c4, 0xc4dcf2]],   // mattino
+ [16.5, 0xfff0d8, 0.85, 0.70, [0x0f55c4, 0xc4dcf2]],   // pomeriggio
+ [18.5, 0xff7a2e, 0.50, 0.42, [0x3a4f9a, 0xff8a4a]],   // tramonto
+ [20,   0x3a3a7a, 0.12, 0.28, [0x141a40, 0x4a3a6a]],   // crepuscolo
+ [24,   0x26305c, 0.12, 0.30, [0x050a1f, 0x141c3a]]
+];
+function lightAt(h){
+  for(let i=1;i<LIGHT_KEYS.length;i++){
+    const a=LIGHT_KEYS[i-1], b=LIGHT_KEYS[i];
+    if(h<=b[0]){
+      const t=(h-a[0])/(b[0]-a[0]);
+      return {color:hexMix(a[1],b[1],t), sun:lerp(a[2],b[2],t), amb:lerp(a[3],b[3],t),
+              zen:hexMix(a[4][0],b[4][0],t), hor:hexMix(a[4][1],b[4][1],t)};
+    }
+  }
+  const k=LIGHT_KEYS[0];
+  return {color:k[1], sun:k[2], amb:k[3], zen:k[4][0], hor:k[4][1]};
+}
+const hexMix=(a,b,t)=>{
+  const ar=a>>16,ag=(a>>8)&255,ab=a&255;
+  const br=b>>16,bg=(b>>8)&255,bb=b&255;
+  return (Math.round(ar+(br-ar)*t)<<16)|(Math.round(ag+(bg-ag)*t)<<8)|Math.round(ab+(bb-ab)*t);
+};
+
+const sun=new THREE.DirectionalLight(0xffffff, 1);
 sun.castShadow = true;//prova ombre
 sun.shadow.mapSize.set(1024, 1024);//ridotto per mobile
-
 const sc_=sun.shadow.camera;
-sc_.left=-70;
-sc_.bottom=-70;
-sc_.right=70;
-sc_.top=70;
-sc_.near=10;
-sc_.far=320;
+sc_.left=-70; sc_.bottom=-70; sc_.right=70; sc_.top=70;
+sc_.near=10; sc_.far=320;
 sun.shadow.bias=-.0004;
 sun.shadow.normalBias=.15;   // evita l'acne sulla strada
 scene.add(sun.target);
-
 scene.add(sun);
 
 //setup vallata
 const valley=new THREE.Mesh(new THREE.PlaneGeometry(4000,4000).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x8fa593}));
 scene.add(valley);
+
+
+/* ============ FARI: pozza di luce proiettata (shader) ============ */
+const hlU={
+  uHLPos:{value:new THREE.Vector3()},
+  uHLDir:{value:new THREE.Vector2(0,1)},
+  uHLK:{value:0}
+};
+function patchHeadlight(m){
+  const prevCompile=m.onBeforeCompile, prevKey=m.customProgramCacheKey;
+  m.onBeforeCompile=(sh,r)=>{
+    if(prevCompile)prevCompile(sh,r);
+    Object.assign(sh.uniforms,hlU);
+    sh.vertexShader=sh.vertexShader
+      .replace('#include <common>','#include <common>\nvarying vec3 vHW;')
+      .replace('#include <begin_vertex>',`#include <begin_vertex>
+#ifdef USE_INSTANCING
+  vHW=(modelMatrix*instanceMatrix*vec4(transformed,1.)).xyz;
+#else
+  vHW=(modelMatrix*vec4(transformed,1.)).xyz;
+#endif`);
+    sh.fragmentShader=sh.fragmentShader
+      .replace('#include <common>',`#include <common>
+uniform vec3 uHLPos; uniform vec2 uHLDir; uniform float uHLK; varying vec3 vHW;`)
+      .replace('#include <fog_fragment>',`
+if(uHLK>0.){
+  vec3 d=vHW-uHLPos;
+  float f=dot(d.xz,uHLDir);                         // distanza davanti all'auto
+  float l=dot(d.xz,vec2(uHLDir.y,-uHLDir.x));       // distanza laterale
+  float hw=1.6+f*.30;                               // il cono si allarga
+  float beam=smoothstep(1.,5.,f)*(1.-smoothstep(25.,60.,f))
+            *(1.-smoothstep(hw*.35,hw,abs(l)))
+            *(1.-smoothstep(4.,10.,abs(d.y)));
+  beam/=1.+f*.03;
+  gl_FragColor.rgb+=vec3(1.,.92,.7)*beam*uHLK*(.22+diffuseColor.rgb*1.1);
+}
+#include <fog_fragment>`);
+  };
+  m.customProgramCacheKey=()=>(prevKey?prevKey.call(m):'')+'hl';
+  m.needsUpdate=true;
+}
+
+
 
 
 /* ============ TEXTURE STRADA ============ */
@@ -969,9 +1081,15 @@ const texGravel=mkTex((g,w,h)=>{
  }
 });
 
-
-const mkRoadMat=t=>new THREE.MeshLambertMaterial({map:t,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
+//luci!!!
+//const mkRoadMat=t=>new THREE.MeshLambertMaterial({map:t,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
 ////const roadMats=[mkRoadMat(texTarmac),mkRoadMat(texGravel)];
+
+const mkRoadMat=t=>{
+  const m=new THREE.MeshLambertMaterial({map:t,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
+  patchHeadlight(m); return m;
+};
+
 
 // Ora abbiamo 6 materiali in totale (0: Giallo/Giallo, 1: Bianco/Bianco, 2: Bianco/No Centro, 4: Sterrati)
 const roadMats=[
@@ -985,6 +1103,7 @@ const roadMats=[
 ];
 
 const terrMat=new THREE.MeshLambertMaterial({vertexColors:true});
+
 
 /* ============ GENERAZIONE STRADA INFINITA ============ */
 const P=[];
@@ -1428,23 +1547,8 @@ function signTexture(type) {
         g.bezierCurveTo(128 + dx + 10, 189, 128 + dx - 6, 192, 128 + dx - 2, 194);
         g.stroke();
       }
-    } else {                                            // curveR / curveL
-	
-	
-	
-	/*
-    if (type === 'slippery') {                          // auto che sbanda
-      g.fillRect(100, 130, 56, 22);
-      g.beginPath(); g.moveTo(108, 130); g.lineTo(116, 112); g.lineTo(140, 112); g.lineTo(148, 130); g.fill();
-      g.fillStyle = '#fff'; g.fillRect(118, 116, 20, 10); g.fillStyle = '#111';
-      g.fillRect(96, 148, 12, 12); g.fillRect(148, 148, 12, 12);
-      g.lineWidth = 6;
-      for (const dx of [-18, 18]) {
-        g.beginPath(); g.moveTo(128 + dx, 168);
-        g.bezierCurveTo(128 + dx - 16, 176, 128 + dx + 16, 184, 128 + dx, 192); g.stroke();
-      }
-    } else {                                            // curveR / curveL
-	*/
+    } else {                                            
+	  // curveR / curveL
       g.save();
       if (type === 'curveL') { g.translate(256, 0); g.scale(-1, 1); }
       g.lineWidth = 14; g.lineCap = 'butt';
@@ -1501,9 +1605,16 @@ function transMat(surf){
  g.fillStyle=gr;g.fillRect(0,0,c.width,c.height);
  const t=new THREE.CanvasTexture(c);
  t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=4;
+ 
+ /*
  return transMats[surf]=new THREE.MeshLambertMaterial({
   map:t,transparent:true,depthWrite:false,
   polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4});
+ */
+ // in transMat(), al posto del return finale:
+ const tm=new THREE.MeshLambertMaterial({ map:t,transparent:true,depthWrite:false, polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4});
+ patchHeadlight(tm);
+ return transMats[surf]=tm;
 }
 
 
@@ -2416,9 +2527,10 @@ const backLightOffsets = [
   { x: 0.35, y: 0.90, z: -2.1 }  // stop destro
 ];
 
+//frontlight le mantengo altrimenti i fari sembrano spenti!
 const frontLightOffsets = [
-  { x: -0.60, y: 0.50, z: 2.2 }, // faro sinistro
-  { x: 0.60,  y: 0.50, z: 2.2 }  // faro destro
+  { x: -0.60, y: 0.50, z: 2.5 }, // faro sinistro
+  { x: 0.60,  y: 0.50, z: 2.5 }  // faro destro
 ];
 
 // Crea la luce di stop all'avvio e aggiungila a carG
@@ -2429,25 +2541,26 @@ const frontLightOffsets = [
 	carG.add(stopLight);
 });
  backLightOffsets.forEach((sl,idx) => {
-	const backLight = new THREE.PointLight(0xffffff, 0, 1); // Colore, intensità iniziale (0), raggio
+	const backLight = new THREE.PointLight(0xffffff, 0, 3); // Colore, intensità iniziale (0), raggio
 	backLight.position.set(sl.x, sl.y, sl.z);
 	backLight.name='backLight'+(idx+1);
 	carG.add(backLight);
  }); 
+ //frontlight le mantengo altrimenti i fari sembrano spenti!
  frontLightOffsets.forEach((sl,idx) => {
-	const frontLight = new THREE.PointLight(0xffffff, 0, 1); // Colore, intensità iniziale (0), raggio
+	const frontLight = new THREE.PointLight(0xffffff, 0, 5); // Colore, intensità iniziale (0), raggio
 	frontLight.position.set(sl.x, sl.y, sl.z);
 	frontLight.name='frontLight'+(idx+1);
 	carG.add(frontLight);
-});
-
+ });
+ 
 const stopLight1 = carG.children.find(c => c.name==='stopLight1');
 const stopLight2 = carG.children.find(c => c.name==='stopLight2');
 const backLight1 = carG.children.find(c => c.name==='backLight1');
 const backLight2 = carG.children.find(c => c.name==='backLight2');
+//frontlight le mantengo altrimenti i fari sembrano spenti!
 const frontLight1 = carG.children.find(c => c.name==='frontLight1');
 const frontLight2 = carG.children.find(c => c.name==='frontLight2');
-
 
 const S0={},SHD={},wheelDat=[0,1,2,3].map(()=>({x:0,y:0,z:0,d:0,surf:0}));
 const SEMI_CARREGGIATA = 0.80;//distanza tra i mozzi dello stesso asse diviso 2, nella delta circa 150cm
@@ -2530,15 +2643,46 @@ const yAtZ=z=>{
 
 
 
+
+
+//luci!!!
+patchHeadlight(terrMat);
+patchHeadlight(pineMat);
+patchHeadlight(rockMat);
+patchHeadlight(postMat);
+patchHeadlight(jerseyMat);
+
+
+
+
+
+
+
 /* ============ INPUT ============ */
 const touch={gas:0,brake:0,hb:0,steer:0};
 const keys={gas:0,brake:0,hb:0,left:0,right:0};
 const ctl={gas:0,brake:0,hb:0};
-function hold(el,key){
+function holdOLD(el,key){
  const on=e=>{e.preventDefault();try{el.setPointerCapture(e.pointerId);}catch(_){}touch[key]=1;el.classList.add('on');};
  const off=()=>{touch[key]=0;el.classList.remove('on');};
  el.addEventListener('pointerdown',on);['pointerup','pointercancel','lostpointercapture'].forEach(n=>el.addEventListener(n,off));
 }
+
+//fix resta accelerato!
+const holdBtns=[];
+function hold(el,key){
+ let pid=null;
+ const on=e=>{e.preventDefault();try{el.setPointerCapture(e.pointerId);}catch(_){}pid=e.pointerId;touch[key]=1;el.classList.add('on');};
+ const off=e=>{
+  if(e&&pid!==null&&e.pointerId!==pid)return;   // evento in ritardo di un altro dito
+  pid=null;touch[key]=0;el.classList.remove('on');
+ };
+ el.addEventListener('pointerdown',on);
+ ['pointerup','pointercancel','lostpointercapture'].forEach(n=>el.addEventListener(n,off));
+ holdBtns.push({el,release:()=>off()});
+}
+
+
 hold($('bGas'),'gas');
 hold($('bBrake'),'brake');
 hold($('bHB'),'hb');
@@ -2552,6 +2696,20 @@ document.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
 document.addEventListener('contextmenu',e=>e.preventDefault());
 const KM={ArrowUp:'gas',KeyW:'gas',ArrowDown:'brake',KeyS:'brake',Space:'hb'};
 
+//fix resta accelerato!
+const releaseAll=()=>{
+ holdBtns.forEach(b=>b.release());
+ touch.steer=0;knob.style.left='50%';
+ keys.gas=keys.brake=keys.hb=keys.left=keys.right=0;
+};
+const syncTouches=e=>{                       // rete di sicurezza: ricalcola dai tocchi ancora attivi
+ const t=[...e.touches];
+ holdBtns.forEach(b=>{if(!t.some(x=>b.el.contains(x.target)))b.release();});
+ if(!t.some(x=>pad.contains(x.target))){touch.steer=0;knob.style.left='50%';}
+};
+['touchend','touchcancel'].forEach(n=>document.addEventListener(n,syncTouches,{passive:true}));
+addEventListener('blur',releaseAll);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseAll();});
 
 
 /* ===== MODALITÀ CAMERA: 0 chase, 1 cofano, 2 abitacolo ===== */
@@ -3585,11 +3743,12 @@ function updateWorld(dt){
   stopLight2.intensity = isBraking ? 0.8 : 0;
   backLight1.intensity = isRetromarcia ? 0.8 : 0;
   backLight2.intensity = isRetromarcia ? 0.8 : 0;
+  
   // I fari anteriori si accendono solo se headlightsOn è true
-  frontLight1.intensity = headlightsOn ? 2 : 0;
-  frontLight2.intensity = headlightsOn ? 2 : 0;
-  	
- 
+  //frontlight le mantengo altrimenti i fari sembrano spenti!
+  frontLight1.intensity = headlightsOn ? 1 : 0;
+  frontLight2.intensity = headlightsOn ? 1 : 0;
+  
  // frenata: muso giù, accelerazione: muso su
  const yF=(wheelDat[0].y+wheelDat[1].y)*0.5;
  const yR=(wheelDat[2].y+wheelDat[3].y)*0.5;
@@ -3658,19 +3817,23 @@ function updateWorld(dt){
  carG.position.set(car.x,car.yS,car.z);
  carG.rotation.set(-car.pitch,car.th,car.roll);
  
+ 
+ //luci!!!
+ hlU.uHLPos.value.set(car.x+Math.sin(car.th)*1.5, car.yS+.7, car.z+Math.cos(car.th)*1.5);
+ hlU.uHLDir.value.set(Math.sin(car.th), Math.cos(car.th));
+ hlU.uHLK.value = headlightsOn ? lerp(.30,1,nightK) : 0;   // di giorno appena percettibile, di notte piena
+ 
  //sporchissimo e' bellissimo!
  carG.updateMatrixWorld(true);
  dirtU.uInv.value.copy(carG.matrixWorld).invert();
  
  
- //sole segue l'auto
+ //sole segue l'auto e cambia con l'ora reale
  {
   const sx=Math.round(car.x*0.5)*2;
   const sz=Math.round(car.z*0.5)*2;   // a scatti di 2 m: meno tremolio
-  sun.target.position.set(sx,car.yS,sz);
-  sun.position.set(sx+80,car.yS+120,sz+50);
+  updateTimeLight(sx,sz,car.yS);
  }
- 
  
  {
    const sh=carG.userData.shadow;
@@ -3825,9 +3988,7 @@ function updateWorld(dt){
   $('surf').textContent=off?'​⚡ FUORI STRADA ​⚡':surfText;
   
   if(hudTick%12===0)lastPace=pace();
-  let difficolta = sev(lastPace.R);
-  
-  const n=$('note');n.innerHTML=lastPace?`${lastPace.left?'◀ '+difficolta : difficolta + ' ▶'} <small> in ${Math.max(0,Math.round(lastPace.dist-(car.idx-lastPace.from)*DS))} m</small>`:'';
+  const n=$('note');n.innerHTML=lastPace?`${lastPace.left?'◀ '+sev(lastPace.R) : sev(lastPace.R) + ' ▶'} <small> in ${Math.max(0,Math.round(lastPace.dist-(car.idx-lastPace.from)*DS))} m</small>`:'';
  }
 }
 
@@ -3897,6 +4058,8 @@ const tach=(()=>{
  //scritte contorno
  h+=`<text x="100" y="70" fill="${Y}" font-size="6" font-weight="700" text-anchor="middle" font-family="sans-serif">VEGLIA</text>`
    +`<text x="100" y="78" fill="${Y}" font-size="5" font-weight="700" text-anchor="middle" font-family="sans-serif">BORLETTI</text>`
+   +`<rect x="114" y="80" width="34" height="12" rx="2" ry="2" fill="#111111" stroke="${Y}" stroke-width="1"/>`
+   +`<text id="tachClockText" x="131" y="86" fill="${Y}" font-size="9" font-weight="900" text-anchor="middle" dominant-baseline="central" font-family="monospace">--:--</text>`
    +`<text x="170" y="88" fill="${Y}" font-size="7" font-weight="700" text-anchor="middle" font-family="sans-serif">RPM x 100</text>`;
    
  //pallini
@@ -3915,6 +4078,8 @@ const tach=(()=>{
  const needle=$('tachNeedle');
  const speedText=el.querySelector('#tachSpeedText');
  const gearText=el.querySelector('#tachGearText');
+ const clockText=el.querySelector('#tachClockText');
+ let lastClock='';
  
  return function(r,kmh,gea,odo){                        // r = car.rpm (0.22..1)
   const rpm=900+clamp((r-.22)/.78,0,1)*6600;  // stessa scala dell'audio
@@ -3928,6 +4093,10 @@ const tach=(()=>{
   }
   if(speedText) speedText.textContent = odo.toFixed(1).padStart(7,'0');//kmh + ' kmh';
   if(gearText) gearText.textContent = gea;
+  
+  const now=new Date();
+  const clk=String((currentHoursDelta+now.getHours())%24).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  if(clockText&&clk!==lastClock){lastClock=clk;clockText.textContent=clk;}
  };
 })();
 
