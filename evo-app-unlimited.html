@@ -592,6 +592,7 @@ $('camResetBtn').addEventListener('pointerdown',e=>{
   cam.el=0; 
   cam.yaw=0;   // stesso effetto del tasto C
   if(camMode)setCamMode(camMode);
+  camInside=false;
 });
 
 // audio on/off
@@ -2133,7 +2134,7 @@ function buildCarWrapper(o) {
 	return Math.random() < 0.5 ? buildCarCinquino(o) : buildCarEvo(o);
 }
 
-//cinquino gpt
+//cinquino gpt modificata in a112 abarth imbruttita
 function buildCarCinquino(o) {
     const K = 1.26;
     const g = new THREE.Group();
@@ -2162,6 +2163,7 @@ function buildCarCinquino(o) {
         opacity: o.glassOpacity,
         side: THREE.DoubleSide
     });
+	
 	//fix sfarfallio
 	glass.depthWrite = false;      //il vetro non scrive depth
 	glass.polygonOffset = true;    //vetro spinto indietro
@@ -2284,18 +2286,6 @@ function buildCarCinquino(o) {
 	//estrusione lungo l'asse x
 	//vista laterale fianco destro
 	const SIDE  = [[-1.18,.76],[.56,.76],[.56,.23],[0,.23],[-.56,.23],[-.66,.48],[-.92,.60],[-1.18,.48]];
-	/*
-	const FRONT = [
-		[.56,.23],//p1 vicino ruota
-		[.66,.48],//p2
-		[.92,.60],//p3 ruota alto
-		[1.18,.48],//p4
-		[1.28,.23],//p5 basso avanti
-		[1.43,.32],//p6
-		[1.47,.51],//p7
-		[1.30,.76],//p8
-		[.56,.76] //p9 addosso parabrezza
-	];*/
 	const FRONT = [
 		[0.56,0.23],//p1 vicino ruota
 		[0.66,0.48],//p2
@@ -2441,7 +2431,7 @@ function buildCarCinquino(o) {
         //maniglia
         box(
             0.025,0.035,0.13,
-            steel,s*0.725,0.68,MONTANTEZ+0.10
+            steel,s*0.725,0.68,MONTANTEZ+0.12
         );
 		//freccette le aveva davanti!!!
 		box(
@@ -2476,7 +2466,7 @@ function buildCarCinquino(o) {
 	box(
 		0.34,0.04,0.24,
 		steel,
-		0,0.851,0.92
+		0,0.851,0.94
 	);	
 
 	// Paraurti cromato anteriore
@@ -2533,9 +2523,7 @@ function buildCarCinquino(o) {
 
     // Targa anteriore
     box(0.40,0.12,0.018,white,0,0.48,1.45);
-
-
-
+	
     // POSTERIORE
     // Paraurti posteriore
     box(1.30,0.12,0.10,steel,0,0.36,-1.40);//-1.50
@@ -2602,7 +2590,6 @@ function buildCarCinquino(o) {
 	add(new THREE.CircleGeometry(LOGO_R*K, 32, Math.PI/4 + Math.PI, Math.PI), B(0xdd1122), 0, LOGO_Y, LOGO_Z);  // rosso: basso-destra
 	
 	
-    
     // DOPPIO CANNONE POSTERIORE
     for(const s of [-1,1]) {
         // Tubo di scarico
@@ -2983,7 +2970,7 @@ let steerWheel=null;
 let currentDeltaColor=new Date().getSeconds()%deltaColors.length;
 
 
-//numeri sulle fiancate!
+//numeri sulle fiancate, funzione usata dal cinquino
 function makeNumberTexture(num, stripe) {
   const c = document.createElement('canvas');
   c.width = c.height = 256;
@@ -3011,6 +2998,7 @@ function makeNumberTexture(num, stripe) {
   return tex;
 }
 
+//funzione usata dal cinquino
 function carAddNumbers(car, bodyMeshes, opts) {
   const num = opts.raceNumber | 0;
   if (num <= 0) return [];                                      // 0 = nessuna targa
@@ -3455,8 +3443,8 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseAll(
 /* ===== MODALITÀ CAMERA: 0 chase, 1 cofano, 2 abitacolo ===== */
 let camMode=0;
 const hoodBtn=$('hoodBtn'), cockpitBtn=$('cockpitBtn');
-const CAM_HOOD=new THREE.Vector3(0,1.50,1.0);      // sopra il cofano era a 1.25
-const CAM_COCKPIT=new THREE.Vector3(0.4,1.28,-0.1);// occhi del pilota (volante a x=.4)
+const CAM_HOOD=new THREE.Vector3(0,1.50,0.50);      // sopra il cofano era a 1.25
+const CAM_COCKPIT=new THREE.Vector3(0.4,1.32,-0.1);// occhi del pilota (volante a x=.4)
 const _cp=new THREE.Vector3(), _ct=new THREE.Vector3();
 function setCamMode(m){
   camMode=(camMode===m)?0:m;
@@ -3468,7 +3456,6 @@ function setCamMode(m){
 }
 hoodBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();setCamMode(1); camInside = false;});
 cockpitBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();setCamMode(2); camInside = true;});
-
 
 
 
@@ -3489,6 +3476,7 @@ addEventListener('keydown',e=>{
  if (e.code === 'KeyO') toggleShadows();
  if (e.code === 'KeyM') toggleMute();
  if (e.code === 'KeyG') toggleGrass();
+ if (e.code === 'KeyO') pushChangeTimeBtn();
  
  startGame();
 });
@@ -4367,7 +4355,7 @@ function stepCamera(dt) {
 }
 
 addEventListener('keydown',e=>{
-	if (e.code==='KeyC') { cam.zoom=1; cam.el=0; cam.yaw=0; if(camMode)setCamMode(camMode); }// C = camera di default
+	if (e.code==='KeyC') { cam.zoom=1; cam.el=0; cam.yaw=0; if(camMode)setCamMode(camMode); camInside=false; }// C = camera di default
 	if (e.code === 'KeyQ') cam.rotDir = -1;
     if (e.code === 'KeyE') cam.rotDir = 1;
     if (e.code === 'KeyZ') cam.zoomDir = -1;
