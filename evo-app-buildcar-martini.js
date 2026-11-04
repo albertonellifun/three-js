@@ -1,5 +1,5 @@
 /* ===== Lancia Delta Evo, generata nativamente =====
-   buildCar({
+   buildCarEvo({
      length: 3.95, paint: 0xf2f2f2, glassOpacity: 0.55,
      liveryRepsol: true,            // livrea Repsol
      liveryMartini: true,           // livrea Martini (si può attivare insieme a Repsol)
@@ -55,7 +55,7 @@ const EVO_DELTA = {
 				{"n":"Material_086","c":"#060606","r":0.396,"m":0},
 				{"n":"Material_085","c":"#000000","r":0.342,"m":0},
 				{"n":"tyre_rubber","c":"#2c2c2c","r":0.9,"m":0},
-				{"n":"rim_alloy","c":"#eeeeff","r":0.35,"m":0.4}//cerchioni
+				{"n":"rim_alloy","c":"#ffffff","r":0.35,"m":0.4}//cerchioni
 				],
 			"T":[
 				[0,0,32,276,-0.173197,0.454882,-1.854504,0.167175,0.860405,1.95855],
@@ -141,9 +141,9 @@ const EVO_LIVERIES = {
     +" vec3 lp = vLiv / __K__;"
     +" float pos = lp.y; "
     +" float baseCenter = 0.85;"
-    +" float slope = 0.08;"
+    +" float slope = 0.04;"
     +" float center = baseCenter - (lp.z * slope); "
-	+" float widthMultiplier = 1.0 - (lp.z * 0.3); "
+	+" float widthMultiplier = 0.5 - (lp.z * 0.3); "
     +" widthMultiplier = max(0.1, widthMultiplier);"
     +" float redWidth  = 0.030 * widthMultiplier;"
     +" float blue1Width = 0.030 * widthMultiplier;"
@@ -171,7 +171,9 @@ const EVO_LIVERIES = {
     +" }"
   }
 };
-
+//basecenter=altezza al centro auto / sportello = 0.85
+//slope=inclinazione = 0.08
+//widthMultiplier = quanto si allarga dietro e stringe davanti = 1.0-(z*0.3)
 const _cap = s => s[0].toUpperCase() + s.slice(1);
 
 
@@ -291,9 +293,9 @@ function _evoNumberTexture(num, stripe) {
   g.beginPath(); g.moveTo(m, m + 20); g.lineTo(m + size, m + 20); g.stroke();
 
   g.fillStyle = '#111111';
-  g.font = '900 200px monospace';
+  g.font = '900 180px monospace';
   g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.fillText(String(num), 128, 170);
+  g.fillText(String(num), 128, 165);
 
   const tex = new THREE.CanvasTexture(c);
   tex.anisotropy = 4;
@@ -363,8 +365,8 @@ function _evoAddNumbers(car, bodyMeshes, opts) {
 
 
 
-/* ===== buildCar ===== */
-function buildCar(opts) {
+/* ===== buildCarEvo ===== */
+function buildCarEvo(opts) {
   opts = opts || {};
   const D = EVO_DELTA, k = (opts.length || D.L) / D.L;
   const s = atob(EVO_DELTA_B64), u = new Uint8Array(s.length);
