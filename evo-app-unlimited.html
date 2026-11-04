@@ -595,7 +595,7 @@ $('camResetBtn').addEventListener('pointerdown',e=>{
 });
 
 // audio on/off
-let muted=1||false;
+let muted=false;
 const muteBtn=$('muteBtn');
 
 function applyMute(){
@@ -2130,12 +2130,12 @@ const carG=new THREE.Group();
 const wheelPivots=[],wheelMeshes=[];
 
 function buildCarWrapper(o) {
-	return Math.random() < 10.50 ? buildCarCinquino(o) : buildCarEvo(o);
+	return Math.random() < 0.5 ? buildCarCinquino(o) : buildCarEvo(o);
 }
 
 //cinquino gpt
 function buildCarCinquino(o) {
-    const K = 1.36;
+    const K = 1.26;
     const g = new THREE.Group();
 
 	const M = c => new THREE.MeshLambertMaterial({ color: c, side: THREE.DoubleSide, shadowSide: THREE.BackSide });
@@ -2282,8 +2282,32 @@ function buildCarCinquino(o) {
 
     // CARROZZERIA INFERIORE
 	//estrusione lungo l'asse x
+	//vista laterale fianco destro
 	const SIDE  = [[-1.18,.76],[.56,.76],[.56,.23],[0,.23],[-.56,.23],[-.66,.48],[-.92,.60],[-1.18,.48]];
-	const FRONT = [[.56,.23],[.66,.48],[.92,.60],[1.18,.48],[1.28,.23],[1.43,.32],[1.47,.51],[1.30,.76],[.56,.76]];
+	/*
+	const FRONT = [
+		[.56,.23],//p1 vicino ruota
+		[.66,.48],//p2
+		[.92,.60],//p3 ruota alto
+		[1.18,.48],//p4
+		[1.28,.23],//p5 basso avanti
+		[1.43,.32],//p6
+		[1.47,.51],//p7
+		[1.30,.76],//p8
+		[.56,.76] //p9 addosso parabrezza
+	];*/
+	const FRONT = [
+		[0.56,0.23],//p1 vicino ruota
+		[0.66,0.48],//p2
+		[0.92,0.60],//p3 ruota alto
+		[1.18,0.48],//p4
+		[1.28,0.23],//p5 basso avanti
+		[1.33,0.32],//p6
+		[1.42,0.72],//p7 punta muso nuovo
+		[1.40,0.76],//nuovo muso imbruttito
+		[1.25,0.76],//p8
+		[0.56,0.76] //p9 addosso parabrezza
+	];
 	const REAR  = [
 		[-1.18,.48],//p1
 		[-1.28,.23],//p2
@@ -2336,7 +2360,7 @@ function buildCarCinquino(o) {
 
 		// Montante anteriore (A) laterale
 		panel([
-			[s*(TOPW*0.5+0.01)+s*SBALZO,BASEY,0.60],
+			[s*(TOPW*0.5+0.01)+s*SBALZO,BASEY,0.55],
 			[s*(TOPW*0.5+0.01),TOPY,0.30],
 			[s*(TOPW*0.5+0.01),TOPY,0.35],
 			[s*(TOPW*0.5+0.01)+s*SBALZO,BASEY,0.70]
@@ -2351,17 +2375,17 @@ function buildCarCinquino(o) {
 		
 		//centrale (-16..-24)
 		panel([
-			[s*(TOPW*0.5+0.01)+s*SBALZO,BASEY,MONTANTEZ+0.04],
-			[s*(TOPW*0.5+0.01),TOPY,MONTANTEZ+0.04],
-			[s*(TOPW*0.5+0.01),TOPY,MONTANTEZ-0.04],
-			[s*(TOPW*0.5+0.01)+s*SBALZO,BASEY,MONTANTEZ-0.04]
+			[s*(TOPW*0.5+0.01)+s*SBALZO,BASEY,MONTANTEZ+0.05],
+			[s*(TOPW*0.5+0.01),TOPY,MONTANTEZ+0.05],
+			[s*(TOPW*0.5+0.01),TOPY,MONTANTEZ-0.05],
+			[s*(TOPW*0.5+0.01)+s*SBALZO,BASEY,MONTANTEZ-0.05]
 		],paint);
 		
 		
 
 		// Montante posteriore (C)
 		panel([
-			[s*(TOPW*0.5+0.01)+s*SBALZO,BASEY,BACKZ-0.03+0.10],
+			[s*(TOPW*0.5+0.01)+s*SBALZO,BASEY,BACKZ-0.03+0.15],
 			[s*(TOPW*0.5+0.01),TOPY,BACKZ+SBALZOZ],
 			[s*(TOPW*0.5+0.01),TOPY,BACKZ+SBALZOZ-0.05],
 			[s*(TOPW*0.5+0.01)+s*SBALZO,BASEY,BACKZ-0.03]
@@ -2419,44 +2443,24 @@ function buildCarCinquino(o) {
             0.025,0.035,0.13,
             steel,s*0.725,0.68,MONTANTEZ+0.10
         );
-        
-		// freccette laterali
-		/*//function cylinder(r1,r2,len,mat, x,y,z, segments=12, rotationX=Math.PI/2, rotationY=0, rotationZ=0) {
-        cylinder(
-            0.035,0.035,0.02,
-            steel,s*0.70,0.65,0.68,
-			12,0,0,s*Math.PI*1.5
-        );		
-		cylinder(
-            0.01,0.03,0.02,
-            orange,s*0.72,0.65,0.68,
-			12,0,0,s*Math.PI*1.5
-        );*/
+		//freccette le aveva davanti!!!
 		box(
             0.0125,0.039,0.14,
-            steel,s*0.7125,0.58,0.65
+            steel,s*0.7125,0.58,1.20
         );
 		box(
             0.025,0.035,0.10,
-            orange,s*0.725,0.58,0.65
+            orange,s*0.725,0.58,1.20
         );
     }
 
-    // FRONTALE FIAT 500L
-    // Pannello frontale
-    box(1.05,0.25,0.075,paint,0,0.59,1.40);
-
-    // Cornice cromata
-    box(0.43,0.025,0.025,steel,0,0.68,1.45);
-    
-    // Logo Fiat abarth
-    /*cylinder(
-        0.047,0.047,0.025,
-        steel,0,0.70,1.45
-    );*/
-	// Logo Fiat: cerchio diviso a 45°, metà giallo e metà rosso
-	cylinder(0.047, 0.047, 0.025, steel, 0, 0.68, 1.45);          // bordo cromato (come prima)
-	let LOGO_R = 0.040, LOGO_Z = 1.464, LOGO_Y = 0.68;           // appena davanti alla faccia del cilindro (1.4625)
+    // FRONTALE
+    // Cornice sul logo
+    box(0.83,0.050,0.025,steel,0,0.68,1.45);
+	
+	// Logo Fiat ABARTH: cerchio diviso a 45°, metà giallo e metà rosso
+	cylinder(0.047, 0.047, 0.025, steel, 0, 0.68, 1.47);          // bordo cromato (come prima)
+	let LOGO_R = 0.040, LOGO_Z = 1.484, LOGO_Y = 0.68;           // appena davanti alla faccia del cilindro (1.4625)
 	add(new THREE.CircleGeometry(LOGO_R*K, 32, Math.PI/4,           Math.PI), B(0xffcc00), 0, LOGO_Y, LOGO_Z);  // giallo: alto-sinistra
 	add(new THREE.CircleGeometry(LOGO_R*K, 32, Math.PI/4 + Math.PI, Math.PI), B(0xdd1122), 0, LOGO_Y, LOGO_Z);  // rosso: basso-destra
 	
@@ -2476,7 +2480,7 @@ function buildCarCinquino(o) {
 	);	
 
 	// Paraurti cromato anteriore
-    box(1.30,0.10,0.095,steel,0,0.36,1.49);
+    box(1.30,0.10,0.095,steel,0,0.36,1.44);
 
     // Fari tondi
     for(const s of [-1,1]) {
@@ -2512,23 +2516,23 @@ function buildCarCinquino(o) {
         //freccette ant
         box(
             0.124,0.064,0.025,
-            black,s*0.55,0.46,1.50
+            black,s*0.55,0.46,1.42
         );
 		box(
             0.120,0.060,0.025,
-            orange,s*0.55,0.46,1.51
+            orange,s*0.55,0.46,1.43
         );
 		
 		//rostri paraurti
 		box(
             0.07,0.19,0.11,
-            black,s*0.40,0.38,1.50
+            black,s*0.40,0.38,1.48
         );
     }
    
 
     // Targa anteriore
-    box(0.40,0.12,0.018,white,0,0.46,1.52);
+    box(0.40,0.12,0.018,white,0,0.48,1.45);
 
 
 
@@ -2562,9 +2566,9 @@ function buildCarCinquino(o) {
 		
 		// luci retro bianche sporche
         box(
-            0.06,0.16,0.07,
+            0.06,0.16,0.06,
             panna,
-			s*0.30,FARO_HEIGHT+0.02,FARO_BACK-0.005
+			s*0.30,FARO_HEIGHT+0.02,FARO_BACK
         );
     
 
@@ -2603,7 +2607,7 @@ function buildCarCinquino(o) {
     for(const s of [-1,1]) {
         // Tubo di scarico
         cylinder(
-            0.040,0.040,0.12,
+            0.050,0.050,0.12,
             steel,s*0.45,0.23,-1.42,16
         );
     }
@@ -2678,8 +2682,6 @@ function buildCarCinquino(o) {
 	
 	// FASCIONI LATERALI (raccordano in basso i passaruota ant/post)
 	for (const s of [-1,1]) {
-		// tubo inferiore: continua gli archi dei passaruota
-		//cylinder(0.045, 0.045, 1.25, orangeFender, s*0.70, 0.216, 0, 8);
 		// fascione in tinta carrozzeria
 		box(0.06, 0.11, 1.25, steel, s*0.72, 0.27, 0);
 	}
@@ -2725,11 +2727,11 @@ function buildCarCinquino(o) {
         // Borchia centrale
         const cap = new THREE.Mesh(
             new THREE.CylinderGeometry(
-                0.10*K,0.04*K,0.05*K,32
+                0.10*K,0.07*K,0.03*K,32
             ),
             steel
         );
-		cap.position.x = x > 0 ? 0.15 : -0.15;
+		cap.position.x = x > 0 ? 0.13 : -0.13;
         cap.rotation.z = x > 0 ? Math.PI/2 : -Math.PI/2;
         spin.add(cap);
 
@@ -2792,7 +2794,7 @@ function buildCarCinquino(o) {
 		};
 
 		decal(0.623, 0.809, 1.012);                              // cofano
-		decal(0.346, 0.665, 1.424, Math.atan2(0.25, 0.17));      // muso inclinato
+		///decal(0.346, 0.665, 1.424, Math.atan2(0.25, 0.17));      // muso inclinato
 		decal(TOPZ, TOPY + 0.003, -0.33);                        // tetto
 		/////decal(TOPZ*0.35, TOPY + 0.0145, -0.1);                   // sopra il tettuccio nero
 		
@@ -2808,8 +2810,8 @@ function buildCarCinquino(o) {
 		
 		// fascia tricolore sui fianchi, lungo tutta la vettura		
 		// z del bordo reale della carrozzeria (stessi spigoli di FRONT e REAR) a quota y
-		const zF = y =>  1.47 + (1.30 - 1.47) * (y - 0.51) / (0.76 - 0.51);   // spigolo muso
-		const zR = y => -1.48 + (-1.25 + 1.48) * (y - 0.43) / (0.76 - 0.43);  // spigolo coda
+		const zF = y => 1.33 + (1.42 - 1.33) * (y - 0.32) / (0.76 - 0.32);//spigolo muso
+		const zR = y => -1.38 + (-1.25 + 1.38) * (y - 0.43) / (0.76 - 0.43);  // spigolo coda
 
 		const sideDecal = (s, ya, yb) => {
 			const x = s * 0.712 * K;
