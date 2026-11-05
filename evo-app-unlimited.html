@@ -596,7 +596,7 @@ $('camResetBtn').addEventListener('pointerdown',e=>{
 });
 
 // audio on/off
-let muted=false;
+let muted=1||false;
 const muteBtn=$('muteBtn');
 
 function applyMute(){
@@ -2454,19 +2454,39 @@ function buildCarCinquino(o) {
 	add(new THREE.CircleGeometry(LOGO_R*K, 32, Math.PI/4,           Math.PI), B(0xffcc00), 0, LOGO_Y, LOGO_Z);  // giallo: alto-sinistra
 	add(new THREE.CircleGeometry(LOGO_R*K, 32, Math.PI/4 + Math.PI, Math.PI), B(0xdd1122), 0, LOGO_Y, LOGO_Z);  // rosso: basso-destra
 	
+	// GRIGLIA ANTERIORE NERA
+	// Pannello centrale principale della griglia tra i fari e sotto il logo
+	box(
+		0.70, 0.22, 0.02,
+		black, 0, 0.55, 1.455
+	);
+
+	// Listelli orizzontali cromati o grigi sulla griglia (stile sportivo)
+	for (let i = 0; i < 4; i++) {
+		box(
+			0.72, 0.012, 0.025,
+			steel, 0, 0.48 + (i * 0.045), 1.46
+		);
+		//li metto pure verticali
+		box(
+			0.025, 0.22, 0.025,
+			steel, -0.36 + (i * 0.24), 0.55 , 1.46
+		);
+	}
+	
+	
+	
 	// COFANO MOTORE MAGGIORATO
 	// Presa d'aria nera
 	box(
 		0.30,0.02,0.20,
-		black,
-		0,0.82,0.92
+		black, 0,0.82,0.92
 	);
 
 	// Box superiore color acciaio
 	box(
 		0.34,0.04,0.24,
-		steel,
-		0,0.851,0.94
+		steel, 0,0.851,0.94
 	);	
 
 	// Paraurti cromato anteriore
@@ -2476,6 +2496,11 @@ function buildCarCinquino(o) {
     for(const s of [-1,1]) {
         //intorno cromato
 		//function cylinder(r1,r2,len,mat, x,y,z, segments=12, rotationX=Math.PI/2, rotationY=0, rotationZ=0) {
+		//bombatura cofano fari
+		cylinder(
+            0.15,0.12,0.82,
+            paint,s*0.52,0.68,1.06
+        );
         cylinder(
             0.12,0.12,0.255,
             steel,s*0.52,0.68,1.36
@@ -2484,7 +2509,7 @@ function buildCarCinquino(o) {
         // Vetro faro
         sphere(
             0.095,0.095,0.025,
-            white,s*0.52,0.68,1.50
+            white,s*0.52,0.68,1.48
         );
 		
 		if (o.spoilerEnabled) {		
@@ -2497,7 +2522,7 @@ function buildCarCinquino(o) {
 			// Vetro faro
 			sphere(
 				0.065,0.065,0.025,
-				white,s*0.30,0.66,1.50
+				white,s*0.30,0.66,1.48
 			);
 		}
 		
@@ -2522,41 +2547,49 @@ function buildCarCinquino(o) {
    
 
     // Targa anteriore
-    box(0.40,0.12,0.018,white,0,0.48,1.45);
+    //box(0.40,0.12,0.018,white,0,0.48,1.45);
 	
     // POSTERIORE
     // Paraurti posteriore
     box(1.30,0.12,0.10,steel,0,0.36,-1.40);//-1.50
-
-	const FARO_BACK = -1.38;
+	
+	const FARO_BACK = -1.39;
 	const FARO_HEIGHT = 0.52;
+	
+	//porta targa box
+	box(
+        0.48, 0.24, 0.05,
+        steel,
+        0, FARO_HEIGHT, FARO_BACK
+	);
+	
     for(const s of [-1,1]) {
 		// Box/Alloggiamento in acciaio per le luci posteriori (retro, fa da cornice/incasso)
         box(
-            0.40, 0.24, 0.06,
+            0.42, 0.24, 0.075,
             steel,
             s*0.45, FARO_HEIGHT, FARO_BACK+0.01
         );
 	
         // freni rossi
         box(
-            0.24,0.16,0.06,
+            0.24,0.14,0.06,
             red,
-			s*0.45,FARO_HEIGHT+0.02,FARO_BACK
+			s*0.45,FARO_HEIGHT+0.03,FARO_BACK
         );
 
-        // freccette arancio
+        // freccette posteriori
         box(
-            0.06,0.16,0.06,
+            0.06,0.14,0.06,
             orange,
-			s*0.60,FARO_HEIGHT+0.02,FARO_BACK
+			s*0.60,FARO_HEIGHT+0.03,FARO_BACK
         );
 		
 		// luci retro bianche sporche
         box(
-            0.06,0.16,0.06,
+            0.06,0.14,0.06,
             panna,
-			s*0.30,FARO_HEIGHT+0.02,FARO_BACK
+			s*0.30,FARO_HEIGHT+0.03,FARO_BACK
         );
     
 
@@ -2568,24 +2601,24 @@ function buildCarCinquino(o) {
     }
 
     // Targa posteriore
-    box(
+    /*box(
         0.42,0.16,0.010,
         black,0,0.58,FARO_BACK-0.01
     );
     box(
         0.40,0.15,0.010,
         white,0,0.57,FARO_BACK-0.02
-    );
+    );*/
 	
 	// Maniglia cofano posteriore
     box(
-        0.20,0.025,0.025,
-        steel,0,0.70,FARO_BACK+0.04
+        0.30,0.025,0.025,
+        steel,0,0.68,FARO_BACK+0.04
     );
 	
 	// Logo Fiat: cerchio diviso a 45°, metà giallo e metà rosso
-	cylinder(0.047, 0.047, 0.025, steel, 0, 0.70, FARO_BACK+0.04);          // bordo cromato (come prima)
-	LOGO_R = 0.040, LOGO_Z = FARO_BACK+0.02, LOGO_Y = 0.70;           // appena davanti alla faccia del cilindro (1.4625)
+	cylinder(0.047, 0.047, 0.025, steel, 0, 0.68, FARO_BACK+0.04);          // bordo cromato (come prima)
+	LOGO_R = 0.040, LOGO_Z = FARO_BACK+0.02, LOGO_Y = 0.68;           // appena davanti alla faccia del cilindro (1.4625)
 	add(new THREE.CircleGeometry(LOGO_R*K, 32, Math.PI/4,           Math.PI), B(0xffcc00), 0, LOGO_Y, LOGO_Z);  // giallo: alto-sinistra
 	add(new THREE.CircleGeometry(LOGO_R*K, 32, Math.PI/4 + Math.PI, Math.PI), B(0xdd1122), 0, LOGO_Y, LOGO_Z);  // rosso: basso-destra
 	
@@ -2835,6 +2868,10 @@ function buildCarCinquino(o) {
 
     g.userData.setNumbersVisible = () => {};
 
+	const targa = carAddTarga(g, bodyMeshes, {
+		plateText: 'Roma 75823F'
+	});
+	
 	//Numeri
 	if(o.numbersVisible) {
 		const plates = carAddNumbers(g, bodyMeshes, {
@@ -3056,6 +3093,111 @@ function carAddNumbers(car, bodyMeshes, opts) {
   });
   return plates;
 }
+
+
+function makeTargaTexture(text) {
+  const c = document.createElement('canvas');
+  c.width = 600;
+  c.height = 100; // targhe vecchie non hanno rapporto 2:1
+  const g = c.getContext('2d');
+  
+  // Sfondo nero della targa
+  g.fillStyle = '#222222';
+  g.fillRect(0, 0, c.width, c.height);
+  
+  // Bordo esterno
+  g.strokeStyle = '#000000';
+  g.lineWidth = 12;
+  g.strokeRect(6, 6, c.width - 12, c.height - 12);
+  
+  // Provincia scritto in arancione
+  console.log(text);
+  const arr = text.split(' ');
+  const prov = arr.length?arr[0]:'Roma';
+  const numb = arr.length>1?arr[1]:'12345F';
+  
+  //provincia
+  g.fillStyle = '#ee8800';
+  g.font = '900 85px monospace';
+  g.textAlign = 'left'; 
+  g.textBaseline = 'middle';
+  g.fillText(String(prov), 50, 55);
+
+  //numeri
+  g.fillStyle = '#ffffff';
+  g.font = '900 85px monospace';
+  g.textAlign = 'left'; 
+  g.textBaseline = 'middle';
+  g.fillText(String(numb), 270, 55);
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.anisotropy = 4;
+  return tex;
+}
+
+
+function carAddTarga(car, bodyMeshes, opts) {
+  const plateText = opts.plateText || opts.rearPlate;
+  
+  if (plateText) {
+    const pSizeX = opts.plateSizeX != null ? opts.plateSizeX : 0.60; // Larghezza targa 3D
+    const pSizeY = opts.plateSizeY != null ? opts.plateSizeY : 0.19; // Altezza targa 3D
+    const pY     = opts.plateY     != null ? opts.plateY     : 0.69; // Altezza da terra
+    const pZ     = opts.plateZ     != null ? opts.plateZ     : -1.78; // Posizione Z sul retro
+
+    const plateMat = new THREE.MeshLambertMaterial({
+      map: makeTargaTexture(plateText),
+      alphaTest: 0.5,
+	  side: THREE.DoubleSide,
+      polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1
+    });
+
+    const plateGeo = new THREE.PlaneGeometry(pSizeX, pSizeY, 4, 4);   // 25 vertici per accartocciamento
+	
+	// CORRETTORE SPECCHIATURA: Inverte le coordinate U per raddrizzare il testo sul retro
+	const uvs = plateGeo.attributes.uv;
+	for (let i = 0; i < uvs.count; i++) {
+		uvs.setX(i, 1.0 - uvs.getX(i));
+	}
+	uvs.needsUpdate = true;
+  
+    // Raycast sul retro (partendo da dietro verso l'avanzamento dell'auto lungo l'asse Z)
+	const rc = new THREE.Raycaster();
+	
+    rc.set(new THREE.Vector3(0, pY, pZ - 2.5), new THREE.Vector3(0, 0, 1));
+    const hit = rc.intersectObjects(bodyMeshes, false)[0];
+
+    const n = new THREE.Vector3(0, 0, -1); // Normale di fallback orientata all'indietro
+    const p = new THREE.Vector3(0, pY, pZ); // Posizione di fallback
+    
+    if (hit) {
+      p.copy(hit.point);
+      if (hit.face) {
+        const f = hit.face.normal.clone();
+        n.copy(f).normalize();
+      }
+    }
+    p.addScaledVector(n, 0.006);
+
+    // Calcolo orientamento basato sulla normale del paraurti posteriore
+    const zA = n.clone().negate(); // Inverte la normale se punta nel verso sbagliato
+    const yA = new THREE.Vector3(0, 1, 0).addScaledVector(zA, -zA.y).normalize();
+    const xA = new THREE.Vector3().crossVectors(zA, yA).normalize();
+
+    const plateMesh = new THREE.Mesh(plateGeo, plateMat);
+    plateMesh.name = 'rearPlate';
+    plateMesh.position.copy(p);
+    plateMesh.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(xA, yA, zA));
+    plateMesh.visible = true;
+    car.add(plateMesh);
+    
+	return plateMesh;
+  }
+
+  return null;
+}
+
+
 
 function disposeModel(m){
   carG.remove(m);
@@ -3500,14 +3642,22 @@ function physics(dt){
  const m=1200,a=1.3,b=1.3,L=2.6,I=1800,g=9.81,hc=.55;
  const u=car.u,v=car.v,r=car.r,sp=Math.abs(u);
  
+ 
  //danneggiamento:
  //let delta=car.steer*maxSteer(sp);
  let delta=car.steer*maxSteer(sp)+dmg.pull;
  
+ //ESP+ABS
+ //controsterzo assistito oltre i 60kmh
+ if(u>16){
+	const beta=Math.atan2(v,u);
+	delta+=clamp(beta*.35,-.22,.22)*clamp((u-6)/10,0,1);
+ }
  
- if(u>6){const beta=Math.atan2(v,u);delta+=clamp(beta*.35,-.22,.22)*clamp((u-6)/10,0,1);}   // controsterzo assistito
+ 
  const Nf0=m*g*b/L,Nr0=m*g*a/L,wt=m*car.axF*hc/L;
- const Nf=Math.max(Nf0-wt,Nf0*.4),Nr=Math.max(Nr0+wt,Nr0*.4);
+ const Nf=Math.max(Nf0-wt,Nf0*.4);
+ const Nr=Math.max(Nr0+wt,Nr0*.4);
  let Fd=0,Fb=0;
  if(ctl.gas>0)Fd=Math.min(150000/Math.max(u,5),9000)*ctl.gas;
  if(ctl.brake>0){
@@ -3518,16 +3668,36 @@ function physics(dt){
  let FmF=car.muF*Nf,FmR=car.muR*Nr;
  car.spin=clamp((Fd*.6)/FmR-1,0,1.5)*(u<22?1:.5);
  let Fxf=Fd*.4,Fxr=Fd*.6;
- const bf=Nf/(Nf+Nr);
- Fxf+=Math.max(Fb*bf,-.8*FmF*car.brakeF);Fxr+=Math.max(Fb*(1-bf),-.8*FmR*car.brakeR);
  
+ const bf=Nf/(Nf+Nr);
+ 
+ //freno ideale rimosso
+ //Fxf+=Math.max(Fb*bf,-.8*FmF*car.brakeF);Fxr+=Math.max(Fb*(1-bf),-.8*FmR*car.brakeR);
+ 
+ //freno piu realistico
+ const BRAKE_BIAS_F=.62;   // .75 = ideale (non blocca mai), .5 = blocca subito dietro
+ Fxf+=Math.max(Fb*BRAKE_BIAS_F,     -FmF*car.brakeF);
+ Fxr+=Math.max(Fb*(1-BRAKE_BIAS_F), -FmR*car.brakeR);
+
+ //freno a mano della madocina, non mi piace!
+ /*
  if(ctl.hb > .5){
-  //freno a mano funziona sempre!
-  // Se u è positivo frena verso l'indietro (-), se u è negativo frena in avanti (+)
   const dir = Math.sign(u) || 1;
   Fxr = -dir * FmR * car.brakeR * .95;
   FmR *= .9;
-}
+ }*/
+
+ const HB_GRIP=.45;    // grip totale del posteriore a ruote bloccate (1 = normale)
+ const HB_BRAKE=.5;    // quota di quel grip usata per frenare (resto = laterale)
+ 
+ if(ctl.hb > .5){
+   //freno a mano funziona sempre! Se u è positivo frena verso l'indietro (-), se u è negativo frena in avanti (+)
+   const dir = Math.sign(u) || 1;
+   FmR *= HB_GRIP;
+   Fxr = -dir * FmR * HB_BRAKE * car.brakeR;
+ }
+ 
+ 
  
  Fxf=clamp(Fxf,-FmF,FmF);Fxr=clamp(Fxr,-FmR,FmR);
  const LmF=Math.sqrt(Math.max(FmF*FmF-Fxf*Fxf,(.15*FmF)**2));
@@ -3551,7 +3721,11 @@ function physics(dt){
  const ay=Fy/m-u*r-g*Math.sin(car.rollT);
  let nu=u+ax*dt;
  let nv=v+ay*dt;
- let nr=r+(Mz/I-.5*r)*dt;
+ 
+ //smorzamento 0.5 e' eccessivo
+ let nr=r+(Mz/I-0.20*r)*dt;//0.5 -> 0.20
+ 
+ 
  if(u>0&&nu<0&&Fd===0)nu=0;
  
  //if(car.brkLatch&&ctl.brake>0&&ctl.gas<.05&&Math.abs(nu)<.25)nu=0;   // da fermo resta fermo
@@ -4493,7 +4667,7 @@ function updateWorld(dt){
  if(dmg.lost[3]){ car.pitchT+=0.08; car.rollT-=0.12; }
  
  
-  const GRAV=13;//PERCHE' 13!?!
+  const GRAV=13;//non 9.8, l'alettone ti schiaccia a terra (altrimenti qualunque dosso vai dritto)
   const gy=ym/4;
   if(car.gy===null){
     car.gy=gy;
