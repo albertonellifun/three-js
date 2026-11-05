@@ -1184,39 +1184,51 @@ function fillQueueRaw(){
 
 
 /* ===== ANTI-INCROCIO ===== */
-//MIN_GAP: se vuoi più spazio tra i tornanti, portalo a 55-60. Valori troppo alti rendono più frequenti i rettilinei di fallback.
-//ARC_SKIP: deve restare maggiore della lunghezza di un tornante (circa 110-140 m), altrimenti scarta i tornanti stessi.
-//GEMINI FIX
-const MIN_GAP=80;// distanza minima tra tratti non adiacenti (60m)
-const MIN_GAP2=MIN_GAP*MIN_GAP;   
-const ARC_SKIP=250;//250;// ignora i punti più vicini di 250 m lungo la strada
+const MIN_GAP=80;                 // distanza minima tra tratti lontani lungo la strada
+const MIN_GAP2=MIN_GAP*MIN_GAP;
+const NEAR_GAP=60;                // distanza minima tra tratti "vicini" (bracci di un tornante: 2R ≥ 68 m)
+const NEAR_GAP2=NEAR_GAP*NEAR_GAP;
+const NEAR_SKIP=80;               // sotto questa distanza lungo la strada è la curva stessa: non si controlla
+const ARC_SKIP=250;               // oltre questa distanza vale MIN_GAP invece di NEAR_GAP
+const GRID_R=Math.ceil(MIN_GAP/GRID);   // celle da scansionare per lato (prima fisso a 1 = bug)
 
-function nearRoad(x,z,s){
+function tooClose(px,pz,ps,x,z,s){
+ const ds=s-ps;
+ if(ds<NEAR_SKIP)return false;
+ const dx=px-x,dz=pz-z;
+ return dx*dx+dz*dz<(ds<ARC_SKIP?NEAR_GAP2:MIN_GAP2);
+}
+
+function nearRoad(x,z,s,sim){
  const cx=Math.floor(x/GRID);
  const cz=Math.floor(z/GRID);
- for(let a=-1;a<=1;a++){
- for(let b=-1;b<=1;b++){
+ for(let a=-GRID_R;a<=GRID_R;a++){
+ for(let b=-GRID_R;b<=GRID_R;b++){
   const arr=grid.get(gkey(cx+a,cz+b));
   if(!arr)continue;
   for(let n=0;n<arr.length;n++){
    const p=P[arr[n]];
-   if(s-p.s<ARC_SKIP)continue;
-   const dx=p.x-x;
-   const dz=p.z-z;
-   if(dx*dx+dz*dz<MIN_GAP2)return true;
+   if(tooClose(p.x,p.z,p.s,x,z,s))return true;
   }
  }
+ }
+ // punti simulati ma non ancora in P: la strada appena accodata non deve sfiorare se stessa
+ if(sim){
+  for(let n=0;n<sim.length;n++){
+   const p=sim[n];
+   if(tooClose(p.x,p.z,p.s,x,z,s))return true;
+  }
  }
  return false;
 }
 
-// simula i segmenti appena messi in coda con la stessa cinematica di genPoint
 function segClear(segs){
  let h=gen.h;
  let k=gen.k;
  let x=gen.x;
  let z=gen.z;
  let n=0;
+ const sim=[];
  const rr=RATE*DS;
  for(const sg of segs){
   let left=sg.len;
@@ -1227,11 +1239,22 @@ function segClear(segs){
    h+=k*DS;
    x+=Math.sin(h)*DS;
    z+=Math.cos(h)*DS;
-   if(nearRoad(x,z,gen.s+(++n)*DS))return false;
+   const s=gen.s+(++n)*DS;
+   if(nearRoad(x,z,s,sim))return false;
+   sim.push({x,z,s});
   }
  }
  return true;
 }
+
+
+
+
+
+
+
+
+
 
 function fillQueue(){
  for(let t=0;t<16;t++){
