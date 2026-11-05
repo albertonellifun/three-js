@@ -46,15 +46,7 @@
       }
 
 	  #gauges{
-	    /*
-		position:absolute;
-	    left:max(4px,env(safe-area-inset-left));
-	    top:max(4px,env(safe-area-inset-top));
-	    display:flex;
-	    align-items:flex-start;
-		justify-content: flex-start;
-	    gap:0px;
-		*/
+	    xxxopacity: 0.8;
 	  }
 
 	  #rpm {
@@ -99,6 +91,19 @@
 	  #spd.night #tachOdoText { color: #ffee11; }
 
 	  #spd svg { display: block; }
+	  
+	  #dmg{
+	    left:calc(max(4px,env(safe-area-inset-left)) + 225px);
+	    top:calc(max(4px,env(safe-area-inset-top)) + 4px);
+	    width:60px;
+	    filter:drop-shadow(0 2px 6px rgba(0,0,0,.6));
+		display:none;
+		color: #ffffff;
+	  }
+	  
+	  #dmg.night {
+	    color: #ffee11;
+	  }
 
 	  #minimap{
 	    position:absolute;
@@ -419,11 +424,12 @@
 
   <body>
     <div id="hud">
-      <div id="gauges">
+	  <div id="gauges">
         <div id="rpm"></div>
         <div id="spd"></div>
       </div>
-	  
+	  <div id="dmg"></div>
+      
 	  <canvas id="minimap" width="150" height="150"></canvas>
 	  
       <div id="top"><span id="surf">ASFALTO</span>
@@ -451,6 +457,7 @@
 		  <button class="btn"              id="cockpitBtn"  title="Camera abitacolo">💺</button>
 		  <button class="btn"              id="camResetBtn" title="Reset Visuale">👁️</button>
 		  <button class="btn"              id="showMapBtn"  title="Mappa">🗺️</button>
+		  <button class="btn"              id="showDmgBtn"  title="Danno">🔨​</button>
 		  <button class="btn"           id="changeTimeBtn"  title="Cambia orario">🕐</button>
 		  <button class="btn"              id="muteBtn"     title="Interruttore Altoparlante">🔇</button>
 		</div>
@@ -527,11 +534,15 @@ let glassInside = null;   // ultimo stato applicato
 let fpsSmooth=60;
 
 //danneggiamento!
-const dmg={toe:[0,0,0,0],camber:[0,0,0,0],lost:[false,false,false,false],pull:0};
+const dmg={toe:[0,0,0,0],camber:[0,0,0,0],lost:[false,false,false,false],pull:0,
+			zone:[0,0,0,0]}; // zone: muso, coda, sx, dx
 function repairCar(){ 
   spawnCar(); 
-  Object.assign(dmg,{toe:[0,0,0,0],camber:[0,0,0,0],lost:[false,false,false,false],pull:0}); 
+  Object.assign(dmg,{toe:[0,0,0,0],camber:[0,0,0,0],lost:[false,false,false,false],pull:0,
+			zone:[0,0,0,0]}); 
 }
+
+
 
 const _v=new THREE.Vector3(), _p=new THREE.Vector3();
 
@@ -665,7 +676,24 @@ showCamBoxBtn.addEventListener('pointerdown', e => {
   toggleShowCamBoxBtn();
 });
 
-
+//danno
+const showDmgBtn = $('showDmgBtn');//danno on/off
+let showDmg = false;
+function toggleDmgBtn() {
+	showDmg = !showDmg;
+	if (showDmg) {
+		$('dmg').style.display = 'block';
+		showDmgBtn.classList.adD('toggled-red');
+	} else {
+		$('dmg').style.display = 'none';
+		showDmgBtn.classList.adD('toggled-red');
+	}
+}
+showDmgBtn.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  e.stopPropagation();
+  toggleDmgBtn();
+});
 
 //minimappa
 const showMapBtn = $('showMapBtn');//mappa on/off
@@ -3643,6 +3671,7 @@ addEventListener('keydown',e=>{
  if (e.code === 'KeyG') toggleGrass();
  if (e.code === 'KeyI') pushChangeTimeBtn();
  if (e.code === 'KeyU') toggleMapBtn();
+ if (e.code === 'KeyY') toggleDmgBtn();
  
  startGame();
 });
@@ -4289,6 +4318,13 @@ function crash(cf,cl,sp){
     if(d<bd){bd=d;best=w;}
   }
   if(best>=0 && bd<1.05 && sev>.42 && Math.random() < (sev-.42)*1.2) loseWheel(best);
+  
+  // danno per zona: cf = longitudinale (+ muso), cl = laterale (+ sinistra)
+  const zw=[clamp(cf/2.1,0,1), clamp(-cf/2.1,0,1), clamp(cl/.95,0,1), clamp(-cl/.95,0,1)];
+  const zadd=.12+sev*.5;
+  for(let i=0;i<4;i++) dmg.zone[i]=Math.min(1,dmg.zone[i]+zadd*zw[i]);
+  
+  
   dent(cl,cf,1.4+sev*.9,.52+sev*.45);   // tolta la soglia: ammacca sempre, anche sugli sportelli
 }
 
@@ -4902,7 +4938,11 @@ function updateWorld(dt){
   updAudio(running?slip:0,dt);
   
  if(++hudTick%3===0){
+  if(showDmg) dmgInd();//danno  
+  $('dmg').classList.toggle('night',headlightsOn);
+  
   if(showMap) drawMinimap();//minimappa
+  
   $('fps').textContent=Math.round(fpsSmooth)+' FPS';//fps
   $('geom').textContent=renderer.info.memory.geometries+' GEOMETRIES';//geometrie
   $('tris').textContent=((renderer.info.render.triangles*0.001)|0)+'K TRIANGLES';//triangoli
@@ -5099,6 +5139,54 @@ const tachSpeed=(()=>{
   const ang=START_ANGLE + clamp(kmh,0,MAXSPD)/MAXSPD*SWEEP;
   needle.setAttribute('transform',`translate(100 100) rotate(${ang})`);
   //if(odoText) odoText.textContent=odoKm.toFixed(1).padStart(5,'0')+' ODO';
+ };
+})();
+
+
+//indicatore danni
+const dmgInd=(()=>{
+ const el=$('dmg');
+ const col=v=>`hsl(${Math.round(120*(1-clamp(v,0,1)))} 85% 50%)`;
+ const G='fill="hsl(120 85% 50%)" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"';
+ const W=(id,x,y)=>`<rect id="${id}" x="${x}" y="${y}" width="11" height="22" rx="3" ${G}/>`;
+ const Y='currentColor';
+
+ el.innerHTML=`<svg viewBox="0 0 80 128" width="50" height="85">`
+  // sfondo nero
+  +`<rect x="0" y="0" width="80" height="128" rx="10" fill="#1b1b1b" stroke="#555" stroke-width="1.5"/>`
+  // ruote
+  +W('dwFL',3,16)+W('dwFR',66,16)+W('dwRL',3,86)+W('dwRR',66,86)
+  // carrozzeria nera
+  +`<rect x="14" y="3" width="52" height="122" rx="14" fill="#000"/>`
+  // zone: muso, coda, fianco sx, fianco dx
+  +`<path id="dzF" d="M16 42V19Q16 5 30 5H50Q64 5 64 19V42Z" ${G}/>`
+  +`<path id="dzR" d="M16 106V111Q16 121 26 121H54Q64 121 64 111V106Z" ${G}/>`
+  +`<rect id="dzL"  x="16" y="42" width="6" height="64" ${G}/>`
+  +`<rect id="dzRt" x="58" y="42" width="6" height="64" ${G}/>`
+  // abitacolo nero
+  //+`<rect x="22" y="42" width="36" height="52" rx="6" fill="#000" stroke="${Y}" stroke-width="2"/>`
+  +`<rect x="22" y="42" width="36" height="64" rx="6" fill="#000" stroke="${Y}" stroke-width="2"/>`
+  +`<text id="dPct" x="40" y="75" fill="${Y}" font-size="14" font-weight="900" text-anchor="middle" dominant-baseline="central" font-family="monospace">0%</text></svg>`;
+  
+ const wid=['dwFL','dwFR','dwRL','dwRR'], zid=['dzF','dzR','dzL','dzRt'];
+ const E={}; [...wid,...zid,'dPct'].forEach(i=>E[i]=el.querySelector('#'+i));
+ let sig='';
+
+ return function(){
+  const z=dmg.zone;
+  const wv=[0,1,2,3].map(w=>dmg.lost[w]?1:clamp(Math.max(Math.abs(dmg.toe[w]),Math.abs(dmg.camber[w]))/.25,0,1));
+  const lost=dmg.lost.filter(Boolean).length;
+  const body=.6*Math.max(z[0],z[1],z[2],z[3])+.4*(z[0]+z[1]+z[2]+z[3])/4;
+  const pct=Math.min(100,Math.round(body*70+lost*10+(wv[0]+wv[1]+wv[2]+wv[3])/4*20));
+  const s=z.join()+'|'+wv.join()+'|'+pct;
+  if(s===sig)return;
+  sig=s;
+  for(let i=0;i<4;i++){
+    E[zid[i]].setAttribute('fill',col(z[i]));
+    E[wid[i]].setAttribute('fill',col(wv[i]));
+    E[wid[i]].setAttribute('opacity',dmg.lost[i]?.35:1);   // ruota persa: rossa e spenta
+  }
+  E.dPct.textContent=pct+'%';
  };
 })();
 
