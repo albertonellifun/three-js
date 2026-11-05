@@ -293,7 +293,7 @@
       #start h1 {
         margin: 0;
         font-size: clamp(34px, 8vw, 64px);
-        letter-spacing: .06em
+        letter-spacing: .06em;
 		font-family: 'Bungee', sans-serif;
 		color: #ffcc00;
         text-shadow: 3px 3px 0px #ff3300, 6px 6px 0px #990000;
@@ -607,7 +607,7 @@ $('camResetBtn').addEventListener('pointerdown',e=>{
 });
 
 // audio on/off
-let muted=false;
+let muted=1||false;
 const muteBtn=$('muteBtn');
 
 function applyMute(){
@@ -683,10 +683,10 @@ function toggleDmgBtn() {
 	showDmg = !showDmg;
 	if (showDmg) {
 		$('dmg').style.display = 'block';
-		showDmgBtn.classList.adD('toggled-red');
+		showDmgBtn.classList.add('toggled-red');
 	} else {
 		$('dmg').style.display = 'none';
-		showDmgBtn.classList.adD('toggled-red');
+		showDmgBtn.classList.add('toggled-red');
 	}
 }
 showDmgBtn.addEventListener('pointerdown', e => {
@@ -1250,15 +1250,16 @@ function nearRoad(x,z,s,sim){
  return false;
 }
 
-function segClear(segs){
- let h=gen.h;
- let k=gen.k;
- let x=gen.x;
- let z=gen.z;
- let n=0;
- const sim=[];
- const rr=RATE*DS;
- for(const sg of segs){
+
+
+
+const LOOK=110;   // rettilineo di verifica in coda: evita i vicoli ciechi
+
+// metri percorsi prima della prima collisione (Infinity = tutto libero)
+function clearDist(segs){
+ let h=gen.h,k=gen.k,x=gen.x,z=gen.z,n=0;
+ const sim=[],rr=RATE*DS;
+ for(const sg of segs.concat({k:0,len:LOOK})){
   let left=sg.len;
   while(left>0){
    const dk=sg.k-k;
@@ -1268,33 +1269,34 @@ function segClear(segs){
    x+=Math.sin(h)*DS;
    z+=Math.cos(h)*DS;
    const s=gen.s+(++n)*DS;
-   if(nearRoad(x,z,s,sim))return false;
+   if(nearRoad(x,z,s,sim))return n*DS;
    sim.push({x,z,s});
   }
  }
- return true;
+ return Infinity;
 }
 
-
-
-
-
-
-
-
-
-
 function fillQueue(){
- for(let t=0;t<16;t++){
-  const start=queue.length;
-  const planBak=planH;
-  fillQueueRaw();
-  if(segClear(queue.slice(start)))return;
-  else console.log('scartato '+t);
+ let best=null,bestD=-1;
+ const attempt=build=>{
+  const start=queue.length,bak=planH;
+  build();
+  const segs=queue.slice(start),d=clearDist(segs);
   queue.length=start;
-  planH=planBak;             // scarta e riprova con un'altra curva
- }
- queue.push({k:0,len:60}); // fallback: rettilineo
+  if(d===Infinity){queue.push(...segs);return true;}   // planH resta quello aggiornato da build
+  if(d>bestD){bestD=d;best={segs,planH};}
+  planH=bak;
+  return false;
+ };
+ for(let t=0;t<24;t++) if(attempt(fillQueueRaw)) return;
+
+ // vie di fuga: tornante a destra o a sinistra
+ for(const sg of [1,-1])
+  if(attempt(()=>{queue.push({k:0,len:15});pushCorner(36,2.9,sg);planH+=sg*2.9;})) return;
+
+ // nessuna via libera: il candidato che arriva più lontano
+ queue.push(...best.segs);
+ planH=best.planH;
 }
 
 
