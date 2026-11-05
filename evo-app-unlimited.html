@@ -460,6 +460,8 @@
 		  <button class="btn"              id="showDmgBtn"  title="Danno">🔨​</button>
 		  <button class="btn"           id="changeTimeBtn"  title="Cambia orario">🕐</button>
 		  <button class="btn"              id="muteBtn"     title="Interruttore Altoparlante">🔇</button>
+		  <button class="btn toggled-red"  id="musicBtn"    title="Musica di sottofondo">🎵</button>
+		  <button class="btn"              id="restartBtn"  title="Ricomincia da capo">💀</button>
 		</div>
     </div>
     
@@ -607,11 +609,12 @@ $('camResetBtn').addEventListener('pointerdown',e=>{
 });
 
 // audio on/off
-let muted=1||false;
+let muted=false;
 const muteBtn=$('muteBtn');
 
 function applyMute(){
   if(E.master) E.master.gain.value = muted ? 0 : .55;
+  /////if(musicAudio) musicAudio.muted = !!muted;
 }
 
 function toggleMute(){
@@ -620,6 +623,34 @@ function toggleMute(){
   applyMute();
 }
 muteBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();toggleMute();});
+
+//Musica
+// musica di sottofondo
+const MUSIC=['./evo-app-music1.mp3','./evo-app-music2.mp3'];
+let musicOn=true;
+let musicAudio=null;
+const musicBtn=$('musicBtn');
+
+function musicStart(){
+  if(musicAudio)return;
+  musicAudio=new Audio(MUSIC[Math.floor(Math.random()*MUSIC.length)]);
+  musicAudio.loop=true;
+  musicAudio.volume=.9;
+  ////musicAudio.muted=!!muted;     // rispetta il mute già attivo all'avvio
+  if(musicOn)musicAudio.play().catch(e=>console.log('Errore musica:',e));
+}
+
+function toggleMusic(){
+  musicOn=!musicOn;
+  musicBtn.classList.toggle('toggled-red',musicOn);
+  if(!musicAudio)return;     // prima di startGame: partirà da sola se musicOn
+  if(musicOn)musicAudio.play().catch(()=>{});
+  else musicAudio.pause();
+}
+musicBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();toggleMusic();});
+
+
+
 
 
 //numeri di Gara
@@ -3550,7 +3581,7 @@ const yAtZ=z=>{
    dummy.updateMatrix();
    jIm.setMatrixAt(idx,dummy.matrix);
    jIm.setColorAt(idx,tmpCol.setRGB(COLS[ci][0],COLS[ci][1],COLS[ci][2]));
-   penObs.push({type:'jersey',x:px,y:y+.3,z:pz,r:.55,col:COLS[ci],im:jIm,i:idx});
+   penObs.push({type:'jersey',x:px,y:y+.3,z:pz,r:.55,col:COLS[ci],im:jIm,i:idx,mtx:dummy.matrix.clone()});//salva jersey originali
    idx++;
  });
  jIm.instanceMatrix.needsUpdate=true;
@@ -3632,7 +3663,12 @@ const syncTouches=e=>{                       // rete di sicurezza: ricalcola dai
 };
 ['touchend','touchcancel'].forEach(n=>document.addEventListener(n,syncTouches,{passive:true}));
 addEventListener('blur',releaseAll);
-document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseAll();});
+
+//se perdo visibility (faccio altro...) stoppa la musica!!!
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){releaseAll();if(musicAudio)musicAudio.pause();}
+  else if(musicAudio&&musicOn)musicAudio.play().catch(()=>{});
+});
 
 
 /* ===== MODALITÀ CAMERA: 0 chase, 1 cofano, 2 abitacolo ===== */
@@ -3674,6 +3710,7 @@ addEventListener('keydown',e=>{
  if (e.code === 'KeyI') pushChangeTimeBtn();
  if (e.code === 'KeyU') toggleMapBtn();
  if (e.code === 'KeyY') toggleDmgBtn();
+ if (e.code === 'KeyP') toggleMusic();
  
  startGame();
 });
@@ -4108,7 +4145,7 @@ const SAMPLES=[
 
 function initAudio(){try{
  AC=new(window.AudioContext||window.webkitAudioContext)();
- E.master=AC.createGain();E.master.gain.value=muted?0:.55;
+ E.master=AC.createGain();E.master.gain.value=muted?0:.5;
  const comp=AC.createDynamicsCompressor();E.master.connect(comp);comp.connect(AC.destination);
  E.buf=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate);
  const dd=E.buf.getChannelData(0);for(let i=0;i<dd.length;i++)dd[i]=Math.random()*2-1;
@@ -4642,6 +4679,66 @@ function resetCar(){
  //danneggiamento rimosso
  repairCar();
 }
+
+
+//ricomincia il gioco!
+function restartGame(){
+  // 1) via chunk e tile del vecchio percorso
+  for(const ch of chunks.values())disposeChunk(ch);
+  chunks.clear();
+  for(const t of tiles.values())disposeTile(t);
+  tiles.clear();
+
+  // 2) detriti, ruote volanti, particelle, fiammate, sgommate
+  debris.forEach(d=>scene.remove(d.m));debris.length=0;
+  flyW.forEach(d=>scene.remove(d.m));flyW.length=0;
+  pLife.fill(0);fLife.fill(0);
+  skAl.fill(0);skHead=0;skGeo.attributes.aAlpha.needsUpdate=true;
+
+  // 3) ripristino i new jersey del recinto di partenza
+  penObs.forEach(o=>{if(o.dead){o.dead=false;o.im.setMatrixAt(o.i,o.mtx);}});
+  if(penObs.length)penObs[0].im.instanceMatrix.needsUpdate=true;
+
+  // 4) nuova strada (stesso setup dell'avvio)
+  P.length=0;grid.clear();surfArr.length=0;modeArr.length=0;queue.length=0;
+  zone={mode:0,left:6};planH=0;
+  queue.push({k:0,len:150+PRE*DS});
+  Object.assign(gen,{h:0,k:0,x:0,z:-PRE*DS,s:-PRE*DS,y:0,target:0,left:0});
+  P.push({x:0,z:-PRE*DS,y:elev(gen.s),h:0,k:0,s:gen.s,surf:surfOf(0)});
+  gen.y=P[0].y;gridAdd(0);
+  ensurePoints((AHEAD+3)*CH);
+  car.idx=PRE;
+  for(let c=0;c<=AHEAD;c++)chunks.set(c,buildChunk(c));
+  mmTerrCX=null;                       // cache della minimappa da rifare
+
+  // 5) auto: posizione, velocità, danni, sporco...
+  resetCar();
+  Object.assign(car,{odo:0,rpm:0,spin:0,shake:0,pitch:0,roll:0,pitchT:0,rollT:0,camY:0,brkLatch:false,cool:0,gvy:0});
+  car.yS=P[PRE].y;
+  car.camYaw=car.th;
+  ctl.gas=ctl.brake=ctl.hb=0;
+  lastPace=null;
+
+  // 6) costruisco subito il terreno attorno alla partenza
+  for(let k=0;k<30;k++)manageTiles();
+  
+  // 7) torno al menu iniziale
+  running=false;
+  releaseAll();
+  ////if(musicAudio){musicAudio.pause();musicAudio=null;}   // al prossimo start ne sceglie una a caso
+  if (AC && AC.state==='running') AC.suspend();             // niente motore al minimo nel menu
+  if (camMode) setCamMode(camMode);                         // esce da cofano/abitacolo
+  camInside = false;
+  camReturn = false;
+  $('start').style.display='flex';
+}
+
+$('restartBtn').addEventListener('pointerdown',e=>{
+  e.preventDefault();
+  e.stopPropagation();
+  restartGame();
+});
+
 
 
 function updateWorld(dt){
@@ -5277,14 +5374,15 @@ function drawMinimap(){
 
 /* ============ AVVIO / LOOP ============ */
 function startGame(){
- if(running)return;
- running=true;
- cam.yaw = angDiff(0, cam.yaw);   // normalizza in [-PI, PI]: torna indietro per la via piu breve!
+ if (running) return;
+ running = true;
+ cam.yaw = angDiff(0, cam.yaw);
  camReturn = true;
  $('start').style.display='none';
- initAudio();
- sfxPreload();
- if(AC&&AC.state==='suspended')AC.resume();
+ if (!AC) initAudio();                     // una sola volta
+ if (!sfxBase.tree) sfxPreload();          // idem
+ musicStart();
+ if (AC && AC.state === 'suspended') AC.resume();
 }
 
 $('start').addEventListener('pointerdown',e=>{e.preventDefault();startGame();});
