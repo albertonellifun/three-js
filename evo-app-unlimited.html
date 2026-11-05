@@ -596,7 +596,7 @@ $('camResetBtn').addEventListener('pointerdown',e=>{
 });
 
 // audio on/off
-let muted=1||false;
+let muted=false;
 const muteBtn=$('muteBtn');
 
 function applyMute(){
@@ -4511,6 +4511,7 @@ addEventListener('drop',e=>{e.preventDefault();const f=e.dataTransfer.files[0];i
 
 /* ============ CONTROLLI CAMERA ============ */
 const cam = { zoom: 1, el: 0, yaw: 0, hold: {}, rotDir: 0, zoomDir: 0, yawDir: 0 };
+let camReturn = false;   // true = rientro fluido alla visuale di default dopo il menu
 document.querySelectorAll('#camBox [data-hold]').forEach(b=>{
  const k=b.dataset.hold;
  const on=e=>{e.preventDefault();e.stopPropagation();try{b.setPointerCapture(e.pointerId);}catch(_){}cam.hold[k]=1;b.classList.replace('toggled-blue','toggled-red');};
@@ -4521,6 +4522,24 @@ document.querySelectorAll('#camBox [data-hold]').forEach(b=>{
 
 function stepCamera(dt) {
   const h = cam.hold;
+
+  if (!running) {
+    // menu iniziale: giro continuo attorno all'auto, come tenere premuto Q
+    cam.yaw -= 0.50 * dt;   //rad/s
+    cam.el   = 0.15;        //un po piu alta
+    cam.zoom = 1.50;		//un po allontanata
+  } else if (camReturn) {
+    // rientro fluido alla visuale di default
+    const k = 1 - Math.exp(-6 * dt);
+    cam.yaw  -= cam.yaw * k;
+    cam.el   -= cam.el * k;
+    cam.zoom += (1 - cam.zoom) * k;
+	
+    if (Math.abs(cam.yaw) < .01 && Math.abs(cam.el) < .005 && Math.abs(cam.zoom - 1) < .005) {
+      cam.yaw = 0; cam.el = 0; cam.zoom = 1; camReturn = false;
+    }
+  }
+
   if (h.zoomIn || cam.zoomDir === -1) cam.zoom = Math.max(.35, cam.zoom * Math.exp(-1.2 * dt));
   if (h.zoomOut || cam.zoomDir === 1) cam.zoom = Math.min(3.5, cam.zoom * Math.exp(1.2 * dt));
   if (h.up || cam.yawDir === 1) cam.el = Math.min(.75, cam.el + .9 * dt);
@@ -4528,6 +4547,8 @@ function stepCamera(dt) {
   if (h.cw || cam.rotDir === -1) cam.yaw -= 1.4 * dt;   // Ruota CW
   if (h.ccw || cam.rotDir === 1) cam.yaw += 1.4 * dt;   // Ruota CCW
 }
+
+
 
 addEventListener('keydown',e=>{
 	if (e.code==='KeyC') { cam.zoom=1; cam.el=0; cam.yaw=0; if(camMode)setCamMode(camMode); camInside=false; }// C = camera di default
@@ -5145,11 +5166,14 @@ function drawMinimap(){
 function startGame(){
  if(running)return;
  running=true;
+ cam.yaw = angDiff(0, cam.yaw);   // normalizza in [-PI, PI]: torna indietro per la via piu breve!
+ camReturn = true;
  $('start').style.display='none';
  initAudio();
- sfxPreload();//crash
+ sfxPreload();
  if(AC&&AC.state==='suspended')AC.resume();
 }
+
 $('start').addEventListener('pointerdown',e=>{e.preventDefault();startGame();});
 $('resetBtn').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();resetCar();});
 addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});
