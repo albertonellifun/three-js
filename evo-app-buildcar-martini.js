@@ -28,14 +28,14 @@ const EVO_DELTA = {
 			"L":3.95,
 			"M":[
 				{"n":"Material_014","c":"#cccccc","r":0.571,"m":0},//
-				{"n":"Material_041","c":"#000000","r":0.258,"m":0},
-				{"n":"car paint_002","c":"#f3f3f3","r":0.2,"m":0,"k":"paint"},
+				{"n":"Material_041","c":"#f3f3f3","r":0.258,"m":0,"k":"paint"},//vernice paraurti retro
+				{"n":"car paint_002","c":"#f3f3f3","r":0.2,"m":0,"k":"paint"},//vernice carrozzeria
 				{"n":"Material_033","c":"#0e0e0e","r":0.39,"m":0},
 				{"n":"Material_016","c":"#cc2d13","r":0.063,"m":0},
 				{"n":"glass_001","c":"#10161c","r":0.05,"m":0,"k":"glass","o":0.55},
 				{"n":"Material_065","c":"#eedddd","r":0.203,"m":0},//luci retromarcia
 				{"n":"Material_064","c":"#cccccc","r":0.91,"m":0},//???
-				{"n":"Material_055","c":"#000000","r":0.314,"m":0},
+				{"n":"Material_055","c":"#440000","r":0.314,"m":0},//tubo radiatore
 				{"n":"Material_053","c":"#666666","r":0.124,"m":0},//cannoni
 				{"n":"Material_067","c":"#ffffff","r":0.084,"m":0},//mascherina griglia anteriore
 				{"n":"Material_062","c":"#cc0b09","r":0.111,"m":0},
@@ -48,12 +48,12 @@ const EVO_DELTA = {
 				{"n":"Material_077","c":"#cc0201","r":0.063,"m":0},
 				{"n":"Material_072","c":"#787878","r":0.416,"m":0},
 				{"n":"Material_071","c":"#030303","r":0.5,"m":0},
-				{"n":"Material_073","c":"#000000","r":0.5,"m":0},
+				{"n":"Material_073","c":"#00ff00","r":0.5,"m":0},//???
 				{"n":"Material_078","c":"#030303","r":0.4,"m":0},
 				{"n":"Material_076","c":"#cccccc","r":0.072,"m":0},
 				{"n":"Material_070","c":"#cccccc","r":0.844,"m":0},
 				{"n":"Material_086","c":"#060606","r":0.396,"m":0},
-				{"n":"Material_085","c":"#000000","r":0.342,"m":0},
+				{"n":"Material_085","c":"#000000","r":0.342,"m":0},//griglia interna
 				{"n":"tyre_rubber","c":"#2c2c2c","r":0.9,"m":0},
 				{"n":"rim_alloy","c":"#ffffff","r":0.35,"m":0.4}//cerchioni
 				],
