@@ -424,6 +424,9 @@
        grid-template-columns: repeat(6, 44px);
      }
    }
+   
+   
+   #espBtn, #absBtn { font-size: 10px !important; text-align: center; }
 
     </style>
   </head>
@@ -457,6 +460,8 @@
 		  <button class="btn toggled-red"  id="grassBtn"    title="Interruttore Erba">🍀</button>
 		  <button class="btn"              id="lightsBtn"   title="Interruttore Luci/Fari">💡</button>
 		  <button class="btn"              id="hornBtn"     title="Pulsante Clackson">📯</button>
+		  <button class="btn toggled-red" id="espBtn" title="Controllo stabilità">ESP<br>ON</button>
+		  <button class="btn toggled-red" id="absBtn" title="ABS">ABS</button>
 		  <button class="btn"              id="colorsBtn"   title="Pulsante Cambia colore">🎨</button>
 		  <button class="btn toggled-red"  id="numberBtn"   title="Interruttore Numeri di Gara">🔢</button>
 		  <button class="btn"              id="hoodBtn"     title="Camera cofano">🚘</button>
@@ -2217,16 +2222,24 @@ function manageTiles(){
 }
 
 /* ============ AUTO ============ */
-const car={x:0,z:0,th:0,u:0,v:0,r:0,steer:0,idx:3,yS:0,pitch:0,roll:0,pitchT:0,rollT:0,axF:0,ayF:0,muF:1.4,muR:1.4,brakeF:1,brakeR:1,stF:1,stR:1,rr:.015,spin:0,rpm:0,camYaw:0,camY:0,shake:0,brkLatch:false,odo:0,vy:0,gvy:0,gy:null,air:false,cool:0};
+const car={x:0,z:0,th:0,u:0,v:0,r:0,steer:0,idx:3,yS:0,
+		pitch:0,roll:0,pitchT:0,rollT:0,
+		axF:0,ayF:0,muF:1.4,muR:1.4,brakeF:1,brakeR:1,
+		stF:1,stR:1,rr:.015,spin:0,rpm:0,
+		camYaw:0,camY:0,
+		shake:0,brkLatch:false,
+		odo:0,vy:0,gvy:0,gy:null,
+		air:false,cool:0,
+		w:[0,0,0,0], slipW:[0,0,0,0], uLast:0};
 const carG=new THREE.Group();
 const wheelPivots=[];
 const wheelMeshes=[];
 
 
 const CAR_SPECS={
-  pandina:         {power: 45000, fmax:4200, mass: 880, drag:.95, tops:[35,55,80,100,120,140],  maxSpeed: 160,  maxRpm: 6000, startSkidSpeed: 0  },
-  centoventisette: {power: 70000, fmax:5500, mass: 840, drag:.85, tops:[40,70,90,120,140,160],  maxSpeed: 160,  maxRpm: 6000, startSkidSpeed: 0  },
-  bianchina:       {power: 80000, fmax:6500, mass: 800, drag:.85, tops:[45,70,95,125,150,170],  maxSpeed: 160,  maxRpm: 6000, startSkidSpeed: 0  },
+  pandina:         {power: 45000, fmax:4200, mass: 880, drag:.95, tops:[35,55,80,100,120,140],  maxSpeed: 160,  maxRpm: 6500, startSkidSpeed: 0  },
+  centoventisette: {power: 70000, fmax:5500, mass: 840, drag:.85, tops:[40,70,90,120,140,160],  maxSpeed: 160,  maxRpm: 7000, startSkidSpeed: 0  },
+  bianchina:       {power: 80000, fmax:6500, mass: 800, drag:.85, tops:[45,70,95,125,150,170],  maxSpeed: 160,  maxRpm: 7000, startSkidSpeed: 0  },
   evo:             {power:150000, fmax:9000, mass:1300, drag:.80, tops:[55,85,115,145,180,215], maxSpeed: 200,  maxRpm: 9000, startSkidSpeed: 16 }
 };
 
@@ -2236,6 +2249,7 @@ let tachSpeed=makeTachSpeed();
 
 function buildCarWrapper(o){
   let rrr = Math.floor( Math.random() * Object.keys(CAR_SPECS).length );
+  rrr=1;
   let mod = null;
   switch(rrr) {
 	case 0 : CURRENT_CAR_SPEC = CAR_SPECS['centoventisette']; mod = buildCarCentoventisette(o); break;
@@ -2251,8 +2265,6 @@ function buildCarWrapper(o){
 }
 
 
-muted=1;
-musicOn=0;
 
 //fiat 127 sport!!!
 function buildCarCentoventisette(o) {
@@ -2262,8 +2274,9 @@ function buildCarCentoventisette(o) {
     const M = c => new THREE.MeshLambertMaterial({ color: c, side: THREE.DoubleSide, shadowSide: THREE.BackSide });
     const B = c => new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide });
     const nc = m => (m.userData.noCast = true, m);
+	const MS = c => new THREE.MeshStandardMaterial({ color:c, side:THREE.DoubleSide, shadowSide: THREE.BackSide, metalness:0, roughness:0.5 });
 
-    const paint = M(o.paint);
+    const paint = MS(o.paint);
     const black = M(0x000000);
     const plastic = M(0x222222);
     const steel = M(0x888899);
@@ -2281,6 +2294,8 @@ function buildCarCentoventisette(o) {
 	const red = B(0xdd2222);
 	const orange = B(0xee6600);
 	const blue = B(0x2233cc);
+	const brakeM = B(0x330000);   // stop: spento
+	const revM   = B(0x333333);   // retromarcia: spenta
 
     const tricolore1 = (o.tricoloreAzz ? o.tricoloreAzz : o.martiniAzz ? o.martiniAzz : o.repsolOra ? o.repsolOra : undefined);
     const tricolore2 = (o.tricoloreBlu ? o.tricoloreBlu : o.martiniBlu ? o.martiniBlu : o.repsolAzz ? o.repsolAzz : undefined);
@@ -2307,7 +2322,7 @@ function buildCarCentoventisette(o) {
 	const RM = (RY0 - TY) / (RZ0 - ZR);        // ≈0.85 (~40°)
 	const rl = z => TY + (z - ZR) * RM;        // y del piano a quota z
 	const rz = (y, off = 0) => ZR + (y - TY) / RM + off;   // z del piano a quota y
-	const RY1 = 1.02, RZ1 = rz(RY1);           // fondo lunotto
+	const RY1 = 0.95, RZ1 = rz(RY1);           // fondo lunotto
 	const RZ2 = rz(BELT);                      // incrocio con la cintura
 
     // ---------- helper ----------
@@ -2482,7 +2497,7 @@ function buildCarCentoventisette(o) {
         box(0.04, 0.12, 0.20, steel, s * 0.74, 0.40, ZR + 0.02);    // risvolto paraurti
 		box(0.33, 0.14, 0.03, black, s * 0.58, 0.60, ZR - 0.005);   // incasso fanale a 60cm da terra
         for (const dx of [-0.105, 0, 0.105])                        // fanale orizzontale a 3 settori
-            box(0.095, 0.10, 0.03, dx * s > 0? orange : red, s * 0.58 + dx, 0.60, ZR - 0.012);//freccette laterali!
+			box(0.095, 0.10, 0.03, dx * s > 0 ? orange : s===1 && dx===-0.105 ? revM : brakeM, s * 0.58 + dx, 0.60, ZR - 0.012);//freccette
 			
 		cylZ(0.04, 0.45, steel, s * 0.50, 0.25, -1.555, 12);        // scarico doppio sotto il paraurti
     }
@@ -2568,7 +2583,7 @@ function buildCarCentoventisette(o) {
 		for(const s of [-1,1]) {
 			box(
 				0.055,0.10,0.07,
-				black,
+				steel,
 				s*0.50,
 				0.86,
 				-1.56,
@@ -2577,7 +2592,7 @@ function buildCarCentoventisette(o) {
 			
 			box(
 				0.055,0.10,0.07,
-				black,
+				steel,
 				s*0.40,
 				0.91,
 				-1.46,
@@ -2588,7 +2603,7 @@ function buildCarCentoventisette(o) {
 		// Ala sottile inclinata a 45°
 		box(
 			1.35,0.025,0.12,
-			steel,
+			black,
 			0,
 			0.905,
 			-1.64,//bello cazzo!
@@ -2597,7 +2612,7 @@ function buildCarCentoventisette(o) {
 		
 		box(
 			1.35,0.025,0.12,
-			steel,
+			black,
 			0,
 			0.955,
 			-1.54,//bello cazzo!
@@ -2698,6 +2713,10 @@ function buildCarCentoventisette(o) {
 
     const K = 1.20;   // scala complessiva (come prima)
     g.scale.setScalar(K);
+	
+	
+	g.userData.brakeMat = brakeM;
+	g.userData.revMat   = revM;
 
     return g;
 }
@@ -2712,8 +2731,9 @@ function buildCarPandina(o) {
     const M = c => new THREE.MeshLambertMaterial({ color: c, side: THREE.DoubleSide, shadowSide: THREE.BackSide });
     const B = c => new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide });
     const nc = m => (m.userData.noCast = true, m);
+	const MS = c => new THREE.MeshStandardMaterial({ color:c, side:THREE.DoubleSide, shadowSide: THREE.BackSide, metalness:0, roughness:0.5 });
 
-    const paint = M(o.paint);
+    const paint = MS(o.paint);
 	const black = M(0x000000);
     const plastic = M(0x222222);
     const steel = M(0x666677);
@@ -2726,6 +2746,8 @@ function buildCarPandina(o) {
     glass.userData.noCast = true;
     glass.userData.noRecv = true;
     const white = B(0xffffff), panna = B(0xffffdd), red = B(0xdd2222), orange = B(0xee6600), blue = B(0x2233cc);
+	const brakeM = B(0x330000);   // stop: spento
+	const revM   = B(0x333333);   // retromarcia: spenta
 
     const tricolore1 = (o.tricoloreAzz ? o.tricoloreAzz : o.martiniAzz ? o.martiniAzz : o.repsolOra ? o.repsolOra : undefined);
     const tricolore2 = (o.tricoloreBlu ? o.tricoloreBlu : o.martiniBlu ? o.martiniBlu : o.repsolAzz ? o.repsolAzz : undefined);
@@ -2840,7 +2862,7 @@ function buildCarPandina(o) {
     box(1.30, 0.04, 0.08, black, 0, 1.04, 0.70);
 
     // fascione nero sotto le porte
-    for (const s of [-1, 1]) box(0.04, 0.08, 1.40, black, s * 0.73, 0.45, 0);
+    for (const s of [-1, 1]) box(0.04, 0.12, 1.46, plastic, s * 0.73, 0.50, 0);//era alto nelle panda
 
     // ---------- PARTE ALTA: tetto, montanti, vetri dritti ----------
     box(0.54 * 2, 0.04, 1.42, paint, 0, ROOF - 0.02, -0.46);                // tetto
@@ -2873,10 +2895,10 @@ function buildCarPandina(o) {
         box(0.006, 0.64, 0.008, black, s * 0.731, 0.745, -0.43);    // taglio porta / montante B
         box(0.006, 0.60, 0.008, black, s * 0.731, 0.74, 0.60);      // taglio porta / parafango
         box(0.02, 0.03, 0.08, steel, s * 0.74, 0.94, -0.33);        // maniglia
-        box(0.012, 0.04, 0.06, orange, s * 0.736, 0.80, 0.82);      // freccia laterale
+        box(0.012, 0.04, 0.06, orange, s * 0.636, 0.80, 0.82);      // freccia laterale
 		box(0.08, 0.03, 0.03, plastic, s * 0.695, 1.12, 0.55);      // braccetto zeppetto
 		box(0.14, 0.10, 0.04, plastic, s * 0.745, 1.16, 0.55);      // corpo specchio, ora a ridosso della fiancata
-		box(0.12, 0.08, 0.01, steel,   s * 0.745, 1.16, 0.53);     // vetro specchio (rivolto verso dietro)
+		box(0.12, 0.08, 0.01, steel,   s * 0.745, 1.16, 0.53);      // vetro specchio (rivolto verso dietro)
     }
 	
 	// presa d'aria sul cofano, davanti al parabrezza
@@ -2898,9 +2920,11 @@ function buildCarPandina(o) {
 	
     // ---------- FRONTALE ----------
     box(1.46, 0.28, 0.12, plastic, 0, 0.51, 1.63);                    // paraurti
+	
+	
     for (const s of [-1, 1]) {
-        box(0.05, 0.28, 0.28, plastic, s * 0.71, 0.51, 1.54);         // risvolto paraurti
-        box(0.07, 0.14, 0.10, black, s * 0.50, 0.62, 1.70);         // rostri
+        box(0.05, 0.28, 0.18, plastic, s * 0.71, 0.51, 1.58);         // risvolto paraurti TODO
+        box(0.07, 0.14, 0.10, black, s * 0.50, 0.62, 1.70);           // rostri
     }
     box(0.75, 0.06, 0.02, black, 0, 0.58, 1.695);                   // presa d'aria bassa
     const fp = new THREE.Mesh(
@@ -2922,18 +2946,18 @@ function buildCarPandina(o) {
     }
 
     // ---------- POSTERIORE ----------
-    box(1.46, 0.28, 0.12, plastic, 0, 0.54, -1.63);                   // paraurti
+    box(1.46, 0.26, 0.10, plastic, 0, 0.56, -1.64);                   // paraurti
     for (const s of [-1, 1]) {
         box(0.05, 0.28, 0.28, plastic, s * 0.71, 0.54, -1.54);
-        box(0.22, 0.32, 0.022, dark, s * 0.62, 0.30, -1.50);        // paraspruzzi rivolto verso dietro
+        box(0.22, 0.32, 0.022, dark, s * 0.62, 0.30, -1.50);        // paraspruzzi rivolto verso dietro TODO
         // fanale alto e stretto: rosso, arancio, retromarcia
-		box(0.11, 0.09, 0.04, red,    s * 0.62, 0.895, -1.60);   // 0.85 - 0.94
+		box(0.11, 0.09, 0.04, brakeM,    s * 0.62, 0.895, -1.60);   // 0.85 - 0.94
 		box(0.11, 0.06, 0.04, orange, s * 0.62, 0.81,  -1.60);   // 0.78 - 0.84
-		box(0.11, 0.05, 0.04, panna,  s * 0.62, 0.745, -1.60);   // 0.72 - 0.77
+		box(0.11, 0.05, 0.04, s===1 ? revM : brakeM,  s * 0.62, 0.745, -1.60);   // 0.72 - 0.77
 		box(0.13, 0.26, 0.02, black,  s * 0.62, 0.83,  -1.585);  // incasso fanale
     }
     cylZ(0.02, 0.03, steel, 0, 0.80, -1.59, 12);                    // serratura portellone
-    box(0.12, 0.025, 0.01, blue, -0.40, 0.86, -1.585);               // scritta FIAT logo
+    box(0.12, 0.025, 0.01, blue, -0.40, 0.86, -1.585);              // scritta FIAT logo
     
 	//targa posteriore
     const rp = new THREE.Mesh(
@@ -2956,15 +2980,17 @@ function buildCarPandina(o) {
         d.position.set(0, 0.27, z); g.add(d);
         for (const s of [-1, 1]) cylZ(0.03, 0.22, M(0xcc2222), s * 0.46, 0.55, z, 8).rotation.x = 0;
     }
-    for (const s of [-1, 1]) for (const zc of [WZ, -WZ]) {
-        prism(archPts(zc), 0.012, black, s * 0.656);                // fodera interna del passaruota
-        const pts = [];
-        for (let i = 0; i <= 14; i++) {
-            const a = 0.36 + (Math.PI - 0.72) * i / 14;
-            pts.push(new THREE.Vector3(s * 0.735, WY + 0.41 * Math.sin(a), zc + 0.41 * Math.cos(a)));
-        }
-        g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, 0.022, 6, false), plastic));
-    }
+    for (const s of [-1, 1]) {
+		for (const zc of [WZ, -WZ]) {
+			prism(archPts(zc), 0.012, black, s * 0.656);                // fodera interna del passaruota
+			const pts = [];
+			for (let i = 0; i <= 8; i++) {
+				const a = 0.36 + (Math.PI - 0.72) * i / 8;
+				pts.push(new THREE.Vector3(s * 0.735, WY + 0.41 * Math.sin(a), zc + 0.41 * Math.cos(a)));
+			}
+			g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, 0.030, 8, false), plastic));
+		}
+	}
 
     // ---------- RUOTE: gomma tassellata + cerchio in lamiera grigia ----------
     const tc = document.createElement('canvas'); tc.width = 448; tc.height = 64;
@@ -3090,6 +3116,9 @@ function buildCarPandina(o) {
 	
 	const K=1.2;// compromesso: x 0.80/0.61=1.31, z 1.25/1.085=1.15
 	g.scale.setScalar(K);
+	
+	g.userData.brakeMat = brakeM;
+	g.userData.revMat   = revM;
 
     return g;
 }
@@ -3104,8 +3133,9 @@ function buildCarBianchina(o) {
 	const M = c => new THREE.MeshLambertMaterial({ color: c, side: THREE.DoubleSide, shadowSide: THREE.BackSide });
 	const B = c => new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide, shadowSide: THREE.BackSide });
 	const nc = m => (m.userData.noCast = true, m);   // mesh che non proietta ombra
+	const MS = c => new THREE.MeshStandardMaterial({ color:c, side:THREE.DoubleSide, shadowSide: THREE.BackSide, metalness:0, roughness:0.5 });
 	
-    const paint = M(o.paint);
+    const paint = MS(o.paint);
 	// vernice dei montanti: leggermente "avanti" rispetto ai vetri, non riceve ombra
 	const paintMontanti = paint.clone();
 	paintMontanti.polygonOffset = true;
@@ -3136,7 +3166,9 @@ function buildCarBianchina(o) {
 	const panna = B(0xffffdd);
     const red = B(0xdd2222);
     const orange = B(0xee5500);
-	
+	const brakeM = B(0x330000);   // stop: spento
+	const revM   = B(0x333333);   // retromarcia: spenta
+
 	const tricolore1 = (o.tricoloreAzz ? o.tricoloreAzz : o.martiniAzz ? o.martiniAzz : o.repsolOra ? o.repsolOra : undefined);
     const tricolore2 = (o.tricoloreBlu ? o.tricoloreBlu : o.martiniBlu ? o.martiniBlu : o.repsolAzz ? o.repsolAzz : undefined);
     const tricolore3 = (o.tricoloreRed ? o.tricoloreRed : o.martiniRed ? o.martiniRed : o.repsolRed ? o.repsolRed : undefined);
@@ -3539,7 +3571,7 @@ function buildCarBianchina(o) {
         // freni rossi
         box(
             0.24,0.14,0.06,
-            red,
+            brakeM,
 			s*0.45,FARO_HEIGHT+0.03,FARO_BACK
         );
 
@@ -3553,7 +3585,7 @@ function buildCarBianchina(o) {
 		// luci retro bianche sporche
         box(
             0.06,0.14,0.06,
-            panna,
+            revM,
 			s*0.30,FARO_HEIGHT+0.03,FARO_BACK
         );
     
@@ -3855,6 +3887,10 @@ function buildCarBianchina(o) {
 		});
 		g.userData.setNumbersVisible = v => plates.forEach(p => p.visible = v);
 	}
+
+
+	g.userData.brakeMat = brakeM;
+	g.userData.revMat   = revM;
 
     return g;
 }
@@ -4395,7 +4431,7 @@ const frontLightOffsets = [
 	carG.add(stopLight);
 });
  backLightOffsets.forEach((sl,idx) => {
-	const backLight = new THREE.PointLight(0xffffff, 0, 3); // Colore, intensità iniziale (0), raggio
+	const backLight = new THREE.PointLight(0xffffff, 0, 1); // Colore, intensità iniziale (0), raggio
 	backLight.position.set(sl.x, sl.y, sl.z);
 	backLight.name='backLight'+(idx+1);
 	carG.add(backLight);
@@ -4629,6 +4665,10 @@ addEventListener('keydown',e=>{
  if (e.code === 'KeyY') toggleDmgBtn();
  if (e.code === 'KeyP') toggleMusic();
  
+ //esp+abs
+ if (e.code === 'KeyK') toggleEsp();//esp on -> esp sport -> esp off -> esp on...
+ if (e.code === 'KeyJ') toggleAbs();//abs on/off
+ 
  startGame();
 });
 
@@ -4642,18 +4682,211 @@ addEventListener('keyup',e=>{
  if (e.code === 'KeyV' || e.code === 'KeyB') cam.yawDir = 0;
 });
 
-/* ============ FISICA (bicicletta + cerchio di attrito) ============ */
-const CAf=140000;
-const CAr=160000;
-const maxSteer=sp=>.75/(1+Math.pow(sp/18,1.3));
+
+
+/* NUOVA FISICA 4 RUOTE INDIPENDENTI - CLAUDE VERSION */
+const WR=0.33;            // raggio ruota
+const IW=2.2;             // inerzia ruota+trasmissione (kg m²)
+const HB_TORQUE=2600;     // Nm per ruota posteriore: blocca
+//           tarG tarB tarNO tarSI grav1 grav2 rocks offroad
+const TYRE_B=[12,  12,   12,   12,   7,    5,    6,    4];   // più alto = picco a slip più basso
+
+//esp+abs
+let espMode=2;                      // 0 OFF, 1 SPORT, 2 ON  (tasto K)
+const ESP_DEAD=[1e9,.15,.06];       // soglia errore imbardata (rad/s)
+const ESP_GAIN=[0,6000,14000];      // Nm di freno per rad/s di errore
+const ESP_VCH=22;                   // velocità caratteristica (sottosterzo naturale)
+
+//ESP+ABS
+let absOn=true;
+const espBtn=$('espBtn'), absBtn=$('absBtn');
+const ESP_LABEL=['ESP<br>OFF','ESP<br>SPORT','ESP<br>ON'];
+
+function updateEspBtn(){
+  espBtn.innerHTML=ESP_LABEL[espMode];
+  espBtn.classList.toggle('toggled-red',espMode===2);    // ON = rosso
+  espBtn.classList.toggle('toggled-blue',espMode===1);   // SPORT = blu, OFF = neutro
+}
+function toggleEsp(){ espMode=(espMode+2)%3; updateEspBtn(); }   // ON -> SPORT -> OFF -> ON
+function toggleAbs(){ absOn=!absOn; absBtn.classList.toggle('toggled-red',absOn); }
+
+espBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();toggleEsp();});
+absBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();toggleAbs();});
+updateEspBtn();
+
+
+
+
+//fisica 4 ruote
 function physics(dt){
+  const m=CURRENT_CAR_SPEC.mass;
+  const I=m*1.7;
+  const a=1.3,b=1.3,L=a+b,W=1.5,w2=W/2,g=9.81,hc=0.55;
+  let u=car.u,v=car.v,r=car.r;
+  
+  car.absT=Math.max(0,(car.absT||0)-dt);//abs
+
+  // dopo un urto u cambia di colpo: riallinea le ruote
+  if(Math.abs(u-car.uLast)>1.5) for(let i=0;i<4;i++) car.w[i]=u/WR;
+
+  const sp=Math.hypot(u,v);
+  const delta=car.steer*maxSteer(sp)+dmg.pull;
+
+  // carichi verticali con trasferimento
+  const N0f=m*g*b/L*.5, N0r=m*g*a/L*.5;
+  const dl=m*car.axF*hc/(2*L);
+  const dtF=m*car.ayF*hc*.4/W, dtR=m*car.ayF*hc*.6/W;
+  const N=[
+    Math.max(N0f-dl-dtF,N0f*.15), Math.max(N0f-dl+dtF,N0f*.15),
+    Math.max(N0r+dl-dtR,N0r*.15), Math.max(N0r+dl+dtR,N0r*.15)];
+  const X=[a,a,-b,-b], Y=[w2,-w2,w2,-w2];   // FL FR RL RR (x avanti, y sinistra)
+
+  // gas, freno, retromarcia
+  let Fd=0;
+  if(ctl.gas>0) Fd=Math.min(CURRENT_CAR_SPEC.power/Math.max(u,5),CURRENT_CAR_SPEC.fmax)*ctl.gas;
+  if(ctl.brake>0){
+    if(u>.05) car.brkLatch=true;
+    else if(!car.brkLatch&&u>-12) Fd-=4500*ctl.brake;
+  } else car.brkLatch=false;
+  const Feb=(ctl.gas<.05&&u>3)?(200+9*u)/4:0;
+  const brakeOn=ctl.brake>0&&car.brkLatch;
+  const share=[.2,.2,.3,.3], BIAS=.62;
+  
+  
+  //esp
+  // ===== ESP =====
+  let espW=-1, espT=0;
+  if(espMode>0 && ctl.hb<.5 && !car.air && u>5){
+	const d0=car.steer*maxSteer(sp);
+	let rDes=u*Math.tan(d0)/(L*(1+(u/ESP_VCH)**2));
+	const rMax=.9*(car.muF+car.muR)*.5*g/u;
+	rDes=clamp(rDes,-rMax,rMax);
+	const beta=Math.atan2(v,u);
+	const sr=Math.sign(r), sd=Math.sign(rDes);
+	const s=(sr===sd||Math.abs(r)<.08)?sd:sr;
+	const ex=((r-rDes)-2*beta)*s;                 // era 1.2*beta
+	const dead=ESP_DEAD[espMode];
+	if(ex>dead){
+		espW=s>0?1:0;
+		espT=(ex-dead)*ESP_GAIN[espMode];
+		Fd*=1-clamp(ex*4,0,.95);                    // era ex*1.5, max .7
+	}else if(ex<-dead*1.5){
+		espW=s>0?2:3;
+		espT=(-ex-dead*1.5)*ESP_GAIN[espMode]*.7;
+		Fd*=1-clamp(-ex*3,0,.8);                    // era -ex, max .5
+	}
+  }
+  car.espAct=espW>=0;
+  
+  
+
+  let Fx=0,Fy=0,Mz=0,spinMax=0;
+  for(let i=0;i<4;i++){
+    const fr=i<2;
+    const d=fr?delta:0, cd=Math.cos(d), sd=Math.sin(d);
+
+    // velocità del punto ruota nel riferimento ruota
+    const vbx=u-r*Y[i], vby=v+r*X[i];
+    const vxw= vbx*cd+vby*sd, vyw=-vbx*sd+vby*cd;
+
+    // superficie e aderenza PER RUOTA
+    const wd=wheelDat[i];
+    const sf=Math.abs(wd.d)>5.4?MU.length-1:wd.surf;
+    let mu=car.air?.03:MU[sf];
+    if(dmg.lost[i]) mu*=.25;
+    const muN=mu*N[i], B=TYRE_B[sf];
+
+    // vettore di slittamento combinato
+    const den=Math.max(Math.abs(vxw),3);
+    const sx=(car.w[i]*WR-vxw)/den, sy=-vyw/den;
+    const s=Math.hypot(sx,sy);
+    const ang=Math.atan(B*s);
+    const f=Math.sin(1.5*ang);                 // picco poi calo (~30%)
+    const F=muN*f;
+    const fx0=s>1e-6?F*sx/s:0, fy0=s>1e-6?F*sy/s:0;
+
+    // dinamica ruota (semi-implicita: stabile anche a slip alto)
+    const sxn=s>1e-6?sx/s:1;
+    const dfds=Math.max(Math.cos(1.5*ang),0)*1.5*B/(1+B*B*s*s);
+    const k=muN*(dfds*sxn*sxn+(s>1e-6?f/s:dfds)*(1-sxn*sxn))/den;
+    const Tdrv=(Fd-Feb)*WR*share[i];
+    ///////const Tb=(brakeOn?16000*WR*ctl.brake*(fr?BIAS:1-BIAS)*.5:0)+(!fr&&ctl.hb>.5?HB_TORQUE:0);
+	
+	//esp
+	const Tesp=(i===espW)?Math.min(espT,.95*muN*WR):0;
+	const hbRear=!fr&&ctl.hb>.5;
+	const absOnW=absOn&&brakeOn&&!hbRear;     // il freno a mano resta libero di bloccare
+	const Tb=(brakeOn?16000*WR*ctl.brake*(fr?BIAS:1-BIAS)*.5:0)+(hbRear?HB_TORQUE:0)+Tesp;
+	
+    const Ieff=IW+dt*k*WR*WR;
+    let wn=car.w[i]+dt*(Tdrv-fx0*WR)/Ieff;
+    if(Tb>0){                                   // il freno ferma la ruota, non la inverte
+      const dwb=dt*Tb/Ieff;
+      wn=Math.abs(wn)<=dwb?0:wn-Math.sign(wn)*dwb;
+    }
+	
+	
+	//esp
+	if((absOnW||Tesp>0)&&vxw>2){
+	  const wMin=(vxw-1.5/B*den)/WR;
+	  if(wn<wMin){ wn=wMin; if(absOnW) car.absT=.15; }
+	}
+	
+	
+    const wmax=CURRENT_CAR_SPEC.maxSpeed/3.6*1.1/WR;
+    car.w[i]=clamp(wn,-wmax,wmax);
+    car.slipW[i]=s;
+    if(!fr) spinMax=Math.max(spinMax,sx);
+
+    // ruota -> corpo
+    const Fxb=fx0*cd-fy0*sd, Fyb=fx0*sd+fy0*cd;
+    Fx+=Fxb; Fy+=Fyb;
+    Mz+=X[i]*Fyb-Y[i]*Fxb;
+  }
+  car.spin=clamp((spinMax-.12)*4,0,1.5)*(sp<22?1:.5);
+
+  // resistenze: opposte al vettore velocità (non solo a u)
+  const V=Math.max(sp,1e-3);
+  const res=car.rr*m*g*Math.tanh(sp*2)/V+CURRENT_CAR_SPEC.drag*sp;
+  Fx-=res*u; Fy-=res*v;
+
+  const ax=Fx/m+v*r-g*Math.sin(car.pitchT);
+  const ay=Fy/m-u*r-g*Math.sin(car.rollT);
+  let nu=u+ax*dt, nv=v+ay*dt, nr=r+(Mz/I-.02*r)*dt;
+
+  // da fermo con freno / freno a mano resta fermo
+  if((ctl.hb>.5||(car.brkLatch&&ctl.brake>0))&&ctl.gas<.05&&Math.hypot(nu,nv)<.3){nu=nv=nr=0;}
+
+  // cinematica solo a velocità TOTALE bassa (non più su u con segno)
+  const wk=sp<=1?1:clamp(1-(sp-1)/3,0,1);
+  if(wk>0){
+    const kk=1-Math.exp(-wk*20*dt);
+    nr+=(nu*Math.tan(delta)/L-nr)*kk;
+    nv+=(0-nv)*kk;
+  }
+
+  const ff=1-Math.exp(-10*dt);
+  car.axF+=(Fx/m-car.axF)*ff;
+  car.ayF+=(Fy/m-car.ayF)*ff;
+  car.u=nu; car.v=nv; car.r=nr; car.uLast=nu;
+  car.th+=nr*dt;
+  car.x+=(nu*Math.sin(car.th)+nv*Math.cos(car.th))*dt;
+  car.z+=(nu*Math.cos(car.th)-nv*Math.sin(car.th))*dt;
+}
+
+
+/* ============ FISICA (bicicletta + cerchio di attrito) ============ */
+const CAf=140000;//rigidezza deriva front
+const CAr=160000;//rigidezza deriva rear
+const maxSteer=sp=>.75/(1+Math.pow(sp/18,1.3));//limitatore di sterzo dipende da velocita
+function physicsOLD(dt){
  const m=CURRENT_CAR_SPEC.mass;
  const I=CURRENT_CAR_SPEC.mass*1.5;
- const a=1.3;
- const b=1.3;
- const L=2.6; 
- const g=9.81;
- const hc=0.55;
+ const a=1.3;//distanza baricentro asse anteriore
+ const b=1.3;//distanza baricentro asse posteriore
+ const L=2.6;//passo veicolo
+ const g=9.81;//gravita
+ const hc=0.55;//altezza baricentro
  const u=car.u;
  const v=car.v;
  const r=car.r;
@@ -4693,21 +4926,10 @@ function physics(dt){
 
  const bf=Nf/(Nf+Nr);
  
- //freno ideale rimosso
- //Fxf+=Math.max(Fb*bf,-.8*FmF*car.brakeF);Fxr+=Math.max(Fb*(1-bf),-.8*FmR*car.brakeR);
- 
  //freno piu realistico
- const BRAKE_BIAS_F=.62;   // .75 = ideale (non blocca mai), .5 = blocca subito dietro
+ const BRAKE_BIAS_F=.62;   // .75 = ideale (non blocca mai), .5 = blocca subito dietro, bilanciamento freno 62% anteriore
  Fxf+=Math.max(Fb*BRAKE_BIAS_F,     -FmF*car.brakeF);
  Fxr+=Math.max(Fb*(1-BRAKE_BIAS_F), -FmR*car.brakeR);
-
- //freno a mano della madocina, non mi piace!
- /*
- if(ctl.hb > .5){
-  const dir = Math.sign(u) || 1;
-  Fxr = -dir * FmR * car.brakeR * .95;
-  FmR *= .9;
- }*/
 
  const HB_GRIP=.45;    // grip totale del posteriore a ruote bloccate (1 = normale)
  const HB_BRAKE=.5;    // quota di quel grip usata per frenare (resto = laterale)
@@ -4723,8 +4945,11 @@ function physics(dt){
  
  Fxf=clamp(Fxf,-FmF,FmF);
  Fxr=clamp(Fxr,-FmR,FmR);
+ 
  const LmF=Math.sqrt(Math.max(FmF*FmF-Fxf*Fxf,(.15*FmF)**2));
  const LmR=Math.sqrt(Math.max(FmR*FmR-Fxr*Fxr,(.15*FmR)**2));
+ 
+ 
  let Fyf=0;
  let Fyr=0;
  if(u>.5){
@@ -4738,8 +4963,8 @@ function physics(dt){
  const sd=Math.sin(delta);
  let Fx=Fxf*cd-Fyf*sd+Fxr;
  const Fy=Fyf*cd+Fxf*sd+Fyr;
- const Mz=a*(Fyf*cd+Fxf*sd)-b*Fyr;
- 
+ let Mz=a*(Fyf*cd+Fxf*sd)-b*Fyr;
+  
  Fx-=(car.rr*m*g+CURRENT_CAR_SPEC.drag*u*Math.abs(u))*Math.tanh(u*2)+Feb;
  
  const ax=Fx/m+v*r-g*Math.sin(car.pitchT);
@@ -4761,7 +4986,7 @@ function physics(dt){
   const k=1-Math.exp(-wk*20*dt);
   const rk=nu*Math.tan(delta)/L;
   nr+=(rk-nr)*k;
-  nv+=(0-nv)*k;
+  nv+=(0-nv)*k;//FORZA VELOCITA LATERALE A ZERO!!!
  }
  const f=1-Math.exp(-10*dt);
  car.axF+=(Fx/m-car.axF)*f;
@@ -4773,6 +4998,8 @@ function physics(dt){
  car.x+=(nu*Math.sin(car.th)+nv*Math.cos(car.th))*dt;
  car.z+=(nu*Math.cos(car.th)-nv*Math.sin(car.th))*dt;
 }
+
+
 function stepControls(dt){
  const tgt=clamp(touch.steer+(keys.left?1:0)-(keys.right?1:0),-1,1);
  const same=Math.sign(tgt)===Math.sign(car.steer)&&Math.abs(tgt)>=Math.abs(car.steer);
@@ -4936,6 +5163,8 @@ function emitWheels(dt){
  const speed=Math.abs(car.u);
  const slipR=Math.abs(car.v-1.3*car.r);
  const slipF=Math.abs(car.v+1.3*car.r);
+ 
+ console.log(slipR);
  
  for(let w=0;w<4;w++){
   const rear=w>=2;
@@ -5611,6 +5840,9 @@ function resetCar(){
  car.air=false;
  car.vy=0;
  car.gy=null;
+ 
+ car.w.fill(0); car.slipW.fill(0); car.uLast=0;//fisica 4 ruote 
+ 
  skW.forEach(s=>{s.on=false;s.has=false;s.k=0;});//toglie sgommate
  
  //sporco rimosso PRIMA di riparare l'auto (respawn)
@@ -5766,6 +5998,11 @@ function updateWorld(dt){
   backLight1.intensity = isRetromarcia ? 0.8 : 0;
   backLight2.intensity = isRetromarcia ? 0.8 : 0;
   
+  const bm = model.userData.brakeMat;
+  const rm = model.userData.revMat;
+  if (bm) bm.color.setHex(isBraking ? 0xff0000 : 0xcc2d13);
+  if (rm) rm.color.setHex(isRetromarcia ? 0xffffff : 0xeedddd);
+  
   // I fari anteriori si accendono solo se headlightsOn è true
   //frontlight le mantengo altrimenti i fari sembrano spenti!
   frontLight1.intensity = headlightsOn ? 1 : 0;
@@ -5864,14 +6101,17 @@ function updateWorld(dt){
    sh.material.opacity=clamp(1-h/8,.25,1);
  }
  
- 
+ /*
  for(let w=0;w<4;w++) {
    wheelMeshes[w].rotation.x+=car.u/.33*dt;//0.36 vecchia delta, 0.33 nuova delta
- }
+ }*/
+ 
+ for(let w=0;w<4;w++) wheelMeshes[w].rotation.x+=car.w[w]*dt;
  
  //danneggiamento:
  //wheelPivots[0].rotation.y=wheelPivots[1].rotation.y=car.steer*maxSteer(Math.abs(car.u));
- const stA=car.steer*maxSteer(Math.abs(car.u));
+ /////const stA=car.steer*maxSteer(Math.abs(car.u));
+ const stA=car.steer*maxSteer(Math.hypot(car.u,car.v));//fisica 4 ruote
  for(let w=0;w<4;w++){
    wheelPivots[w].rotation.y=(w<2?stA:0)+dmg.toe[w];
    wheelPivots[w].rotation.z=dmg.camber[w];
@@ -5886,7 +6126,9 @@ function updateWorld(dt){
  
  
  // camera 3/4 da dietro, ~45°
- const spd=Math.abs(car.u);
+ /////const spd=Math.abs(car.u);
+ const spd=Math.hypot(car.u,car.v);//fisica 4 ruote
+ 
  const beta=spd>5?Math.atan2(car.v,car.u):0;
  car.camYaw+=angDiff(car.camYaw,car.th+clamp(beta*.6,-.6,.6))*(1-Math.exp(-3.5*dt));
  
@@ -5978,6 +6220,11 @@ function updateWorld(dt){
   updAudio(running?slip:0,dt);
   
  if(++hudTick%3===0){
+  $('surf').style.background=car.espAct?'rgba(220,120,0,.85)':'';   // la barra del fondo diventa arancio quando l'ESP lavora
+  absBtn.style.background=car.absT>0?'rgba(255,140,0,.85)':'';
+  espBtn.style.background=car.espAct?'rgba(255,140,0,.85)':'';
+  
+ 
   if(showDmg) dmgInd();//danno  
   $('dmg').classList.toggle('night',headlightsOn);
   
