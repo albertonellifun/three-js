@@ -2249,7 +2249,6 @@ let tachSpeed=makeTachSpeed();
 
 function buildCarWrapper(o){
   let rrr = Math.floor( Math.random() * Object.keys(CAR_SPECS).length );
-  rrr=1;
   let mod = null;
   switch(rrr) {
 	case 0 : CURRENT_CAR_SPEC = CAR_SPECS['centoventisette']; mod = buildCarCentoventisette(o); break;
@@ -2894,8 +2893,8 @@ function buildCarPandina(o) {
     for (const s of [-1, 1]) {
         box(0.006, 0.64, 0.008, black, s * 0.731, 0.745, -0.43);    // taglio porta / montante B
         box(0.006, 0.60, 0.008, black, s * 0.731, 0.74, 0.60);      // taglio porta / parafango
-        box(0.02, 0.03, 0.08, steel, s * 0.74, 0.94, -0.33);        // maniglia
-        box(0.012, 0.04, 0.06, orange, s * 0.636, 0.80, 0.82);      // freccia laterale
+        box(0.02,  0.03, 0.08, steel,  s * 0.74,  0.94, -0.33);        // maniglia
+        box(0.02,  0.03, 0.03, orange, s * 0.736, 0.80, 0.72);      // freccia laterale
 		box(0.08, 0.03, 0.03, plastic, s * 0.695, 1.12, 0.55);      // braccetto zeppetto
 		box(0.14, 0.10, 0.04, plastic, s * 0.745, 1.16, 0.55);      // corpo specchio, ora a ridosso della fiancata
 		box(0.12, 0.08, 0.01, steel,   s * 0.745, 1.16, 0.53);      // vetro specchio (rivolto verso dietro)
@@ -2923,7 +2922,13 @@ function buildCarPandina(o) {
 	
 	
     for (const s of [-1, 1]) {
-        box(0.05, 0.28, 0.18, plastic, s * 0.71, 0.51, 1.58);         // risvolto paraurti TODO
+        //box(0.05, 0.28, 0.18, red, s * 0.71, 0.51, 1.58);         // risvolto paraurti TODO
+		box(0.05, 0.26 * 0.25, 0.32, plastic, s * 0.71, 0.6375, 1.50);         // 1 (Alto - panna)
+		box(0.05, 0.26 * 0.25, 0.26, plastic, s * 0.71, 0.5725, 1.53);         // 2 (Medio-alto - red)
+		box(0.05, 0.26 * 0.25, 0.20, plastic, s * 0.71, 0.5075, 1.56);         // 3 (Medio-basso - panna)
+		box(0.05, 0.26 * 0.25, 0.18, plastic, s * 0.71, 0.4425, 1.57);         // 4 (Basso - red)
+		
+		
         box(0.07, 0.14, 0.10, black, s * 0.50, 0.62, 1.70);           // rostri
     }
     box(0.75, 0.06, 0.02, black, 0, 0.58, 1.695);                   // presa d'aria bassa
@@ -2948,8 +2953,13 @@ function buildCarPandina(o) {
     // ---------- POSTERIORE ----------
     box(1.46, 0.26, 0.10, plastic, 0, 0.56, -1.64);                   // paraurti
     for (const s of [-1, 1]) {
-        box(0.05, 0.28, 0.28, plastic, s * 0.71, 0.54, -1.54);
-        box(0.22, 0.32, 0.022, dark, s * 0.62, 0.30, -1.50);        // paraspruzzi rivolto verso dietro TODO
+        //box(0.05, 0.28, 0.28, red, s * 0.71, 0.54, -1.54);			 // paraurti TODO
+		box(0.05, 0.26 * 0.25, 0.32, plastic, s * 0.71, 0.6375, -1.50);         // 1 (Alto - panna)
+		box(0.05, 0.26 * 0.25, 0.26, plastic,   s * 0.71, 0.5725, -1.53);         // 2 (Medio-alto - red)
+		box(0.05, 0.26 * 0.25, 0.20, plastic, s * 0.71, 0.5075, -1.56);         // 3 (Medio-basso - panna)
+		box(0.05, 0.26 * 0.25, 0.18, plastic,   s * 0.71, 0.4425, -1.57);         // 4 (Basso - red)
+		
+        box(0.22, 0.32, 0.022, black, s * 0.62, 0.30, -1.50);        // paraspruzzi rivolto verso dietro 
         // fanale alto e stretto: rosso, arancio, retromarcia
 		box(0.11, 0.09, 0.04, brakeM,    s * 0.62, 0.895, -1.60);   // 0.85 - 0.94
 		box(0.11, 0.06, 0.04, orange, s * 0.62, 0.81,  -1.60);   // 0.78 - 0.84
@@ -2974,12 +2984,6 @@ function buildCarPandina(o) {
 	}
 
     // ---------- 4x4: assali, differenziali, molle rosse, passaruota ----------
-    for (const z of [WZ, -WZ]) {
-        cylX(0.035, 1.10, black, 0, 0.30, z);
-        const d = new THREE.Mesh(new THREE.SphereGeometry(0.13, 16, 12), black);
-        d.position.set(0, 0.27, z); g.add(d);
-        for (const s of [-1, 1]) cylZ(0.03, 0.22, M(0xcc2222), s * 0.46, 0.55, z, 8).rotation.x = 0;
-    }
     for (const s of [-1, 1]) {
 		for (const zc of [WZ, -WZ]) {
 			prism(archPts(zc), 0.012, black, s * 0.656);                // fodera interna del passaruota
