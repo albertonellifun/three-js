@@ -3016,11 +3016,13 @@ function buildCarPandina(o) {
     for (const s of [-1, 1]) {
         box(0.006, 0.64, 0.008, black, s * 0.731, 0.745, -0.43);    // taglio porta / montante B
         box(0.006, 0.60, 0.008, black, s * 0.731, 0.74, 0.60);      // taglio porta / parafango
-        box(0.02,  0.03, 0.08, steel,  s * 0.74,  0.94, -0.33);     // maniglia
-        box(0.02,  0.03, 0.03, orange, s * 0.736, 0.80, 0.72);      // freccia laterale
-		box(0.08, 0.03, 0.03, plastic, s * 0.695, 1.12, 0.55);      // braccetto zeppetto
-		box(0.14, 0.10, 0.04, plastic, s * 0.745, 1.16, 0.55);      // corpo specchio, ora a ridosso della fiancata
-		box(0.12, 0.08, 0.01, steel,   s * 0.745, 1.16, 0.53);      // vetro specchio (rivolto verso dietro)
+        box(0.02,  0.03, 0.10,  plastic, s * 0.74,  0.94, -0.33);   // maniglia
+        box(0.02,  0.03, 0.03,  orange,  s * 0.736, 0.80, 0.72);    // freccia laterale
+		box(0.02,  0.04, 0.08,  plastic, s * 0.736, 0.92, 0.63);    // copri cerniera plastica
+		box(0.02,  0.04, 0.08,  plastic, s * 0.736, 0.67, 0.63);    // copri cerniera plastica
+		box(0.08, 0.03, 0.03,   plastic, s * 0.695, 1.12, 0.55);    // braccetto zeppetto
+		box(0.14, 0.10, 0.04,   plastic, s * 0.745, 1.16, 0.55);    // corpo specchio, ora a ridosso della fiancata
+		box(0.12, 0.08, 0.01,   steel,   s * 0.745, 1.16, 0.53);    // vetro specchio (rivolto verso dietro)
     }
 	
 	// presa d'aria sul cofano, davanti al parabrezza
