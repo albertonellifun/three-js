@@ -426,7 +426,31 @@
    }
    
    
-   #espBtn, #absBtn { font-size: 10px !important; text-align: center; }
+   #espBtn, #absBtn, #assistBtn, #physBtn  { font-size: 10px !important; letter-spacing: -0.5px; text-align: center; }
+
+   #quickBox{
+	  position:fixed;
+	  left:max(4px,env(safe-area-inset-left));
+	  bottom:calc(max(4px,env(safe-area-inset-bottom)) + 118px); /* sopra il pad (110px + 8px) */
+	  display:grid;
+	  grid-template-columns:repeat(3,44px);
+	  gap:6px;
+	  z-index:4;
+	  pointer-events:auto;
+	}
+	#quickBox .btn{
+	  position:static;
+	  width:44px;
+	  height:44px;
+	  border-radius:12px;
+	  font-size:20px;
+	  color:#fff;
+	  padding:0;
+	  pointer-events:auto;
+	}
+	@media (orientation: landscape){
+	  #quickBox{ grid-template-columns:repeat(6,44px); }   /* una sola riga in orizzontale */
+	}
 
     </style>
   </head>
@@ -449,6 +473,15 @@
 	  <div id="tris">0 TRIANGLES</div>
 	  <div id="geom">0 GEOMETRIES</div>
 	  
+	  <div id="quickBox">
+		<button class="btn"             id="lightsBtn"  title="Interruttore Luci/Fari">💡</button>
+		<button class="btn"             id="hornBtn"    title="Pulsante Clackson">📯</button>
+		<button class="btn toggled-red" id="espBtn"     title="Controllo stabilità">ESP<br>ON</button>
+		<button class="btn toggled-red" id="absBtn"     title="ABS">ABS</button>
+		<button class="btn toggled-red" id="assistBtn"  title="Guida assistita">AIUTO<br>FULL</button>
+		<button class="btn toggled-red" id="physBtn"    title="Fisica PRO/EASY">FISICA<br>PRO</button>
+	  </div>
+	  
 	  <div id="camBox">
 		  <button class="btn toggled-blue" data-hold="zoomIn">+</button>
 		  <button class="btn toggled-blue" data-hold="zoomOut">−</button>
@@ -458,10 +491,14 @@
 		  <button class="btn toggled-blue" data-hold="ccw">↺</button>
 		  <button class="btn toggled-red"  id="shadowBtn"   title="Interruttore Ombre">🌓</button>
 		  <button class="btn toggled-red"  id="grassBtn"    title="Interruttore Erba">🍀</button>
-		  <button class="btn"              id="lightsBtn"   title="Interruttore Luci/Fari">💡</button>
+		  <!--button class="btn"              id="lightsBtn"   title="Interruttore Luci/Fari">💡</button>
 		  <button class="btn"              id="hornBtn"     title="Pulsante Clackson">📯</button>
-		  <button class="btn toggled-red" id="espBtn" title="Controllo stabilità">ESP<br>ON</button>
-		  <button class="btn toggled-red" id="absBtn" title="ABS">ABS</button>
+		  
+		  <button class="btn toggled-red"  id="espBtn"      title="Controllo stabilità">ESP<br>ON</button>
+		  <button class="btn toggled-red"  id="absBtn"      title="ABS">ABS</button>
+		  <button class="btn toggled-red"  id="assistBtn"   title="Guida assistita">AIUTO<br>FULL</button>
+		  <button class="btn toggled-red"  id="physBtn"     title="Fisica PRO/EASY">FISICA<br>PRO</button-->
+		  
 		  <button class="btn"              id="colorsBtn"   title="Pulsante Cambia colore">🎨</button>
 		  <button class="btn toggled-red"  id="numberBtn"   title="Interruttore Numeri di Gara">🔢</button>
 		  <button class="btn"              id="hoodBtn"     title="Camera cofano">🚘</button>
@@ -470,7 +507,8 @@
 		  <button class="btn"              id="showMapBtn"  title="Mappa">🗺️</button>
 		  <button class="btn"              id="showDmgBtn"  title="Danno">🔨​</button>
 		  <button class="btn"           id="changeTimeBtn"  title="Cambia orario">🕐</button>
-		  <button class="btn"              id="muteBtn"     title="Interruttore Altoparlante">🔇</button>
+		  <!--button class="btn"              id="muteBtn"     title="Interruttore Altoparlante">🔇</button-->
+		  <button class="btn toggled-red"  id="muteBtn"     title="Interruttore Altoparlante">🔊</button>
 		  <button class="btn toggled-red"  id="musicBtn"    title="Musica di sottofondo">🎵</button>
 		  <button class="btn"              id="restartBtn"  title="Ricomincia da capo">💀</button>
 		</div>
@@ -560,8 +598,91 @@ function repairCar(){
 
 const _v=new THREE.Vector3(), _p=new THREE.Vector3();
 
-//danneggiamento
+
+//danni 2.0
+const _bb=new THREE.Box3(), _m=new THREE.Matrix4(), _mi=new THREE.Matrix4();
+
+// suddivide i triangoli finché i lati sono < maxEdge (geometria non indicizzata)
+function subdivideGeo(src,maxEdge){
+  const g=src.index?src.toNonIndexed():src.clone();
+  const P=g.attributes.position.array, U=g.attributes.uv?g.attributes.uv.array:null;
+  const oP=[], oU=U?[]:null, e2=maxEdge*maxEdge;
+  const d2=(a,b)=>(a[0]-b[0])**2+(a[1]-b[1])**2+(a[2]-b[2])**2;
+  const mid=(a,b)=>a.map((v,i)=>(v+b[i])*.5);
+  const emitT=(a,b,c,ua,ub,uc,dp)=>{
+    if(dp<5&&Math.max(d2(a,b),d2(b,c),d2(c,a))>e2){
+      const ab=mid(a,b),bc=mid(b,c),ca=mid(c,a);
+      const uab=U&&mid(ua,ub),ubc=U&&mid(ub,uc),uca=U&&mid(uc,ua);
+      emitT(a,ab,ca,ua,uab,uca,dp+1);
+      emitT(ab,b,bc,uab,ub,ubc,dp+1);
+      emitT(ca,bc,c,uca,ubc,uc,dp+1);
+      emitT(ab,bc,ca,uab,ubc,uca,dp+1);
+    }else{
+      oP.push(...a,...b,...c);
+      if(U)oU.push(...ua,...ub,...uc);
+    }
+  };
+  for(let i=0;i<P.length;i+=9){
+    const t=i/9*6;
+    emitT([P[i],P[i+1],P[i+2]],[P[i+3],P[i+4],P[i+5]],[P[i+6],P[i+7],P[i+8]],
+          U&&[U[t],U[t+1]],U&&[U[t+2],U[t+3]],U&&[U[t+4],U[t+5]],0);
+  }
+  const out=new THREE.BufferGeometry();
+  out.setAttribute('position',new THREE.Float32BufferAttribute(oP,3));
+  if(U)out.setAttribute('uv',new THREE.Float32BufferAttribute(oU,2));
+  out.computeVertexNormals();
+  return out;
+}
+
 function dent(lx,lz,R,depth){
+  carG.updateMatrixWorld(true);
+  const k=1/model.scale.x;                              // 127/pandina: g.scale=1.2
+  _p.set(lx,.6,lz); model.worldToLocal(carG.localToWorld(_p));
+  R*=k; depth*=k;
+
+  // spinta lungo l'asse dominante dell'urto (niente taglio diagonale)
+  const fF=lz/2.1, fS=lx/.95, lat=Math.abs(fS)>Math.abs(fF);
+  const pushX=lat?-Math.sign(fS):0, pushZ=lat?0:-Math.sign(fF);
+
+  const mInv=model.matrixWorld.clone().invert();
+  model.traverse(o=>{
+    if(!o.isMesh||o.userData.noDent) return;
+    const wheel=o.parent&&(o.parent.name==='steer'||o.parent.name==='spin');
+    _m.multiplyMatrices(mInv,o.matrixWorld);
+    let g=o.geometry;
+    if(!g.boundingBox) g.computeBoundingBox();
+    if(_bb.copy(g.boundingBox).applyMatrix4(_m).distanceToPoint(_p)>R) return;  // mesh lontana: non si tocca
+
+    if(!o.userData.own){                                 // una volta sola, solo per le mesh colpite
+      g=o.geometry=wheel?g.clone():subdivideGeo(g,.3);
+      o.userData.own=true;
+    }
+    _mi.copy(_m).invert();
+    const pos=g.attributes.position, df=wheel?.25:1;
+    for(let i=0;i<pos.count;i++){
+      _v.fromBufferAttribute(pos,i).applyMatrix4(_m);    // direttamente nello spazio del modello
+      const d=_v.distanceTo(_p);
+      if(d>R) continue;
+      // rumore continuo nello spazio: vertici coincidenti = stesso valore, niente cuciture aperte
+      const n=.6+.4*vnoise(_v.x*9+_v.y*4.7,_v.z*9+_v.y*3.1);
+      const f=(1-d/R)**2*depth*n*df;
+      _v.x+=pushX*f*.6;
+      _v.z+=pushZ*f*.6;
+      _v.y-=f*.3;                                        // era f: cedimento verso il basso ridotto
+      _v.applyMatrix4(_mi);
+      pos.setXYZ(i,_v.x,_v.y,_v.z);
+    }
+    pos.needsUpdate=true;
+    g.computeVertexNormals();
+    g.computeBoundingBox(); g.computeBoundingSphere();
+  });
+}
+
+
+
+
+//danneggiamento
+function dentOLD(lx,lz,R,depth){
   _p.set(lx,.6,lz);
   // direzione di spinta verso l'interno, combinando componente longitudinale e laterale
   const fFront=clamp(lz/2.1,-1,1);   // -1 dietro .. 1 davanti
@@ -631,7 +752,8 @@ function applyMute(){
 
 function toggleMute(){
   muted=!muted;
-  muteBtn.classList.toggle('toggled-red',muted);
+  muteBtn.classList.toggle('toggled-red',!muted);
+  muteBtn.textContent = muted ? '🔇' : '🔊';
   applyMute();
 }
 muteBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();toggleMute();});
@@ -2247,8 +2369,8 @@ let CURRENT_CAR_SPEC = CAR_SPECS.evo;
 let tachRpm=makeTachRpm();
 let tachSpeed=makeTachSpeed();
 
-function buildCarWrapper(o){
-  let rrr = Math.floor( Math.random() * Object.keys(CAR_SPECS).length );
+function buildCarWrapper(o,forceModel){
+  let rrr = forceModel===-1 ? Math.floor( Math.random() * Object.keys(CAR_SPECS).length ) : forceModel;
   let mod = null;
   switch(rrr) {
 	case 0 : CURRENT_CAR_SPEC = CAR_SPECS['centoventisette']; mod = buildCarCentoventisette(o); break;
@@ -2759,6 +2881,7 @@ function buildCarPandina(o) {
     const SILL = 0.44;                  // bordo basso fiancata (assetto rialzato)
     const WZ = 1.085, WX = 0.61, WY = 0.30, WR = 0.30;   // ruote: passo 2.17
     const AR = 0.40;                    // raggio passaruota
+	const REAR_Y = 1.06;				// portellone quota
     const sx = y => 0.70 - (y - BELT) / (ROOF - BELT) * 0.16;   // semilarghezza della fiancata inclinata a quota y
 
     // ---------- helper ----------
@@ -2825,7 +2948,7 @@ function buildCarPandina(o) {
     for (const s of [-1, 1]) bodyMeshes.push(prism(SIDE, 0.08, paint, s * 0.69));
     // cofano (piano, leggermente inclinato) e portellone posteriore
     bodyMeshes.push(prism([[0.72, 0.62], [ZF, 0.62], [ZF, 0.88], [0.72, 1.04]], 1.30, paint));
-    bodyMeshes.push(prism([[-1.30, 0.62], [ZR, 0.62], [ZR, 1.10], [-1.52, 1.10], [-1.30, BELT]], 1.30, paint));
+    bodyMeshes.push(prism([[-1.30, 0.62], [ZR, 0.62], [ZR, REAR_Y], [-1.52, REAR_Y], [-1.30, BELT]], 1.30, paint));
 	
 	// cofano con rialzo centrale squadrato: piano originale + diagonale + piano rialzato
 	const HOOD_CROWN = 0.02;   // altezza del rialzo
@@ -2866,7 +2989,7 @@ function buildCarPandina(o) {
     // ---------- PARTE ALTA: tetto, montanti, vetri dritti ----------
     box(0.54 * 2, 0.04, 1.42, paint, 0, ROOF - 0.02, -0.46);                // tetto
 
-    const OUT   = [[0.72, BELT], [0.25, ROOF], [-1.17, ROOF], [-1.56, 1.085], [-1.56, BELT]];
+    const OUT   = [[0.72, BELT], [0.25, ROOF], [-1.17, ROOF], [-1.56, REAR_Y-0.025], [-1.56, BELT]];
     const DOOR  = [[0.55, BELT + 0.03], [0.27, 1.42], [-0.38, 1.42], [-0.38, BELT + 0.03]];
     const QUART = [[-0.47, BELT + 0.03], [-0.47, 1.42], [-1.07, 1.42], [-1.20, BELT + 0.03]];
     for (const s of [-1, 1]) {
@@ -2875,11 +2998,11 @@ function buildCarPandina(o) {
         sidePoly(s, QUART, null, glass);
         // montante A e montante C (raccordo tra fiancata inclinata e parabrezza / lunotto)
         panel([[s * 0.70, BELT, 0.72], [s * 0.54, ROOF, 0.25], [s * 0.50, 1.46, 0.26], [s * 0.62, BELT, 0.70]], paint);
-        panel([[s * 0.684, 1.10, -1.55], [s * 0.54, ROOF, -1.17], [s * 0.50, 1.46, -1.19], [s * 0.58, 1.10, -1.55]], paint);
+        panel([[s * 0.70, REAR_Y, -1.53], [s * 0.54, ROOF, -1.17], [s * 0.50, 1.46, -1.19], [s * 0.58, REAR_Y, -1.55]], paint);//il primo e' spigolo esterno lamiera
     }
     // parabrezza e lunotto
     panel([[-0.62, BELT, 0.70], [0.62, BELT, 0.70], [0.50, 1.46, 0.26], [-0.50, 1.46, 0.26]], glass);
-    panel([[-0.58, 1.10, -1.55], [0.58, 1.10, -1.55], [0.50, 1.46, -1.19], [-0.50, 1.46, -1.19]], glass);
+    panel([[-0.58, REAR_Y, -1.55], [0.58, REAR_Y, -1.55], [0.50, 1.46, -1.19], [-0.50, 1.46, -1.19]], glass);//il primo e' spigolo esterno vetro
 
     // barre portatutto
     for (const s of [-1, 1]) {
@@ -2893,7 +3016,7 @@ function buildCarPandina(o) {
     for (const s of [-1, 1]) {
         box(0.006, 0.64, 0.008, black, s * 0.731, 0.745, -0.43);    // taglio porta / montante B
         box(0.006, 0.60, 0.008, black, s * 0.731, 0.74, 0.60);      // taglio porta / parafango
-        box(0.02,  0.03, 0.08, steel,  s * 0.74,  0.94, -0.33);        // maniglia
+        box(0.02,  0.03, 0.08, steel,  s * 0.74,  0.94, -0.33);     // maniglia
         box(0.02,  0.03, 0.03, orange, s * 0.736, 0.80, 0.72);      // freccia laterale
 		box(0.08, 0.03, 0.03, plastic, s * 0.695, 1.12, 0.55);      // braccetto zeppetto
 		box(0.14, 0.10, 0.04, plastic, s * 0.745, 1.16, 0.55);      // corpo specchio, ora a ridosso della fiancata
@@ -2918,15 +3041,15 @@ function buildCarPandina(o) {
 	
 	
     // ---------- FRONTALE ----------
-    box(1.46, 0.28, 0.12, plastic, 0, 0.51, 1.63);                    // paraurti
+    box(1.46, 0.265, 0.12, plastic, 0, 0.54, 1.63);                    // paraurti
 	
 	
     for (const s of [-1, 1]) {
         //box(0.05, 0.28, 0.18, red, s * 0.71, 0.51, 1.58);         // risvolto paraurti TODO
-		box(0.05, 0.26 * 0.25, 0.32, plastic, s * 0.71, 0.6375, 1.50);         // 1 (Alto - panna)
-		box(0.05, 0.26 * 0.25, 0.26, plastic, s * 0.71, 0.5725, 1.53);         // 2 (Medio-alto - red)
-		box(0.05, 0.26 * 0.25, 0.20, plastic, s * 0.71, 0.5075, 1.56);         // 3 (Medio-basso - panna)
-		box(0.05, 0.26 * 0.25, 0.18, plastic, s * 0.71, 0.4425, 1.57);         // 4 (Basso - red)
+		box(0.05, 0.26 * 0.25, 0.35, plastic, s * 0.71, 0.6375, 1.505);         // 1 (Alto - panna)
+		box(0.05, 0.26 * 0.25, 0.29, plastic, s * 0.71, 0.5725, 1.535);         // 2 (Medio-alto - red)
+		box(0.05, 0.26 * 0.25, 0.22, plastic, s * 0.71, 0.5075, 1.570);         // 3 (Medio-basso - panna)
+		box(0.05, 0.26 * 0.25, 0.20, plastic, s * 0.71, 0.4425, 1.580);         // 4 (Basso - red)
 		
 		
         box(0.07, 0.14, 0.10, black, s * 0.50, 0.62, 1.70);           // rostri
@@ -2936,7 +3059,7 @@ function buildCarPandina(o) {
         new THREE.PlaneGeometry(0.50, 0.11),
         new THREE.MeshLambertMaterial({ map: makeTargaTexture('Roma 69642W',true), side: THREE.DoubleSide })
     );
-    fp.position.set(0, 0.46, 1.696); g.add(fp);
+    fp.position.set(0, 0.48, 1.696); g.add(fp);
 
     box(0.80, 0.19, 0.03, black, 0, 0.77, 1.595);                   // griglia nera
     for (let i = 0; i < 4; i++) box(0.80, 0.012, 0.012, steel, 0, 0.70 + i * 0.045, 1.612);
@@ -2954,10 +3077,10 @@ function buildCarPandina(o) {
     box(1.46, 0.26, 0.10, plastic, 0, 0.56, -1.64);                   // paraurti
     for (const s of [-1, 1]) {
         //box(0.05, 0.28, 0.28, red, s * 0.71, 0.54, -1.54);			 // paraurti TODO
-		box(0.05, 0.26 * 0.25, 0.32, plastic, s * 0.71, 0.6375, -1.50);         // 1 (Alto - panna)
-		box(0.05, 0.26 * 0.25, 0.26, plastic,   s * 0.71, 0.5725, -1.53);         // 2 (Medio-alto - red)
-		box(0.05, 0.26 * 0.25, 0.20, plastic, s * 0.71, 0.5075, -1.56);         // 3 (Medio-basso - panna)
-		box(0.05, 0.26 * 0.25, 0.18, plastic,   s * 0.71, 0.4425, -1.57);         // 4 (Basso - red)
+		box(0.05, 0.26 * 0.25, 0.35, plastic, s * 0.71, 0.6375, -1.490); // 1 (Alto - panna)
+		box(0.05, 0.26 * 0.25, 0.29, plastic, s * 0.71, 0.5725, -1.525); // 2 (Medio-alto - red)
+		box(0.05, 0.26 * 0.25, 0.22, plastic, s * 0.71, 0.5075, -1.560); // 3 (Medio-basso - panna)
+		box(0.05, 0.26 * 0.25, 0.20, plastic, s * 0.71, 0.4425, -1.570); // 4 (Basso - red)
 		
         box(0.22, 0.32, 0.022, black, s * 0.62, 0.30, -1.50);        // paraspruzzi rivolto verso dietro 
         // fanale alto e stretto: rosso, arancio, retromarcia
@@ -4212,7 +4335,7 @@ function disposeModel(m){
 
 
 //crea lancia delta
-function spawnCar(){
+function spawnCar(forceModel=-1){
   if(model) disposeModel(model);
   wheelPivots.length=0; 
   wheelMeshes.length=0;
@@ -4261,7 +4384,7 @@ function spawnCar(){
 	repsolOra:dc.liveryRepsol?dc.liveryRepsol.ora:null,
 	repsolAzz:dc.liveryRepsol?dc.liveryRepsol.azz:null,
 	repsolRed:dc.liveryRepsol?dc.liveryRepsol.red:null,
-  });
+  },forceModel);
   model.position.y=.06;//altrimenti sembra affondare
   carG.add(model);
 
@@ -4654,24 +4777,41 @@ addEventListener('keydown',e=>{
  if (e.code==='ArrowLeft'||e.code==='KeyA') keys.left=1;
  if (e.code==='ArrowRight'||e.code==='KeyD') keys.right=1;
  if (e.code==='KeyR') resetCar();
- if(e.code==='Digit1') { setCamMode(1); camInside = false; }
- if(e.code==='Digit2') { setCamMode(2); camInside = true; }
+ if (e.code==='Digit1') { setCamMode(1); camInside = false; }
+ if (e.code==='Digit2') { setCamMode(2); camInside = true; }
  
- if (e.code==='KeyT') changeDelta();
- if (e.code==='KeyH') hornBtnPlay();
- if (e.code === 'KeyL') toggleLights();
- if (e.code === 'KeyN') toggleNumbers();
- if (e.code === 'KeyO') toggleShadows();
- if (e.code === 'KeyM') toggleMute();
- if (e.code === 'KeyG') toggleGrass();
- if (e.code === 'KeyI') pushChangeTimeBtn();
- if (e.code === 'KeyU') toggleMapBtn();
- if (e.code === 'KeyY') toggleDmgBtn();
- if (e.code === 'KeyP') toggleMusic();
+ if (e.code==='Digit7') { if(flipG) return; currentDeltaColor=(currentDeltaColor+1)%deltaColors.length; spawnCar(0); }
+ if (e.code==='Digit8') { if(flipG) return; currentDeltaColor=(currentDeltaColor+1)%deltaColors.length; spawnCar(1); }
+ if (e.code==='Digit9') { if(flipG) return; currentDeltaColor=(currentDeltaColor+1)%deltaColors.length; spawnCar(2); }
+ if (e.code==='Digit0') { if(flipG) return; currentDeltaColor=(currentDeltaColor+1)%deltaColors.length; spawnCar(3); }
+ 
+ if (e.code==='KeyT') changeDelta();//texture
+ if (e.code==='KeyH') hornBtnPlay();//horn
+ if (e.code === 'KeyL') toggleLights();//lights
+ if (e.code === 'KeyN') toggleNumbers();//numbers
+ if (e.code === 'KeyO') toggleShadows();//
+ if (e.code === 'KeyM') toggleMute();//mute engine
+ if (e.code === 'KeyG') toggleGrass();//
+ if (e.code === 'KeyI') pushChangeTimeBtn();//
+ if (e.code === 'KeyU') toggleMapBtn();//
+ if (e.code === 'KeyY') toggleDmgBtn();//repair
+ if (e.code === 'KeyP') toggleMusic();//mute music
  
  //esp+abs
  if (e.code === 'KeyK') toggleEsp();//esp on -> esp sport -> esp off -> esp on...
  if (e.code === 'KeyJ') toggleAbs();//abs on/off
+ if (e.code === 'Comma') toggleAssist();//guida assistita
+ if (e.code === 'Period') togglePhysics();   // fisica PRO/EASY
+ 
+ 
+ if (e.code==='KeyC' || e.code === 'Digit3') { cam.zoom=1; cam.el=0; cam.yaw=0; if(camMode)setCamMode(camMode); camInside=false; }// C = camera di default
+ if (e.code === 'KeyQ') cam.rotDir = -1;
+ if (e.code === 'KeyE') cam.rotDir = 1;
+ if (e.code === 'KeyZ') cam.zoomDir = -1;
+ if (e.code === 'KeyX') cam.zoomDir = 1;
+ if (e.code === 'KeyV') cam.yawDir = 1;   // V = ruota lo yaw in un verso
+ if (e.code === 'KeyB') cam.yawDir = -1;
+ 
  
  startGame();
 });
@@ -4719,10 +4859,81 @@ absBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation()
 updateEspBtn();
 
 
+//guida assistita
+let assistMode=IS_MOBILE?2:0;          // 0 OFF, 1 sterzo, 2 sterzo+velocità (tasto 3)
+let assistW=1;                         // 0 = guida solo il player, 1 = piena assistenza
+const assistBtn=$('assistBtn');
+const ASSIST_LABEL=['AIUTO<br>OFF','AIUTO<br>STERZO','AIUTO<br>FULL'];
+function updAssistBtn(){
+  assistBtn.innerHTML=ASSIST_LABEL[assistMode];
+  assistBtn.classList.toggle('toggled-red',assistMode===2);
+  assistBtn.classList.toggle('toggled-blue',assistMode===1);
+}
+function toggleAssist(){ assistMode=(assistMode+1)%3; updAssistBtn(); }
+assistBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();toggleAssist();});
+updAssistBtn();
+
+// sterzo: pure pursuit sul punto di strada davanti all'auto
+function assistSteer(){
+  const sp=Math.hypot(car.u,car.v);
+  if(sp<2||car.air||car.u<0)return 0;
+  const Ld=clamp(6+car.u*.55,8,40);                         // lookahead cresce con la velocità
+  const p=P[Math.min(P.length-2,car.idx+Math.max(2,Math.round(Ld/DS)))];
+  const dx=p.x-car.x, dz=p.z-car.z;
+  const alpha=angDiff(car.th,Math.atan2(dx,dz));            // + = bersaglio a sinistra
+  const beta=Math.atan2(car.v,Math.max(car.u,3));           // derapata
+  const delta=Math.atan(2*2.6*Math.sin(alpha)/Math.max(Math.hypot(dx,dz),1));
+  return clamp(delta/maxSteer(sp)+beta*1.2,-1,1);           // + controsterzo automatico
+}
+
+// velocità massima sicura: curve davanti + spazio di frenata
+function assistSpeed(){
+  const g=9.81;
+  let vt=CURRENT_CAR_SPEC.maxSpeed/3.6;
+  const aB0=.55*MU[Math.min(P[car.idx].surf,MU.length-1)]*g;
+  const n=Math.min(70,Math.ceil((Math.max(car.u,0)**2/(2*aB0)+30)/DS));
+  for(let j=1;j<=n;j++){
+    const p=P[car.idx+j]; if(!p)break;
+    const mu=MU[p.surf];
+    const k=Math.max(Math.abs(p.k),1/600);
+    const vc2=.75*mu*g/k;                                   // velocità limite in curva
+    vt=Math.min(vt,Math.sqrt(vc2+2*.55*mu*g*j*DS));         // raggiungibile frenando
+  }
+  return Math.max(vt,8);
+}
+
+
+
+
+//switch fisica a caldo
+let physicsMode=1;                 // 1 = PRO, 0 = EASY
+let physicsWrapper=physicsPRO;
+const physBtn=$('physBtn');
+function updPhysBtn(){
+  physBtn.innerHTML=physicsMode?'FISICA<br>PRO':'FISICA<br>EASY';
+  physBtn.classList.toggle('toggled-red',!!physicsMode);
+}
+function togglePhysics(){
+  physicsMode=physicsMode?0:1;
+  physicsWrapper=physicsMode?physicsPRO:physicsEASY;
+  // raccordo: ruote allineate alla velocità attuale, stati PRO azzerati
+  car.w.fill(car.u/WR);
+  car.slipW.fill(0);
+  car.uLast=car.u;
+  car.absT=0; car.espAct=false; car.spin=0;
+  updPhysBtn();
+}
+physBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();togglePhysics();});
+updPhysBtn();
+
+
+
+
+
 
 
 //fisica 4 ruote
-function physics(dt){
+function physicsPRO(dt){
   const m=CURRENT_CAR_SPEC.mass;
   const I=m*1.7;
   const a=1.3,b=1.3,L=a+b,W=1.5,w2=W/2,g=9.81,hc=0.55;
@@ -4883,7 +5094,7 @@ function physics(dt){
 const CAf=140000;//rigidezza deriva front
 const CAr=160000;//rigidezza deriva rear
 const maxSteer=sp=>.75/(1+Math.pow(sp/18,1.3));//limitatore di sterzo dipende da velocita
-function physicsOLD(dt){
+function physicsEASY(dt){
  const m=CURRENT_CAR_SPEC.mass;
  const I=CURRENT_CAR_SPEC.mass*1.5;
  const a=1.3;//distanza baricentro asse anteriore
@@ -5001,10 +5212,48 @@ function physicsOLD(dt){
  car.th+=nr*dt;
  car.x+=(nu*Math.sin(car.th)+nv*Math.cos(car.th))*dt;
  car.z+=(nu*Math.cos(car.th)-nv*Math.sin(car.th))*dt;
+ 
+ 
+ //fix switch fisica pro/easy
+ car.w.fill(nu/WR);      // ruote che girano in modo coerente con la velocità
+ car.uLast=nu;           // evita il "riallineamento" brusco quando si torna a PRO
+ car.espAct=false;       // niente ESP/ABS in EASY (HUD non resta arancio)
+ car.absT=0;
 }
 
 
+//guida assistita
 function stepControls(dt){
+ const hum=clamp(touch.steer+(keys.left?1:0)-(keys.right?1:0),-1,1);
+ const manual=Math.abs(hum)>.05||touch.hb||keys.hb;
+ assistW+=clamp((manual?.1:1)-assistW,-8*dt,1.5*dt);        // cede subito, rientra piano
+ const au=(assistMode>0&&running)?assistSteer()*assistW:0;
+ const tgt=clamp(hum+au,-1,1);
+
+ const same=Math.sign(tgt)===Math.sign(car.steer)&&Math.abs(tgt)>=Math.abs(car.steer);
+ const rate=(same||car.steer===0)?8:12;
+ car.steer+=clamp(tgt-car.steer,-rate*dt,rate*dt);
+
+ let tg=Math.max(touch.gas,keys.gas?1:0);
+ let tb=(touch.brake||keys.brake)?1:0;
+ if(tb&&touch.gas)gasSet(0);
+
+ // limitatore di velocità: solo se non freni tu e non usi il freno a mano
+ if(assistMode>=2&&running&&!tb&&!car.air&&!(touch.hb||keys.hb)){
+   const over=car.u-assistSpeed();
+   if(over>0){
+     tg*=clamp(1-over/2,0,1);
+     if(over>1.5)tb=clamp((over-1.5)/5,0,1);
+   }
+ }
+
+ ctl.gas+=clamp(tg-ctl.gas,-8*dt,4*dt);
+ ctl.brake+=clamp(tb-ctl.brake,-8*dt,6*dt);
+ ctl.hb=(touch.hb||keys.hb)?1:0;
+}
+
+
+function stepControlsOLD(dt){
  const tgt=clamp(touch.steer+(keys.left?1:0)-(keys.right?1:0),-1,1);
  const same=Math.sign(tgt)===Math.sign(car.steer)&&Math.abs(tgt)>=Math.abs(car.steer);
  const rate=(same||car.steer===0)?8:12;
@@ -5820,18 +6069,6 @@ function stepCamera(dt) {
 
 
 
-addEventListener('keydown',e=>{
-	if (e.code==='KeyC') { cam.zoom=1; cam.el=0; cam.yaw=0; if(camMode)setCamMode(camMode); camInside=false; }// C = camera di default
-	if (e.code === 'KeyQ') cam.rotDir = -1;
-    if (e.code === 'KeyE') cam.rotDir = 1;
-    if (e.code === 'KeyZ') cam.zoomDir = -1;
-    if (e.code === 'KeyX') cam.zoomDir = 1;
-    if (e.code === 'KeyV') cam.yawDir = 1;   // V = ruota lo yaw in un verso
-    if (e.code === 'KeyB') cam.yawDir = -1;
-});   
-
-
-
 
 
 /* ============ AGGIORNAMENTO MONDO ============ */
@@ -6605,7 +6842,7 @@ let gt=0;//erba
 function frame(now){
  requestAnimationFrame(frame);
  const dt=Math.min(.05,(now-last)/1000);last=now;
- if(running){stepControls(dt);acc+=dt;while(acc>=H){physics(H);acc-=H;}}
+ if(running){stepControls(dt);acc+=dt;while(acc>=H){physicsWrapper(H);acc-=H;}}
  stepCamera(dt);
  
  gt+=dt; 
