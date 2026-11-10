@@ -1803,7 +1803,7 @@ function signTexture(type) {
       g.closePath(); g.fill(); g.stroke();
     }
   } 
-  
+ 
   //guado
   else if (type === 'fordPanel') {                     // pannello con onde blu
     g.fillStyle = '#fff'; g.fillRect(0, 0, 256, 100);
@@ -1839,25 +1839,25 @@ function signTexture(type) {
     g.fillStyle = '#fff';    g.beginPath(); g.arc(128, 128, 86, 0, 6.2832); g.fill();
     g.fillStyle = '#111'; g.font = 'bold 100px Arial'; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.fillText('50', 128, 134);
-  } 
+  }
   
   // CUNETTA O DOSSO
   else if (type === 'bump') {
     tri(1, '#d4141c', 14); tri(.72, '#ffffff', 6);
     g.fillStyle = '#111';
     g.beginPath();
-    g.moveTo(82, 168);
-    g.lineTo(82, 156);
-    // Gobba sinistra
-    g.bezierCurveTo(82, 132, 104, 132, 120, 146);
-    // Cunetta centrale
-    g.bezierCurveTo(124, 150, 128, 150, 132, 146);
-    // Gobba destra
-    g.bezierCurveTo(148, 132, 170, 132, 170, 156);
-    g.lineTo(170, 168);
+    g.moveTo(77, 180);
+    g.lineTo(77, 166);
+    // Prima gobba (allargata a sinistra e punti di controllo adeguati)
+    g.bezierCurveTo(77, 142, 105, 142, 118, 158);
+    // Avvallamento centrale
+    g.bezierCurveTo(123, 164, 129, 164, 134, 158);
+    // Seconda gobba (allargata a destra)
+    g.bezierCurveTo(147, 142, 175, 142, 175, 166);
+    g.lineTo(175, 180);
     g.closePath();
     g.fill();
-  }
+}
   
   //slippery
   else {
