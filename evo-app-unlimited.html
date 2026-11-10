@@ -1350,12 +1350,56 @@ const bumpAt=s=>{
  let y=0;
  for(let k=Math.max(1,c-1);k<=c+1;k++){
   if(hash2(k,77)<.55)continue;                       // ~1 dosso ogni 300 m
-  const cx=(k+.25+hash2(k,91)*.5)*140,w=10+hash2(k,13)*5,a=.6+hash2(k,5)*1.0,d=(s-cx)/w;
+  const cx=(k+.25+hash2(k,91)*.5)*140;
+  const w=10+hash2(k,13)*5;
+  const a=.6+hash2(k,5)*1.0;
+  const d=(s-cx)/w;
   if(d>-1&&d<1)y+=a*.5*(1+Math.cos(Math.PI*d));      // altezza 0.6-1.6 m, lunghezza 20-30 m
  }
  return y;
 };
 const elev=s=>24+11*Math.sin(s/230+1.3)+5*Math.sin(s/83+.4)+1.5*Math.sin(s/37)+bumpAt(s);
+
+
+//cartelli TORNANTE
+const HAIRPIN_SIGN=90;       // m di anticipo
+const HAIRPIN_K=1/48;        // curvatura minima (R < 48 m)
+const HAIRPIN_ANG=2.0;       // rad di rotazione minimi: scarta S e curve normali
+
+// ritorna il segno di k se P[q] è l'inizio di un tornante, altrimenti 0
+function hairpinSign(q){
+ ensurePoints(q+70);
+ const k=P[q].k, sg=Math.sign(k);
+ const prevIn=Math.abs(P[q-1].k)>=HAIRPIN_K&&Math.sign(P[q-1].k)===sg;
+ if(Math.abs(k)<HAIRPIN_K||prevIn)return 0;     // deve essere il primo punto "stretto"
+ let h=0;
+ for(let n=q;n<q+60;n++){
+  const kk=P[n].k;
+  if(Math.sign(kk)!==sg||Math.abs(kk)<1/90)break;
+  h+=Math.abs(kk)*DS;
+ }
+ return h>=HAIRPIN_ANG?sg:0;
+}
+
+
+//larghezza strada -> QUI SI REGOLA TUTTO!!!
+const W_ZONE=400;//W_ZONE (400 m) è la distanza tra un possibile cambio e l'altro,
+const W_RAMP=45;//raccordo tra le zone 45m
+const W_SIGN=90;//anticipo cartello in metri
+
+const wFac=z=>{ 
+	if(z<=0)return 1; 
+	const h=hash2(z,201); 
+	return h < 0.75 ? 1 //larghezza standard 75%
+		   : h < 0.85 ? 1.33 //allargata 10%
+		   : 0.66; //ristretta 15%
+};
+
+const widthAt=s=>{ 
+	const z=Math.floor(s/W_ZONE);
+	const t=clamp((s-z*W_ZONE)/W_RAMP,0,1);
+	return lerp(wFac(z-1),wFac(z),t*t*(3-2*t));
+};
 
 
 
@@ -1481,8 +1525,8 @@ function dirtyTilesAround(x,z){
 
 
 
-/////P.push({x:0,z:0,y:elev(0),h:0,k:0,s:0,surf:surfOf(0)});gridAdd(0);
-P.push({x:0,z:-PRE*DS,y:elev(gen.s),h:0,k:0,s:gen.s,surf:surfOf(0)});gen.y=P[0].y;gridAdd(0);
+//larghezza strada
+P.push({x:0,z:-PRE*DS,y:elev(gen.s),h:0,k:0,s:gen.s,surf:surfOf(0),w:HALF});gen.y=P[0].y;gridAdd(0);
 function genPoint(){
  if(gen.left<=0){if(!queue.length)fillQueue();const sg=queue.shift();gen.target=sg.k;gen.left=sg.len;}
  const dk=gen.target-gen.k,rr=RATE*DS;gen.k+=Math.abs(dk)<rr?dk:Math.sign(dk)*rr;
@@ -1495,7 +1539,8 @@ function genPoint(){
  
  
  const i=P.length;
- P.push({x:gen.x,z:gen.z,y:gen.y,h:gen.h,k:gen.k,s:gen.s,surf:surfOf(Math.floor(i/CH))});
+ //larghezza strada
+ P.push({x:gen.x,z:gen.z,y:gen.y,h:gen.h,k:gen.k,s:gen.s,surf:surfOf(Math.floor(i/CH)),w:HALF*widthAt(gen.s)});
  gridAdd(i);
  
  //LA FIX?
@@ -1725,13 +1770,17 @@ function addGrass(tile,R){
 
 
 /* ============ CARTELLI STRADALI ============ */
-const SIGN_EVERY = 125;// metri tra un cartello e l'altro
+const SIGN_EVERY = 500;// metri tra un cartello e l'altro
 const signTex = {};
 const signMats = {};
 
 function signTexture(type) {
   if (signTex[type]) return signTex[type];
   const c = document.createElement('canvas'); c.width = c.height = 256;
+  
+  //guado!
+  if (type === 'fordPanel' || type === 'hairpinPanel') c.height = 100;
+  
   const g = c.getContext('2d');
   g.lineJoin = 'round'; g.lineCap = 'round';
 
@@ -1742,12 +1791,76 @@ function signTexture(type) {
     g.closePath(); g.fill(); g.stroke();
   };
 
-  if (type === 'limit50') {
+  //allargamento
+  if (type === 'widen') {                                // quadrato bianco con doppia freccia
+    g.fillStyle = '#fff'; g.fillRect(0, 0, 256, 256);
+    g.strokeStyle = '#222'; g.lineWidth = 10; g.strokeRect(5, 5, 246, 246);
+    g.fillStyle = g.strokeStyle = '#111'; g.lineWidth = 6;
+    for (const cx of [82, 174]) {
+      g.beginPath();
+      g.moveTo(cx, 40); g.lineTo(cx + 36, 112); g.lineTo(cx + 10, 112); g.lineTo(cx + 10, 220);
+      g.lineTo(cx - 10, 220); g.lineTo(cx - 10, 112); g.lineTo(cx - 36, 112);
+      g.closePath(); g.fill(); g.stroke();
+    }
+  } 
+  
+  //guado
+  else if (type === 'fordPanel') {                     // pannello con onde blu
+    g.fillStyle = '#fff'; g.fillRect(0, 0, 256, 100);
+    g.strokeStyle = '#222'; g.lineWidth = 6; g.strokeRect(3, 3, 250, 94);
+    g.strokeStyle = '#1f5fbf'; g.lineWidth = 6; g.lineCap = 'round';
+    for (const y of [32, 50, 68]) {
+      g.beginPath(); g.moveTo(26, y);
+      for (let x = 26; x <= 230; x += 4) g.lineTo(x, y + Math.sin((x - 26) / 204 * Math.PI * 6) * 5);
+      g.stroke();
+    }
+  } 
+  
+  //tornante
+  else if (type === 'hairpinPanel') {
+    g.fillStyle = '#fff'; g.fillRect(0, 0, 256, 100);
+    g.strokeStyle = '#222'; g.lineWidth = 6; g.strokeRect(3, 3, 250, 94);
+    g.fillStyle = '#111'; g.font = 'bold 34px Arial';
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('TORNANTE', 128, 52);
+  }
+  
+  //pericolo
+  else if (type === 'danger') {                        // triangolo con punto esclamativo
+    tri(1, '#d4141c', 14); tri(.72, '#ffffff', 6);
+    g.fillStyle = '#111';
+    g.beginPath(); g.moveTo(119, 88); g.lineTo(137, 88); g.lineTo(133, 148); g.lineTo(123, 148); g.closePath(); g.fill();
+    g.beginPath(); g.arc(128, 170, 9, 0, 6.2832); g.fill();
+  } 
+
+  //limite 50
+  else if (type === 'limit50') {
     g.fillStyle = '#d4141c'; g.beginPath(); g.arc(128, 128, 118, 0, 6.2832); g.fill();
     g.fillStyle = '#fff';    g.beginPath(); g.arc(128, 128, 86, 0, 6.2832); g.fill();
     g.fillStyle = '#111'; g.font = 'bold 100px Arial'; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.fillText('50', 128, 134);
-  } else {
+  } 
+  
+  // CUNETTA O DOSSO
+  else if (type === 'bump') {
+    tri(1, '#d4141c', 14); tri(.72, '#ffffff', 6);
+    g.fillStyle = '#111';
+    g.beginPath();
+    g.moveTo(82, 168);
+    g.lineTo(82, 156);
+    // Gobba sinistra
+    g.bezierCurveTo(82, 132, 104, 132, 120, 146);
+    // Cunetta centrale
+    g.bezierCurveTo(124, 150, 128, 150, 132, 146);
+    // Gobba destra
+    g.bezierCurveTo(148, 132, 170, 132, 170, 156);
+    g.lineTo(170, 168);
+    g.closePath();
+    g.fill();
+  }
+  
+  //slippery
+  else {
     tri(1, '#d4141c', 14); tri(.72, '#ffffff', 6);
     g.fillStyle = g.strokeStyle = '#111';
 	
@@ -1776,8 +1889,22 @@ function signTexture(type) {
         g.bezierCurveTo(128 + dx + 10, 189, 128 + dx - 6, 192, 128 + dx - 2, 194);
         g.stroke();
       }
-    } else {                                            
-	  // curveR / curveL
+	} 
+	
+	else if (type === 'narrow' || type === 'widen') {
+	  //larghezza strada
+      g.save();
+      if (type === 'widen') { g.translate(0, 293); g.scale(1, -1); }
+      g.fillStyle = '#111';
+      for (const m of [1, -1]) {
+        g.beginPath();
+        [[108,105],[122,105],[122,135],[110,160],[110,188],[96,188],[96,160],[108,135]]
+          .forEach((p, i) => { const x = m > 0 ? p[0] : 256 - p[0]; i ? g.lineTo(x, p[1]) : g.moveTo(x, p[1]); });
+        g.closePath(); g.fill();
+      }
+      g.restore();
+    } else {
+      // curveR / curveL
       g.save();
       if (type === 'curveL') { g.translate(256, 0); g.scale(-1, 1); }
       g.lineWidth = 14; g.lineCap = 'butt';
@@ -1806,16 +1933,31 @@ const SIGN_FACE_Y = SIGN_H - SIGN_SIZE / 2 - .1;
 const signPoleMat = new THREE.MeshLambertMaterial({ color: 0x8a9096 });
 const signBackMat = new THREE.MeshBasicMaterial({ color: 0x555a60, alphaTest: .5 });
 
+const fordPanelGeo = new THREE.PlaneGeometry(1.1, .43);
+
 function makeSign(type) {
   const g = new THREE.Group();
   const pole = new THREE.Mesh(signPoleGeo, signPoleMat);
-  const face = new THREE.Mesh(signPlaneGeo, signMat(type)); face.position.set(0, SIGN_FACE_Y, .04);
-  const backGeo = type === 'limit50' ? signCircleGeo : signTriangleGeo;
-  const back = new THREE.Mesh(backGeo, signBackMat);  back.position.set(0, SIGN_FACE_Y, .03); back.rotation.y = Math.PI;
   pole.castShadow = true;
-  g.add(pole, face, back);
+  g.add(pole);
+  if (type === 'ford' || type === 'hairpinL' || type === 'hairpinR') {
+    const faceT  = type === 'ford' ? 'danger' : type === 'hairpinL' ? 'curveL' : 'curveR';
+    const panelT = type === 'ford' ? 'fordPanel' : 'hairpinPanel';
+    const face = new THREE.Mesh(signPlaneGeo, signMat(faceT)); face.position.set(0, SIGN_FACE_Y, .04);
+    const back = new THREE.Mesh(signTriangleGeo, signBackMat);    back.position.set(0, SIGN_FACE_Y, .03); back.rotation.y = Math.PI;
+    const py = SIGN_FACE_Y - SIGN_SIZE * .336 - .1 - .215;
+    const pf = new THREE.Mesh(fordPanelGeo, signMat(panelT)); pf.position.set(0, py, .04);
+    const pb = new THREE.Mesh(fordPanelGeo, signBackMat);      pb.position.set(0, py, .03); pb.rotation.y = Math.PI;
+    g.add(face, back, pf, pb);
+    return g;
+  }
+  const face = new THREE.Mesh(signPlaneGeo, signMat(type)); face.position.set(0, SIGN_FACE_Y, .04);
+  const backGeo = type === 'limit50' ? signCircleGeo : type === 'widen' ? signPlaneGeo : signTriangleGeo;
+  const back = new THREE.Mesh(backGeo, signBackMat); back.position.set(0, SIGN_FACE_Y, .03); back.rotation.y = Math.PI;
+  g.add(face, back);
   return g;
 }
+
 
 
 
@@ -1834,13 +1976,8 @@ function transMat(surf){
  g.fillStyle=gr;g.fillRect(0,0,c.width,c.height);
  const t=new THREE.CanvasTexture(c);
  t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=4;
- 
- /*
- return transMats[surf]=new THREE.MeshLambertMaterial({
-  map:t,transparent:true,depthWrite:false,
-  polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4});
- */
- // in transMat(), al posto del return finale:
+
+ // in transMat()
  const tm=new THREE.MeshLambertMaterial({ map:t,transparent:true,depthWrite:false, polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4});
  patchHeadlight(tm);
  return transMats[surf]=tm;
@@ -1853,21 +1990,28 @@ function buildChunk(c){
  const i0=c*CH;
  const n=CH+1;
  const surf=surfOf(c);
- const ch={objs:[],geos:[],obs:[]};
+ 
+ //guadi
+ const ch={objs:[],geos:[],obs:[],fords:[]};
+ 
  const rp=new Float32Array(n*6);
  const ru=new Float32Array(n*4);
  const ri=[];
  for(let j=0;j<n;j++){
-   const p=P[i0+j];
-   const lx=Math.cos(p.h);
-   const lz=-Math.sin(p.h);
-   const y=p.y+.06;
-   rp.set([p.x+lx*HALF,y,p.z+lz*HALF,p.x-lx*HALF,y,p.z-lz*HALF],j*6);
-   ru.set([0,p.s/12,1,p.s/12],j*4);
-   if(j<n-1){
-     const a=j*2;
-	 ri.push(a,a+1,a+2,a+1,a+3,a+2);
-   }
+	const p=P[i0+j];
+	const lx=Math.cos(p.h);
+	const lz=-Math.sin(p.h);
+	const y=p.y+.06;
+	
+	//larghezza strada
+	//rp.set([p.x+lx*HALF,y,p.z+lz*HALF,p.x-lx*HALF,y,p.z-lz*HALF],j*6);
+	rp.set([p.x+lx*p.w,y,p.z+lz*p.w,p.x-lx*p.w,y,p.z-lz*p.w],j*6);
+	
+	ru.set([0,p.s/12,1,p.s/12],j*4);
+	if(j<n-1){
+		const a=j*2;
+		ri.push(a,a+1,a+2,a+1,a+3,a+2);
+	}
  }
  const rg=new THREE.BufferGeometry();
  rg.setAttribute('position',new THREE.BufferAttribute(rp,3));
@@ -1882,24 +2026,35 @@ function buildChunk(c){
  
  // transizione: la superficie precedente sfuma sopra l'inizio di questo chunk
  if(c>0){
-  const ps=surfOf(c-1);
-  if(ps!==surf){
-   const tn=TRANS_PTS+1;
-   const tp=new Float32Array(tn*6),tu=new Float32Array(tn*4),ti=[];
-   for(let j=0;j<tn;j++){
-    const p=P[i0+j],lx=Math.cos(p.h),lz=-Math.sin(p.h),y=p.y+.062;
-    tp.set([p.x+lx*HALF,y,p.z+lz*HALF,p.x-lx*HALF,y,p.z-lz*HALF],j*6);
-    tu.set([0,p.s/12,1,p.s/12],j*4);
-    if(j<tn-1){const a=j*2;ti.push(a,a+1,a+2,a+1,a+3,a+2);}
-   }
-   const tg=new THREE.BufferGeometry();
-   tg.setAttribute('position',new THREE.BufferAttribute(tp,3));
-   tg.setAttribute('uv',new THREE.BufferAttribute(tu,2));
-   tg.setIndex(ti);tg.computeVertexNormals();
-   const tm=new THREE.Mesh(tg,transMat(ps));
-   tm.receiveShadow=true;
-   scene.add(tm);ch.objs.push(tm);ch.geos.push(tg);
-  }
+	const ps=surfOf(c-1);
+	if(ps!==surf){
+		const tn=TRANS_PTS+1;
+		const tp=new Float32Array(tn*6);
+		const tu=new Float32Array(tn*4);
+		const ti=[];
+		for(let j=0;j<tn;j++){
+			const p=P[i0+j];
+			const lx=Math.cos(p.h);
+			const lz=-Math.sin(p.h);
+			const y=p.y+.062;
+			
+			//larghezza strada
+			//tp.set([p.x+lx*HALF,y,p.z+lz*HALF,p.x-lx*HALF,y,p.z-lz*HALF],j*6);
+			tp.set([p.x+lx*p.w,y,p.z+lz*p.w,p.x-lx*p.w,y,p.z-lz*p.w],j*6);
+		
+			tu.set([0,p.s/12,1,p.s/12],j*4);
+			if(j<tn-1){
+				const a=j*2;ti.push(a,a+1,a+2,a+1,a+3,a+2);
+			}
+		}
+		const tg=new THREE.BufferGeometry();
+		tg.setAttribute('position',new THREE.BufferAttribute(tp,3));
+		tg.setAttribute('uv',new THREE.BufferAttribute(tu,2));
+		tg.setIndex(ti);tg.computeVertexNormals();
+		const tm=new THREE.Mesh(tg,transMat(ps));
+		tm.receiveShadow=true;
+		scene.add(tm);ch.objs.push(tm);ch.geos.push(tg);
+	}
  }
 
 
@@ -1907,15 +2062,22 @@ function buildChunk(c){
  //paletti
  const posts=[];
  const POST_OFFSET = 0.25;
- const d = HALF + POST_OFFSET;
+ 
+ //larghezza strada
+ //const d = HALF + POST_OFFSET;
+ 
  for(let j=0;j<CH;j++){
-   const p=P[i0+j];
-   const lx=Math.cos(p.h);
-   const lz=-Math.sin(p.h);
-   if(Math.abs(p.k)>1/60 && j%2 === 0){
-     const sd=-Math.sign(p.k);
-     posts.push([p.x+lx*sd*d, p.y + POST_H / 2 - .3, p.z+lz*sd*d, p.h, (i0+j)%4<2]);//invece di 6 schiantato, uso d
-   }
+	const p=P[i0+j];
+	const lx=Math.cos(p.h);
+	const lz=-Math.sin(p.h);
+	
+	//larghezza strada
+	const d=p.w+POST_OFFSET;
+	
+	if(Math.abs(p.k)>1/60 && j%2 === 0){
+		const sd=-Math.sign(p.k);//esterni
+		posts.push([p.x+lx*sd*d, p.y + POST_H / 2 - .3, p.z+lz*sd*d, p.h, (i0+j)%4<2]);//invece di 6 schiantato, uso d
+	}
  }
  if(posts.length){
   const im=new THREE.InstancedMesh(postGeo,postMat,posts.length);
@@ -1925,8 +2087,6 @@ function buildChunk(c){
 	dummy.scale.set(1,1,1);
 	dummy.updateMatrix();
 	im.setMatrixAt(i,dummy.matrix);
-    ////im.setColorAt(i,t[4]?tmpCol.setRGB(.9,.1,.1):tmpCol.setRGB(1,1,1));
-    ////ch.obs.push({type:'post',x:t[0],y:t[1],z:t[2],r:.35,col:t[4]?[.9,.1,.1]:[1,1,1],im,i});
 	im.setColorAt(i, tmpCol.setRGB(1, 1, 1));
     ch.obs.push({type:'post',x:t[0],y:t[1],z:t[2],r:.35,col:[1,1,1],im,i});
   });
@@ -1942,32 +2102,103 @@ function buildChunk(c){
  const sA = P[i0].s;
  const sB = P[i0 + CH].s;
  for (let n = Math.max(1, Math.ceil(sA / SIGN_EVERY)); n * SIGN_EVERY < sB; n++) {
-   const s = n * SIGN_EVERY;
-   let j = i0; while (j < i0 + CH - 1 && P[j + 1].s <= s) j++;
-   const p = P[j];
-   ensurePoints(j + 70);
-   let kmax = 0, ks = 0;
-   for (let q = j + 8; q < j + 60; q++) if (Math.abs(P[q].k) > kmax) { kmax = Math.abs(P[q].k); ks = Math.sign(P[q].k); }
-   const type = kmax > 1 / 70 ? (ks > 0 ? 'curveL' : 'curveR')
-              : p.surf >= 4 ? 'slippery'
-              : (n % 2 ? 'limit50' : 'slippery');
-
-   const lx = Math.cos(p.h), lz = -Math.sin(p.h);
-   const x = p.x - lx * (HALF + 1.3), z = p.z - lz * (HALF + 1.3);   // lato destro
-   const sg = makeSign(type);
-   sg.position.set(x, p.y - .3, z);
-   sg.rotation.y = p.h + Math.PI;                                    // rivolto verso chi arriva
-   scene.add(sg);
-   ch.objs.push(sg);
-   ch.obs.push({ type: 'sign', x, y: p.y + 1, z, r: .3, col: [.55, .57, .6], group: sg });
+	const s = n * SIGN_EVERY;
+	let j = i0; while (j < i0 + CH - 1 && P[j + 1].s <= s) j++;
+	const p = P[j];
+	ensurePoints(j + 70);
+	let kmax = 0;
+	let ks = 0;
+	for (let q = j + 8; q < j + 60; q++) {
+		if (Math.abs(P[q].k) > kmax) { 
+			kmax = Math.abs(P[q].k); 
+			ks = Math.sign(P[q].k); 
+		}
+	}
+	
+	const type = kmax > 1 / 70 ? (ks > 0 ? 'curveL' : 'curveR')
+			: p.surf >= 4 ? 'slippery'
+			: (n % 3 === 1 ? 'limit50' : n % 3 === 2 ? 'bump' : 'danger');
+	
+	const lx = Math.cos(p.h);
+	const lz = -Math.sin(p.h);
+	
+	//larghezza strada
+	const x = p.x - lx * (p.w + 1.3);//lato destro
+	const z = p.z - lz * (p.w + 1.3);
+	
+	const sg = makeSign(type);
+	sg.position.set(x, p.y - .3, z);
+	sg.rotation.y = p.h + Math.PI;                                    // rivolto verso chi arriva
+	scene.add(sg);
+	ch.objs.push(sg);
+	ch.obs.push({ type: 'sign', x, y: p.y + 1, z, r: .3, col: [.55, .57, .6], group: sg });
  }
  
  
+ //larghezza strada - cartelli strettoia / allargamento
+ for(let zn=Math.max(1,Math.ceil((sA+W_SIGN)/W_ZONE)); zn*W_ZONE-W_SIGN<sB; zn++){
+	const f0=wFac(zn-1), f1=wFac(zn);
+	if(f0===f1)continue;
+	const s=zn*W_ZONE-W_SIGN;
+	let j=i0; while(j<i0+CH-1&&P[j+1].s<=s)j++;
+	const p=P[j];
+	const lx=Math.cos(p.h);
+	const lz=-Math.sin(p.h);
+	const x=p.x-lx*(p.w+1.3);//a destra
+	const zp=p.z-lz*(p.w+1.3);
+	const sg=makeSign(f1>f0?'widen':'narrow');
+	sg.position.set(x,p.y-.3,zp);
+	sg.rotation.y=p.h+Math.PI;
+	scene.add(sg);
+	ch.objs.push(sg);
+	ch.obs.push({type:'sign',x,y:p.y+1,z:zp,r:.3,col:[.55,.57,.6],group:sg});
+ }
+ 
+ // cartelli tornante: HAIRPIN_SIGN m prima dell'inizio della curva
+ for(let j=i0;j<i0+CH;j++){
+	const hs=hairpinSign(j+Math.round(HAIRPIN_SIGN/DS));
+	if(!hs)continue;
+	const p=P[j];
+	const lx=Math.cos(p.h);
+	const lz=-Math.sin(p.h);
+	const dist = p.w + 1.3;
+	const side = -1;//destra anche sulle curve a sx
+	const x = p.x + lx * side * dist;
+	const zp = p.z + lz * side * dist;
+	const sgn = makeSign(hs > 0 ? 'hairpinL' : 'hairpinR');
+	sgn.position.set(x, p.y - .3, zp); 
+	sgn.rotation.y = p.h + Math.PI;
+	scene.add(sgn); 
+	ch.objs.push(sgn);
+	ch.obs.push({type: 'sign', x, y: p.y + 1, z: zp, r: .3, col: [.55, .57, .6], group: sgn});
+ }
+ 
+ // guadi: cartello FORD_SIGN m prima + specchio d'acqua
+ for(let k=Math.floor(sA/FORD_ZONE); k<=Math.floor((sB+FORD_SIGN)/FORD_ZONE); k++){
+	const def=fordDef(k); if(!def)continue;
+	const jf=Math.floor((def.s-P[0].s)/DS);                  // indice del guado
+	const js=Math.floor((def.s-FORD_SIGN-P[0].s)/DS);        // indice del cartello
+	const hereF=jf>=i0&&jf<i0+CH, hereS=js>=i0&&js<i0+CH;
+	if(!hereF&&!hereS)continue;
+	if(!fordIsStraight(jf,def.len))continue;                 // guado e cartello nascono insieme o per niente
+	if(hereF)buildFord(def,jf,ch);
+	if(hereS)placeFordSign(P[js],ch);
+ }
  
  
  return ch;
 }
-function disposeChunk(ch){ch.objs.forEach(o=>{scene.remove(o);if(o.isInstancedMesh)o.dispose();});ch.geos.forEach(g=>g.dispose());}
+
+//guadi - rimuove anche quelli
+function disposeChunk(ch){
+	(ch.fords||[]).forEach(f=>fords.delete(f));
+	ch.objs.forEach(o=>{
+		scene.remove(o);
+		if(o.isInstancedMesh)o.dispose();
+	});
+	ch.geos.forEach(g=>g.dispose());
+}
+
 function manageChunks(){
  const cc=Math.floor(car.idx/CH);
  for(const[c,ch]of chunks)if(c<cc-3){disposeChunk(ch);chunks.delete(c);}
@@ -1991,6 +2222,10 @@ function terrain(x,z,o){
  let bt=0;
  let ws=0;
  let ys=0;
+ 
+ //larghezza strada
+ let hw=HALF;
+ 
  for(let a=-3;a<=3;a++)for(let b=-3;b<=3;b++){
   const arr=grid.get(gkey(cx+a,cz+b));if(!arr)continue;
   for(let n=0;n<arr.length;n++){
@@ -2019,8 +2254,16 @@ function terrain(x,z,o){
    d=(x-(p.x+dx*bt))*(dz/L)+(z-(p.z+dz*bt))*(-dx/L);
    surf=p.surf;
    sl=Math.abs(q.y-p.y)/DS;
+   
+   //larghezza strada
+   hw=p.w+(q.w-p.w)*bt;
  }
- const dE=Math.min(dmin,185);//////185);                      // oltre la finestra di ricerca il terreno non cambia più
+ 
+ //larghezza strada
+ const dA=Math.max(dmin-(hw-HALF),0);
+ 
+ const dE=Math.min(dA,185);// oltre la finestra di ricerca il terreno non cambia più
+ 
  /////let yRef=lerp(ynear,idw,sm(dE,6,12));
  /////yRef=lerp(yRef,24,sm(dE,60,160));
  //GEMINI FIX
@@ -2031,9 +2274,10 @@ function terrain(x,z,o){
  const dune=(vnoise(x*.035+50,z*.035)-.5)*3*Math.min(1,t/20);
  const mt=95*Math.pow(fbm(x*.0016,z*.0016),1.6)*sm(dE,40,170);
  o.y=yRef+hn+dune+mt+.06*(1-sm(dE,5,7));
- o.i=bi;o.t=bt;o.d=d;o.ad=dmin;o.surf=surf;o.sl=sl;return o;
  
- 
+ //o.i=bi;o.t=bt;o.d=d;o.ad=dmin;o.surf=surf;o.sl=sl;return o;
+ //larghezza strada
+ o.i=bi;o.t=bt;o.d=d;o.ad=dA;o.hw=hw;o.surf=surf;o.sl=sl;return o;
 }
 
 const TILE=120;//120m di tessera del paesaggio
@@ -2129,7 +2373,10 @@ const PUDDLE_SURFACE_OFFSET=.055;
 
 function visibleGroundY(q){
  const terrainY=q.y-(0.08+1.5*q.sl)*(1-sm(q.ad,5.2,8.5));
- if(q.i<0||Math.abs(q.d)>=HALF)return terrainY;
+ //larghezza strada
+ //if(q.i<0||Math.abs(q.d)>=HALF)return terrainY;
+ if(q.i<0||Math.abs(q.d)>=q.hw)return terrainY;
+ 
  const p=P[q.i],next=P[q.i+1];
  return Math.max(terrainY,lerp(p.y,next.y,q.t)+.06);
 }
@@ -2149,6 +2396,118 @@ function makePuddleGeometry(p,rotation){
  geometry.computeVertexNormals();
  return geometry;
 }
+
+/* ============ GUADI ============ */
+function fordIsStraight(j,len){
+  const n=Math.ceil((len||10)/2/DS)+3;        // metà guado + margine
+  ensurePoints(j+n+2);
+  let kx=0; 
+  for(let q=Math.max(0,j-n);q<=j+n;q++)kx=Math.max(kx,Math.abs(P[q].k));
+  return kx<1/220;
+}
+
+function placeFordSign(p,ch){
+  const lx=Math.cos(p.h), lz=-Math.sin(p.h), x=p.x-lx*(p.w+1.3), z=p.z-lz*(p.w+1.3);
+  const sg=makeSign('ford');
+  sg.position.set(x,p.y-.3,z); sg.rotation.y=p.h+Math.PI;
+  scene.add(sg); ch.objs.push(sg);
+  ch.obs.push({type:'sign',x,y:p.y+1,z,r:.3,col:[.55,.57,.6],group:sg});
+}
+
+//guadi - QUI SI REGOLA TUTTO!!!
+const FORD_LEN_MIN = 5;//lunghezza minima lungo la strada (m)
+const FORD_LEN_VAR = 20;//+0..20 m casuali -> 5-25 m totali
+const FORD_SIGN = 90;//cartello prima del guado (90m)
+const FORD_ZONE = 500;//FORD_ZONE (500 m) è la lunghezza di ogni zona, con al massimo un guado per zona
+const FORD_DY = 0.5;//FORD_DY (0.2 m) è il dislivello massimo dal piano stradale oltre il quale l’acqua non viene disegnata
+const FORD_CELL = 2.5;//FORD_CELL (2.5 m) è la dimensione delle celle del film d’acqua. Più è basso, più bordi precisi ma più triangoli
+const fords = new Set();
+const fordAcc = [0,0,0,0];
+let fordSnd = 0;
+
+const fordTex=mkTex((g,w,h)=>{
+ g.fillStyle='#5b97ad';
+ g.fillRect(0,0,w,h);
+ g.strokeStyle='rgba(235,250,255,.25)';
+ g.lineWidth=1;
+ g.lineCap='round';
+ for(let i=0;i<26;i++){
+  const x=Math.random()*w;
+  const y=Math.random()*h;
+  const l=10+Math.random()*50;
+  g.beginPath();
+  g.moveTo(x,y);
+  g.quadraticCurveTo(x+l/2,y-3,x+l,y);
+  g.stroke();
+ }
+},128,128);
+
+
+const fordMat=new THREE.MeshPhongMaterial({map:fordTex,specular:0xdff4ff,shininess:90,transparent:true,opacity:.78,
+ depthWrite:false,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4});
+
+//ocho!
+function fordDef(k){
+ if(k<1||hash2(k,311)<.45) return null;
+ return{s:(k+.15+hash2(k,312)*.7)*FORD_ZONE,len:FORD_LEN_MIN+hash2(k,313)*FORD_LEN_VAR,wid:50+hash2(k,314)*50};
+}
+
+function buildFord(def,j,ch){
+ const p=P[j], fx=Math.sin(p.h), fz=Math.cos(p.h), lx=Math.cos(p.h), lz=-Math.sin(p.h);
+ const sl=(P[j+1].y-p.y)/DS, y0=p.y+.06;
+ const nx=Math.ceil(def.wid/FORD_CELL), nz=Math.max(2,Math.ceil(def.len/FORD_CELL));
+ const nv=(nx+1)*(nz+1), pos=new Float32Array(nv*3), uv=new Float32Array(nv*2), ok=new Uint8Array(nv), ind=[];
+ for(let a=0;a<=nx;a++)for(let b=0;b<=nz;b++){
+  const la=(a/nx-.5)*def.wid, al=(b/nz-.5)*def.len, x=p.x+lx*la+fx*al, z=p.z+lz*la+fz*al, v=a*(nz+1)+b;
+  terrain(x,z,TQ);
+  pos[v*3]=x; pos[v*3+1]=visibleGroundY(TQ)+.09; pos[v*3+2]=z;
+  uv[v*2]=la/6; uv[v*2+1]=al/6;
+  ok[v]=Math.abs(TQ.y-(y0+sl*al))<FORD_DY?1:0;     // dove il rilievo si discosta troppo niente acqua
+ }
+ for(let a=0;a<nx;a++)for(let b=0;b<nz;b++){
+  const v0=a*(nz+1)+b, v1=v0+1, v2=v0+nz+1, v3=v2+1;
+  if(ok[v0]&&ok[v1]&&ok[v2]&&ok[v3])ind.push(v0,v1,v2,v1,v3,v2);
+ }
+ if(!ind.length)return;
+ const g=new THREE.BufferGeometry();
+ g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+ g.setAttribute('uv',new THREE.BufferAttribute(uv,2));
+ g.setIndex(ind); g.computeVertexNormals();
+ const m=new THREE.Mesh(g,fordMat); m.frustumCulled=false;
+ scene.add(m); ch.objs.push(m); ch.geos.push(g);
+ const f={x:p.x,z:p.z,fx,fz,lx,lz,len:def.len,wid:def.wid,y:y0,sl};
+ fords.add(f); ch.fords.push(f);
+}
+
+function updFords(dt){
+ const sp=Math.hypot(car.u,car.v);
+ let any=false;
+ for(let w=0;w<4;w++){
+  const d=wheelDat[w], was=d.wet; let wet=false;
+  if(!car.air)for(const f of fords){
+   const dx=d.x-f.x, dz=d.z-f.z;
+   if(dx*dx+dz*dz>(f.wid*.5+8)**2)continue;
+   const al=dx*f.fx+dz*f.fz, la=dx*f.lx+dz*f.lz;
+   if(Math.abs(al)<f.len/2&&Math.abs(la)<f.wid/2&&Math.abs(d.y-(f.y+f.sl*al))<FORD_DY){wet=true;break;}
+  }
+  d.wet=wet;
+  if(!wet||sp<2)continue;
+  any=true;
+  fordAcc[w]+=sp*(IS_MOBILE?4:7)*dt+(was?0:sp*2);          // all'ingresso botta extra
+  const side=WO[w][0]>0?1:-1, lx=Math.cos(car.th), lz=-Math.sin(car.th);
+  const vxw=car.u*Math.sin(car.th)+car.v*lx, vzw=car.u*Math.cos(car.th)+car.v*lz;
+  while(fordAcc[w]>=1){
+   fordAcc[w]--;
+   const o=rnd(1,5), blue=Math.random()<.5;
+   emit(d.x+rnd(-.2,.2),d.y+.1,d.z+rnd(-.2,.2),
+    vxw*.3+lx*side*o+rnd(-1.2,1.2), rnd(2.5,6)+sp*.1, vzw*.3+lz*side*o+rnd(-1.2,1.2),
+    blue?.55:.9, blue?.82:.96, 1, rnd(.4,.85), .1, rnd(.3,.5), .85, 11, 1);
+  }
+ }
+ if(any&&AC&&(fordSnd-=dt)<=0){ burst(rnd(700,1400),'bandpass',clamp(sp/40,.15,.5),.3,.7); fordSnd=.1; }
+}
+
+
 
 const PUDDLE_GRASS_CLEARANCE=.5;//distanza dall'erba
 
@@ -2194,8 +2553,10 @@ function buildDetail(tile){
   const x=tile.x0+PR(0,TILE);
   const z=tile.z0+PR(0,TILE);
   terrain(x,z,TQ);
-  const onAsphalt=TQ.surf<4&&Math.abs(TQ.d)<HALF-.6;
-  const onGreen=Math.abs(TQ.d)>HALF+1.5&&TQ.y<56;
+  //larghezza strada
+  const onAsphalt=TQ.surf<4&&Math.abs(TQ.d)<TQ.hw-.6;
+  const onGreen=Math.abs(TQ.d)>TQ.hw+1.5&&TQ.y<56;
+  
   if((!onAsphalt&&!onGreen)||PR(0,1)>(onAsphalt?.22:.09))continue;
   const rx=1+PR(1,2);
   const rz=1+PR(1,2);
@@ -5281,8 +5642,15 @@ function physicsPRO(dt){
 
     // superficie e aderenza PER RUOTA
     const wd=wheelDat[i];
-    const sf=Math.abs(wd.d)>5.4?MU.length-1:wd.surf;
-    let mu=car.air?.03:MU[sf];
+	
+	//larghezza strada
+    ////const sf=Math.abs(wd.d)>5.4?MU.length-1:wd.surf;
+	const sf=wd.off?MU.length-1:wd.surf;
+	
+    //guadi
+	//let mu=car.air?.03:MU[sf];
+	let mu=(car.air?.03:MU[sf])*(wd.wet?.8:1);
+	
     if(dmg.lost[i]) mu*=.25;
     const muN=mu*N[i], B=TYRE_B[sf];
 
@@ -5546,7 +5914,8 @@ function stepControlsOLD(dt){
 }
 
 /* ============ PARTICELLE (polvere / fumo / fango) ============ */
-const NP=700;
+//const NP=700;
+const NP=1400;
 const pPos=new Float32Array(NP*3).fill(-9999),pCol=new Float32Array(NP*3),pSize=new Float32Array(NP),pAl=new Float32Array(NP);
 const pVel=new Float32Array(NP*3),pLife=new Float32Array(NP),pMax=new Float32Array(NP).fill(1),pS0=new Float32Array(NP),pS1=new Float32Array(NP),pA0=new Float32Array(NP),pG=new Float32Array(NP),pD=new Float32Array(NP);
 let pHead=0;
@@ -5695,10 +6064,17 @@ function emitWheels(dt){
  console.log(slipR);
  
  for(let w=0;w<4;w++){
+  //guadi
+  if(wheelDat[w].wet)continue;//no polvere in acqua!
+  
   const rear=w>=2;
   const slip=rear?slipR:slipF*.6;
   const d=wheelDat[w];
-  const off=Math.abs(d.d)>5.4;
+  
+  //larghezza strada
+  //const off=Math.abs(d.d)>5.4;
+  const off=d.off;
+  
   const surf=off?(MU.length-1):d.surf;
   const spin=rear?car.spin:0;
   let rate;
@@ -5780,7 +6156,13 @@ function updSkids(dt){
  for(let w=0;w<4;w++){
   const s=skW[w],d=wheelDat[w];
   
-  const off=Math.abs(d.d)>5.4;
+  //guadi
+  if(d.wet){s.on=false;continue;}//niente sgommate in acqua!
+  
+  //larghezza strada
+  //const off=Math.abs(d.d)>5.4;
+  const off=d.off;
+  
   const si=off?4:(d.surf<4?0:d.surf-3);   // 0 asfalto, 1 gravel, 2 fango, 3 roccia, 4 offroad
   
   const tgt=skidTarget(w,si);
@@ -5967,7 +6349,10 @@ function updAudio(skid,dt){
  ////////////E.rdG.gain.setTargetAtTime(clamp(skid,0,1)*.3+clamp(Math.abs(car.u)/60,0,1)*.04,t,.06);
  
  const rw=wheelDat[2];
- const asph=Math.abs(rw.d)<=5.4&&rw.surf<4;           // ruota posteriore su asfalto?
+ 
+ //larghezza strada
+ //const asph=Math.abs(rw.d)<=5.4&&rw.surf<4;           // ruota posteriore su asfalto?
+ const asph=!rw.off&&rw.surf<4;
  
  const skMark=Math.max(skW[2].k,skW[3].k);
  const sk=clamp(Math.max(skid,skMark),0,1), spdN=clamp(Math.abs(car.u)/60,0,1);
@@ -6265,12 +6650,13 @@ function useGLB(buffer){
   box.setFromObject(model);let sz=box.getSize(V());
   if(sz.x>sz.z)model.rotation.y=Math.PI/2;
   model.updateMatrixWorld(true);box.setFromObject(model);sz=box.getSize(V());
-  model.scale.setScalar(4.2/sz.z);model.updateMatrixWorld(true);
+  //model.scale.setScalar(4.2/sz.z);
+  model.updateMatrixWorld(true);
   box.setFromObject(model);const c=box.getCenter(V());
   model.position.set(model.position.x-c.x,model.position.y-box.min.y,model.position.z-c.z);
   wrap.updateMatrixWorld(true);
   model.traverse(o=>{if(o.isMesh)[].concat(o.material).forEach(m=>{if(m.isMeshStandardMaterial){m.metalness=Math.min(m.metalness,.35);m.roughness=Math.max(m.roughness,.4);}});});
-  const re=/wheel|ruota|tyre|tire|rim|cerchi|gomma/i,tops=[];
+  const re=/wheel|ruota|tyre|tire|rim|cerchi|gomma|chrome8_|chrome44_|chrome45_|chrome46_/i,tops=[];
   (function walk(n){if(re.test(n.name)){tops.push(n);return;}n.children.forEach(walk);})(model);
   box.setFromObject(model);sz=box.getSize(V());
   const quad={};
@@ -6392,7 +6778,8 @@ function restartGame(){
   zone={mode:0,left:6};planH=0;
   queue.push({k:0,len:150+PRE*DS});
   Object.assign(gen,{h:0,k:0,x:0,z:-PRE*DS,s:-PRE*DS,y:0,target:0,left:0});
-  P.push({x:0,z:-PRE*DS,y:elev(gen.s),h:0,k:0,s:gen.s,surf:surfOf(0)});
+  //larghezza strada
+  P.push({x:0,z:-PRE*DS,y:elev(gen.s),h:0,k:0,s:gen.s,surf:surfOf(0),w:HALF});
   gen.y=P[0].y;gridAdd(0);
   ensurePoints((AHEAD+3)*CH);
   car.idx=PRE;
@@ -6462,11 +6849,17 @@ function updateWorld(dt){
   wd.y=SHD.y;
   wd.d=SHD.d;
   wd.surf=SHD.surf;
+  //larghezza strada
+  wd.off=Math.abs(SHD.d)>SHD.hw+.4;
+  
   ym+=SHD.y;
-  const off=Math.abs(SHD.d)>5.4;
+  //larghezza strada
+  //////const off=Math.abs(SHD.d)>5.4;
+  const off=wd.off;
+  
   const sf=off?(MU.length-1):SHD.surf;
   
-  if(sf>=4){ dusty++; sfDust=sf; }//sporco e' bello
+  if(sf>=4 && !wd.wet){ dusty++; sfDust=sf; }//sporco e' bello, sporco ci piace!
   
   mu[w]=MU[sf];
   st[w]=ST[sf];
@@ -6475,7 +6868,19 @@ function updateWorld(dt){
   
   //danneggiamento!
   if(dmg.lost[w]){ mu[w]*=.25; rr+=.12; }
+  
+  //guadi
+  if(wd.wet){ mu[w]*=.8; rr+=.05; }
  }
+ updFords(dt);
+ 
+ //sporco e' bello ma ogni tanto ci laviamo!
+ if(wheelDat.some(d=>d.wet) && dirt>0){
+  dirt*=Math.exp(-dt*Math.LN2/0.6);
+  if(dirt<.002)dirt=0;
+  applyDirt();
+ }
+ 
  
  car.muF=(mu[0]+mu[1])/2;
  car.muR=(mu[2]+mu[3])/2;
@@ -6653,10 +7058,10 @@ function updateWorld(dt){
  
  car.shake=Math.max(0,car.shake-dt*2);
  
- const sk=car.shake*.5+(Math.abs(wheelDat[2].d)>5.4?Math.min(.08,spd*.002):0);
- ////camera.position.set(car.x-Math.sin(car.camYaw)*dist+rnd(-sk,sk),car.camY+hgt+rnd(-sk,sk),car.z-Math.cos(car.camYaw)*dist);
- ////terrain(camera.position.x,camera.position.z,SHD);camera.position.y=Math.max(camera.position.y,SHD.y+1.8);
- ////camera.lookAt(car.x+Math.sin(car.camYaw)*6,car.camY+1.2,car.z+Math.cos(car.camYaw)*6);
+ //larghezza strada
+ //const sk=car.shake*.5+(Math.abs(wheelDat[2].d)>5.4?Math.min(.08,spd*.002):0);
+ const sk=car.shake*.5+(wheelDat[2].off?Math.min(.08,spd*.002):0);
+ 
  
  
  const CAM_BACK=5.5;
@@ -6761,7 +7166,10 @@ function updateWorld(dt){
   tachSpeed(kmhVal, car.odo/1000);
   $('spd').classList.toggle('night',headlightsOn);
   
-  const off=Math.abs(c.d)>5.4;
+  //larghezza strada
+  //const off=Math.abs(c.d)>5.4;
+  const off=Math.abs(c.d)>c.hw+0.4;
+  
   const mode=modeArr[Math.floor(car.idx/CH)];
   const surfType=P[car.idx].surf;
   
@@ -7063,6 +7471,28 @@ function drawMinimap(){
   i===i0?mmCtx.moveTo(px,py):mmCtx.lineTo(px,py);
  }
  mmCtx.stroke();
+ 
+ // guadi: calcolati da fordDef (non dai chunk), così si vedono su tutto il raggio della mappa
+ {
+  const sCar=P[car.idx].s, s0=P[0].s;
+  const k0=Math.floor((sCar-MM_RADIUS)/FORD_ZONE), k1=Math.floor((sCar+MM_RADIUS)/FORD_ZONE);
+  mmCtx.strokeStyle='rgba(70,170,255,.95)';
+  mmCtx.lineCap='butt';
+  for(let k=k0;k<=k1;k++){
+   const def=fordDef(k); if(!def)continue;
+   const jf=Math.floor((def.s-s0)/DS);
+   if(jf<1||jf>i1)continue;
+   if(!fordIsStraight(jf,def.len))continue;           // stessa regola del mondo 3D
+   const p=P[jf], lx=Math.cos(p.h), lz=-Math.sin(p.h);
+   const hw=Math.min(def.wid,60)/2;                   // l'acqua vera finisce dove il rilievo sale (~±30 m)
+   const cx=W/2+(p.x-car.x)*scale, cy=H/2-(p.z-car.z)*scale;
+   mmCtx.lineWidth=Math.max(3,def.len*scale);
+   mmCtx.beginPath();
+   mmCtx.moveTo(cx-lx*hw*scale, cy+lz*hw*scale);
+   mmCtx.lineTo(cx+lx*hw*scale, cy-lz*hw*scale);
+   mmCtx.stroke();
+  }
+ }
 
  // marcatore auto
  mmCtx.save();mmCtx.translate(W/2,H/2);mmCtx.rotate(car.th);
@@ -7122,6 +7552,9 @@ function frame(now){
  
  gt+=dt; 
  grassU.uTime.value=gt;
+ 
+ //guadi
+ fordTex.offset.set(gt*.05,gt*.02);//acqua scorre x veloce, y lento
  
  sky.rotation.y+=dt*0.003; // nuvole che scorrono lentissime
  
