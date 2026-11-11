@@ -2724,6 +2724,7 @@ const CAR_SPECS={
   centoventisette: {power: 70000, fmax:5500, mass: 840, drag:.85, tops:[40,70,90,120,140,160],  maxSpeed: 160,  maxRpm: 7000, startSkidSpeed: 0  },
   bianchina:       {power: 80000, fmax:6500, mass: 800, drag:.85, tops:[45,70,95,125,150,170],  maxSpeed: 160,  maxRpm: 7000, startSkidSpeed: 0  },
   tipozza:         {power:100000, fmax:7500, mass:1050, drag:.85, tops:[45,75,105,135,165,195], maxSpeed: 180,  maxRpm: 7000, startSkidSpeed: 0  },
+  deltona:         {power:150000, fmax:9000, mass:1300, drag:.80, tops:[55,85,115,145,180,215], maxSpeed: 200,  maxRpm: 9000, startSkidSpeed: 16 },
   evo:             {power:150000, fmax:9000, mass:1300, drag:.80, tops:[55,85,115,145,180,215], maxSpeed: 200,  maxRpm: 9000, startSkidSpeed: 16 }
 };
 
@@ -2739,7 +2740,8 @@ function buildCarWrapper(o,forceModel){
 	case 1 : CURRENT_CAR_SPEC = CAR_SPECS['pandina']; mod = buildCarPandina(o); break;
 	case 2 : CURRENT_CAR_SPEC = CAR_SPECS['bianchina']; mod = buildCarBianchina(o); break;
 	case 3 : CURRENT_CAR_SPEC = CAR_SPECS['tipozza']; mod = buildCarTipozza(o); break;
-	case 4 : CURRENT_CAR_SPEC = CAR_SPECS['evo']; mod = buildCarEvo(o); break;
+	case 4 : CURRENT_CAR_SPEC = CAR_SPECS['deltona']; mod = buildCarDeltona(o); break;
+	case 5 : CURRENT_CAR_SPEC = CAR_SPECS['evo']; mod = buildCarEvo(o); break;
 	default: CURRENT_CAR_SPEC = CAR_SPECS['evo']; mod = buildCarEvo(o);
   }
   //aggiorna tachimetro
@@ -2891,6 +2893,448 @@ function _triGlsl(P) {
 
 
 
+//deltona!
+//lancia delta hf integrale evoluzione - quote ricavate dal blueprint (3898 x 1767 x 1365 mm, passo 2479 mm)
+//lancia delta hf integrale evoluzione - quote ricavate dal blueprint (3898 x 1767 x 1365 mm, passo 2479 mm)
+function buildCarDeltona(o) {
+    const g = new THREE.Group();
+
+    // ---------- materiali ----------
+    const M  = c => new THREE.MeshLambertMaterial({ color: c, side: THREE.DoubleSide, shadowSide: THREE.BackSide });
+    const B  = c => new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide });
+    const MS = c => new THREE.MeshStandardMaterial({ color: c, side: THREE.DoubleSide, shadowSide: THREE.BackSide, metalness: 0, roughness: 0.5 });
+
+    const paint = MS(o.paint);
+    const black = M(0x000000), plastic = M(0x222222), steel = M(0x888899), dark = M(0x333333), floorM = M(0x111122);
+    const glass = new THREE.MeshLambertMaterial({ color: 0x223333, transparent: true, opacity: o.glassOpacity, side: THREE.DoubleSide });
+    glass.depthWrite = false;
+    glass.userData.noCast = true;
+    glass.userData.noRecv = true;
+    const white = B(0xffffff), panna = B(0xffffdd), orange = B(0xee6600), red = B(0xdd2222), blue = B(0x112266), yellow = B(0xffff00);
+    const brakeM = B(0x330000);          // stop: spento
+    const revM   = B(0x666666);          // retromarcia: spenta
+    
+    // targa: sfondo chiaro, testo nero centrato (makeTargaTexture spezza il testo in 2 campi, qui serve una riga sola)
+    const PLATE = 'Rally 3170TR';
+    const plateTex = () => {
+        const c = document.createElement('canvas'); c.width = 600; c.height = 100;
+        const t = c.getContext('2d');
+        t.fillStyle = '#eeeeee'; t.fillRect(0, 0, 600, 100);
+        t.strokeStyle = '#000000'; t.lineWidth = 10; t.strokeRect(5, 5, 590, 90);
+        t.fillStyle = '#000000'; t.font = '900 70px monospace'; t.textAlign = 'center'; t.textBaseline = 'middle';
+        t.fillText(PLATE, 300, 54);
+        const tex = new THREE.CanvasTexture(c); tex.anisotropy = 4;
+        return tex;
+    };
+
+    // ---------- quote (metri, z+ = muso, x+ = sinistra) ----------
+    const WZ = 1.24, WX = 0.7575, WY = 0.305, WR = 0.305;   // ruote: passo 2.48, carreggiata 1.515, 205/50 R15
+    const AR = 0.345, SILL = 0.19;                           // raggio passaruota, bordo basso fiancata
+    const BX = 0.86;                                         // semilarghezza lamiera bassa (parafanghi 0.88)
+    const bel = z => 0.866 - 0.034 * z;                      // bordo basso dei finestrini (sale verso la coda)
+    const sx  = y => 0.735 - 0.565 * (y - 1.0);              // semilarghezza sopra la cintura (tumblehome)
+    const HOOD = [[0.80, 0.935], [0.927, 0.897], [1.173, 0.892], [1.47, 0.854], [1.615, 0.825], [1.876, 0.743], [1.92, 0.717]];
+    const hoodY = z => {
+        for (let i = 1; i < HOOD.length; i++) if (z <= HOOD[i][0]) {
+            const a = HOOD[i - 1];
+			const b = HOOD[i];
+            return a[1] + (b[1] - a[1]) * (z - a[0]) / (b[0] - a[0]);
+        }
+        return HOOD[HOOD.length - 1][1];
+    };
+
+    // ---------- helper ----------
+    const box = (w, h, d, mat, x, y, z, rx = 0, ry = 0, rz = 0) => {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+        m.position.set(x, y, z); m.rotation.set(rx, ry, rz);
+        g.add(m); return m;
+    };
+    const cylZ = (r, len, mat, x, y, z, seg = 12, rx = 0, ry = 0, rz = 0) => {
+        const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, seg).rotateX(Math.PI / 2), mat);
+        m.position.set(x, y, z); m.rotation.set(rx, ry, rz); g.add(m); return m;
+    };
+    const cylX = (r, len, mat, x, y, z, seg = 12) => {
+        const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, seg).rotateZ(Math.PI / 2), mat);
+        m.position.set(x, y, z); g.add(m); return m;
+    };
+    // estrusione lungo X di un profilo [z,y], centrata in cx
+    const prism = (pts, width, mat, cx = 0) => {
+        const sh = new THREE.Shape();
+        pts.forEach((p, i) => i ? sh.lineTo(p[0], p[1]) : sh.moveTo(p[0], p[1]));
+        sh.closePath();
+        const geo = new THREE.ExtrudeGeometry(sh, { depth: width, bevelEnabled: false, steps: 1 });
+        geo.rotateY(-Math.PI / 2);
+        geo.translate(width / 2 + cx, 0, 0);
+        const m = new THREE.Mesh(geo, mat);
+        g.add(m); return m;
+    };
+    // quadrilatero 3D
+    const panel = (v, mat) => {
+        const a = v.map(q => new THREE.Vector3(q[0], q[1], q[2])), p = [];
+        [0, 1, 2, 0, 2, 3].forEach(i => p.push(...a[i].toArray()));
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
+        geo.computeVertexNormals();
+        const m = new THREE.Mesh(geo, mat);
+        g.add(m); return m;
+    };
+    // solido a sezioni [z, yBasso, yAlto, semilarghezza]: sopra, sotto, fianchi e due tappi
+    const shell = (S, mat) => {
+        const p = [];
+        const q = (a, b, c, d) => p.push(...a, ...b, ...c, ...a, ...c, ...d);
+        const TL = s => [-s[3], s[2], s[0]], TR = s => [s[3], s[2], s[0]];
+        const BL = s => [-s[3], s[1], s[0]], BR = s => [s[3], s[1], s[0]];
+        for (let i = 0; i < S.length - 1; i++) {
+            const a = S[i], b = S[i + 1];
+            q(TL(a), TR(a), TR(b), TL(b));
+            q(BL(a), BR(a), BR(b), BL(b));
+            q(TL(a), BL(a), BL(b), TL(b));
+            q(TR(a), BR(a), BR(b), TR(b));
+        }
+        const f = S[0], l = S[S.length - 1];
+        q(TL(f), TR(f), BR(f), BL(f));
+        q(TL(l), TR(l), BR(l), BL(l));
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
+        geo.computeVertexNormals();
+        const m = new THREE.Mesh(geo, mat);
+        g.add(m); return m;
+    };
+    // poligono [z,y] (con eventuali buchi) appoggiato sulla fiancata alta inclinata (dx = sporgenza)
+    const sidePoly = (s, pts, holes, mat, dx = 0) => {
+        const sh = new THREE.Shape(pts.map(p => new THREE.Vector2(p[0], p[1])));
+        (holes || []).forEach(h => sh.holes.push(new THREE.Path(h.map(p => new THREE.Vector2(p[0], p[1])))));
+        const geo = new THREE.ShapeGeometry(sh);
+        const pos = geo.attributes.position;
+        for (let i = 0; i < pos.count; i++) { const z = pos.getX(i), y = pos.getY(i); pos.setXYZ(i, s * (sx(y) + dx), y, z); }
+        geo.computeVertexNormals();
+        const m = new THREE.Mesh(geo, mat);
+        g.add(m); return m;
+    };
+    // allarga un poligono radialmente di d metri
+    const grow = (pts, d) => {
+        const cz = pts.reduce((a, p) => a + p[0], 0) / pts.length, cy = pts.reduce((a, p) => a + p[1], 0) / pts.length;
+        return pts.map(p => { const dz = p[0] - cz, dy = p[1] - cy, L = Math.hypot(dz, dy) || 1; return [p[0] + dz / L * d, p[1] + dy / L * d]; });
+    };
+    // punti dell'arco del passaruota (percorso in senso z decrescente)
+    const archPts = zc => {
+        const a0 = Math.asin((SILL - WY) / AR), p = [];
+        for (let i = 0; i <= 12; i++) {
+            const a = a0 + (Math.PI - 2 * a0) * i / 12;
+            p.push([zc + AR * Math.cos(a), WY + AR * Math.sin(a)]);
+        }
+        return p;
+    };
+
+    // ---------- SCOCCA BASSA ----------
+	const bodyMeshes = [];
+    // fiancate sottili (da z=1.62=LIM_FRONT a z=-1.575=LIM_REAR) con passaruota; muso e coda sono solidi rastremati
+	const LIM_FRONT = 1.85;
+	const LIM_REAR = -1.575;
+    const SIDE = [
+		[LIM_FRONT, SILL + 0.08], 
+		...archPts(WZ), 
+		...archPts(-WZ), 
+		[LIM_REAR, 0.246], 
+		[LIM_REAR, bel(LIM_REAR) - 0.03],
+        [0.76, bel(0.76) - 0.03], 
+		[0.80, 0.915], 
+		[0.93, 0.877], 
+		[1.173, 0.872], 
+		[1.47, 0.834], 
+		
+		[1.62, 0.73], //vecchio limite frontale
+		
+		[1.65, 0.70],
+		[1.70, 0.65],
+		[1.75, 0.60],
+		[LIM_FRONT, 0.55]
+	];
+    
+	//pusha le fiancate del deltone
+	for (const s of [-1, 1]) bodyMeshes.push(prism(SIDE, 0.07, paint, s * (BX - 0.035)));
+	
+    // cofano + muso (rastremato in pianta come nella vista dall'alto)
+    shell([
+		//[z,   yBasso, yAlto, semilarghezza]
+		[0.80,  0.80,  0.935,        0.80],//0.80], 
+		[0.93,  0.76,  hoodY(0.93),  0.81],//0.80], 
+		[1.173, 0.74,  hoodY(1.173), 0.82],//0.80],
+		[1.40,  0.72,  hoodY(1.40),  0.83],//0.81], 
+									 
+		[1.47,  0.70,  hoodY(1.47),  0.84],//0.82], 
+		[1.55,  0.234, hoodY(1.55),  0.85],//0.862],//punta laterale troppo accentuata?
+		[1.65,  0.234, hoodY(1.65),  0.84],//0.836], 
+									 
+		[1.75,  0.234, hoodY(1.75),  0.82],//0.808], 
+		[1.85,  0.234, hoodY(1.85),  0.80],//0.783],
+		[1.92,  0.234, 0.717,        0.75]//0.745]
+	], paint);
+		   
+    // paraurti anteriore
+    shell([[1.78, 0.215, 0.53, 0.80], [1.90, 0.21, 0.53, 0.745], [1.975, 0.225, 0.52, 0.70], [1.992, 0.25, 0.50, 0.66]], paint);
+    // coda sopra il paraurti (rastremata in pianta fino al piano dei fanali)
+    shell([
+		//[z,   yBasso, yAlto, semilarghezza]
+		[-1.56, 0.58,  0.885, 0.8625], 
+		[-1.65, 0.58,  0.890, 0.815], 
+		[-1.75, 0.58,  0.895, 0.794], 
+		[-1.795, 0.58, 0.905, 0.76]
+	], paint);
+	
+    // paraurti posteriore: fascia in tinta con spigoli arrotondati (piano superiore a y 0.58) + sottoparaurti nero inclinato
+    shell([
+		//[z,   yBasso, yAlto, semilarghezza]
+		[-1.565, 0.44, 0.58,  0.85], 
+		[-1.60, 0.44,  0.58,  0.83], 
+		[-1.70, 0.44,  0.58,  0.80], 
+		[-1.78, 0.44,  0.58,  0.765],
+        [-1.825, 0.44, 0.575, 0.72], 
+		[-1.84, 0.45,  0.565, 0.65]
+	], paint);
+    shell([[-1.58, 0.245, 0.44, 0.80], [-1.65, 0.265, 0.44, 0.78], [-1.73, 0.297, 0.44, 0.76], [-1.80, 0.34, 0.44, 0.72]], plastic);
+
+    // pavimento scuro (gli interni li crea buildInterior)
+    box(1.50, 0.03, 2.90, floorM, 0, 0.32, -0.10);
+
+    // fondo scocca (visibile da dietro sotto il paraurti, tra le ruote)
+    box(1.26, 0.04, 3.00, dark, 0, 0.215, 0);
+
+    // minigonne
+    for (const s of [-1, 1]) {
+		box(0.02, 0.12, 1.82, black, s * 0.862, 0.245, 0);
+	}
+
+    // ---------- PARTE ALTA: tetto, montanti, vetri ----------
+    const ROOFS = [[0.27, 1.29], [0.124, 1.314], [-0.075, 1.33], [-0.73, 1.353], [-1.168, 1.337], [-1.245, 1.305]];
+    shell(ROOFS.map(r => [r[0], r[1] - 0.04, r[1], sx(r[1])]), paint);
+
+    const OUT = [[0.80, bel(0.80) - 0.03], [0.80, 0.935], [0.27, 1.29], [0.124, 1.314], [-0.075, 1.33], [-0.73, 1.353],
+                 [-1.168, 1.337], [-1.245, 1.305], [-1.325, 1.25], [-1.711, 0.975], [-1.784, 0.908], [LIM_REAR, bel(LIM_REAR) - 0.03]];
+    const G1 = [[0.47, 0.852], [0.495, 0.953], [0.18, 1.208], [-0.275, 1.241], [-0.228, 0.874]];   // porta anteriore + deflettore
+    const G2 = [[-0.376, 1.247], [-0.351, 0.878], [-0.916, 0.899], [-0.90, 1.25]];                 // porta posteriore
+    const G3 = [[-0.94, 1.248], [-0.95, 0.90], [-1.17, 0.905], [-0.997, 1.18]];                    // fisso posteriore
+    for (const s of [-1, 1]) {
+        sidePoly(s, OUT, [G1, G2, G3], paint);
+        for (const G of [G1, G2, G3]) {
+            sidePoly(s, G, null, glass);
+            sidePoly(s, grow(G, 0.022), [G], black, 0.004);// cornice nera dei vetri
+        }
+    }
+
+    // parabrezza (inclinato) e montanti A neri
+    const wz = y => 0.80 - (y - 0.935) * (0.53 / 0.355);
+    const gw = y => sx(y) - 0.04;
+    panel([[-gw(1.29), 1.29, wz(1.29)], [gw(1.29), 1.29, wz(1.29)], [gw(0.935), 0.935, wz(0.935)], [-gw(0.935), 0.935, wz(0.935)]], glass);
+    //laterali vetro anteriore sono neri
+	for (const s of [-1, 1]) {
+        panel([[s * sx(1.29), 1.29, wz(1.29)], [s * gw(1.29), 1.29, wz(1.29)], [s * gw(0.935), 0.935, wz(0.935)], [s * sx(0.935), 0.935, wz(0.935)]], black);
+	}
+
+    // lunotto + montanti C + bordi del portellone
+    const rz = y => -1.325 - (1.25 - y) * 1.404;
+    const gr = y => sx(y) - 0.085;
+    panel([[-gr(1.25), 1.25, rz(1.25)], [gr(1.25), 1.25, rz(1.25)], [gr(0.975), 0.975, rz(0.975)], [-gr(0.975), 0.975, rz(0.975)]], glass);
+	
+	//laterali vetro portellone sono neri
+    for (const s of [-1, 1]) {
+        panel([[s * sx(1.25), 1.25, rz(1.25)], [s * gr(1.25), 1.25, rz(1.25)], [s * gr(0.975), 0.975, rz(0.975)], [s * sx(0.975), 0.975, rz(0.975)]], black);
+	}
+    panel([[-sx(1.305), 1.305, -1.245], [sx(1.305), 1.305, -1.245], [sx(1.25), 1.25, -1.325], [-sx(1.25), 1.25, -1.325]], paint);
+    panel([[-sx(0.975), 0.975, -1.711], [sx(0.975), 0.975, -1.711], [0.775, 0.908, -1.784], [-0.775, 0.908, -1.784]], paint);
+
+    // ---------- ALETTONE (ala poco inclinata sul bordo del tetto + due deriva triangolari) ----------
+    if (o.spoilerEnabled) {
+        const SW = 0.55;
+		const WY0 = 1.318;
+		const WY1 = 1.385;        // WY1 - WY0 = quanto sale l'ala (0.067 su 0.137 m = ~26 gradi)
+		const ATTACCO_Z = -1.215;
+		const RETRO_Z = -1.352;
+        panel([[-SW, WY0, ATTACCO_Z], [SW, WY0, ATTACCO_Z], [SW, WY1, RETRO_Z], [-SW, WY1, RETRO_Z]], paint);
+        box(2 * SW, 0.04, 0.02, paint, 0, WY1 + 0.012, -1.352);                       // bordo superiore
+        
+		const FIN = [
+			[ATTACCO_Z, 1.315], //p1 destra (-1.243,1.305)
+			[-1.32,     1.446], //p2 alto
+			[RETRO_Z,   1.446], //p3 alto
+			[-1.358,    1.300], //p4 basso
+			[-1.326,    1.280]  //p5 basso
+		];
+        for (const s of [-1, 1]) {
+			prism(FIN, 0.018, dark, s * SW);
+		}
+    }
+
+    // ---------- FIANCATE: tagli porte, maniglie, specchi, serbatoio ----------
+    for (const s of [-1, 1]) {
+		//tagli portiere
+        box(0.006, 0.52, 0.008, black, s * 0.8615, 0.56, 0.72);
+		box(0.006, 0.56, 0.008, black, s * 0.8615, 0.57, -0.29);
+		box(0.006, 0.24, 0.008, black, s * 0.8615, 0.76, -1.18);
+		
+		box(0.016, 0.03, 0.12, black, s * 0.864, 0.78, -0.17);       // maniglia anteriore
+        box(0.016, 0.03, 0.12, black, s * 0.864, 0.80, -1.07);       // maniglia posteriore
+        box(0.08, 0.03, 0.03, black, s * 0.86, 0.88, 0.57,   0, s * 0.5, 0);        // braccetto specchio
+        box(0.15, 0.10, 0.08, paint, s * 0.905, 0.91, 0.53,  0, s * 0.5, 0);        // specchio
+        box(0.13, 0.08, 0.01, steel, s * 0.885, 0.91, 0.485, 0, s * 0.5, 0);        // vetro specchio
+        box(0.02, 0.04, 0.08, orange, s * 0.862, 0.66, 0.88);        // freccia laterale
+    }
+    cylX(0.05, 0.012, dark, -0.862, 0.80, -1.518);                   // sportellino benzina (lato destro)
+
+    // ---------- passaruota: fodera nera interna + bordo ----------
+    for (const s of [-1, 1]) {
+		for (const zc of [WZ, -WZ]) {
+			prism(archPts(zc), 0.012, black, s * 0.62);
+			const pts = [];
+			for (let i = 0; i <= 14; i++) {
+				const a = 0.02 + (Math.PI - 0.04) * i / 14;
+				pts.push(new THREE.Vector3(s * 0.866, WY + (AR + 0.01) * Math.sin(a), zc + (AR + 0.01) * Math.cos(a)));
+			}
+			g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, 0.022, 6, false), plastic));
+		}
+	}
+
+    // ---------- COFANO: 2 serie di 3 feritoie (a 1/3 e verso il muso) e tergicristalli ----------
+    const slat = (z,len=0.80) => box(len, 0.008, 0.035, black, 0, hoodY(z) + 0.004, z, Math.atan(-(hoodY(z + 0.05) - hoodY(z - 0.05)) / 0.10));
+    for (const zz of [1.13, 1.18, 1.23]) slat(zz,0.90);   // 1/3 del cofano dal parabrezza (z 0.80 -> 1.92)
+    for (const zz of [1.70, 1.75, 1.80]) slat(zz,0.80 + (1.80-zz)/2);	//in punta o quasi
+    for (const s of [-1, 1]) box(0.50, 0.012, 0.02, black, s * 0.30, 0.98, 0.80);//tergi
+
+    // ---------- FRONTALE ----------
+    // fari tondi: 2 per lato, dentro un alloggiamento nero
+    for (const s of [-1, 1]) {
+        box(0.30, 0.12, 0.02, black, s * 0.555, 0.617, 1.921);
+        for (const x of [0.48, 0.63]) {
+            cylZ(0.066, 0.02, steel, s * x, 0.617, 1.926);
+            cylZ(0.052, 0.02, panna, s * x, 0.617, 1.934);
+        }
+        box(0.355, 0.14, 0.02, black, s * 0.194, 0.61, 1.926);       // mezza calandra
+        box(0.11, 0.05, 0.03, orange, s * 0.60, 0.45, 1.982);        // freccia / luce nel paraurti
+    }
+    box(0.76, 0.17, 0.016, steel, 0, 0.61, 1.921);                   // cornice calandra
+    cylZ(0.04, 0.02, steel, 0, 0.68, 1.93, 12);                      // stemma Lancia bordo
+	cylZ(0.03, 0.02,  blue, 0, 0.68, 1.94, 12);                      // stemma Lancia centro
+    box(0.70, 0.12, 0.02, black, 0, 0.425, 1.994);                   // presa d'aria bassa
+    for (let i = -2; i <= 2; i++) box(0.012, 0.12, 0.02, paint, i * 0.14, 0.425, 1.996);
+    box(1.30, 0.12, 0.04, black, 0, 0.31, 1.975);                    // spoiler anteriore nero
+    
+	//targa anteriore bassa
+	const fp = new THREE.Mesh(new THREE.PlaneGeometry(0.50, 0.12),
+        new THREE.MeshLambertMaterial({ map: plateTex(), side: THREE.DoubleSide }));
+    fp.position.set(0, 0.40, 2.01); g.add(fp);
+
+    // ---------- POSTERIORE ----------
+    const TZ = -1.799;
+    for (const s of [-1, 1]) {
+        // fanale: trapezio alto
+        panel([ [s * 0.76, 0.58, TZ], 
+				[s * 0.58, 0.58, TZ], 
+				[s * 0.62, 0.84, TZ], 
+				[s * 0.76, 0.84, TZ]], 
+				black);
+        panel([ [s * 0.75, 0.59, TZ - 0.007], 
+				[s * 0.59, 0.59, TZ - 0.007], 
+				[s * 0.63, 0.83, TZ - 0.007], 
+				[s * 0.75, 0.83, TZ - 0.007]], 
+				brakeM);
+		// freccia in mezzo
+		panel([ [s * 0.75, 0.69, TZ - 0.008], 
+				[s * 0.605, 0.69, TZ - 0.008], 
+				[s * 0.61, 0.73, TZ - 0.008], 
+				[s * 0.75, 0.73, TZ - 0.008]], 
+				orange);
+		box(0.085, 0.14, 0.01, black,  s * 0.33, 0.76, TZ - 0.007);     // retromarcia deve essere bordata di nero
+		box(0.065, 0.12, 0.02, revM,   s * 0.33, 0.76, TZ - 0.010);     // retromarcia deve essere centrale
+		
+        cylZ(0.04, 0.12, steel, s * 0.62, 0.29, -1.80, 12);               // doppio scarico
+    }
+    box(0.77, 0.17, 0.02, dark, 0, 0.755, -1.797);                   // incasso targa
+	
+	//targa posteriore alta
+    const rp = new THREE.Mesh(new THREE.PlaneGeometry(0.54, 0.12),
+        new THREE.MeshLambertMaterial({ map: plateTex(), side: THREE.DoubleSide }));
+    rp.rotation.y = Math.PI;
+    rp.position.set(0, 0.755, -1.808); g.add(rp);
+	
+    box(0.14, 0.05, 0.02, black, 0, 0.635, -1.797);                  // maniglia portellone
+    box(0.14, 0.07, 0.012, paint, 0, 0.32, -1.776);                  // gancio traino
+	
+	box(0.14, 0.05, 0.02, blue, -0.45, 0.635, -1.797);                // integrale
+	box(0.12, 0.01, 0.02, yellow, -0.45, 0.635, -1.800);               // integrale
+	cylZ(0.04, 0.02, steel, 0, 0.95, -1.750, 12, 0.75, 0, 0);        // stemma Lancia bordo inclinato circa 45'
+	cylZ(0.03, 0.02,  blue, 0, 0.955, -1.753, 12, 0.75, 0, 0);       // stemma Lancia centro inclinato circa 45'
+    
+    // ---------- RUOTE: gomma tassellata + cerchio in lega ----------
+    const tc = document.createElement('canvas'); tc.width = 448; tc.height = 64;
+    const tg = tc.getContext('2d');
+    tg.fillStyle = '#171717'; tg.fillRect(0, 0, 448, 64);
+    tg.fillStyle = '#353535';
+    for (let i = 0; i < 28; i++) {
+        const x = i * 16;
+        tg.beginPath(); tg.moveTo(x + 2, 0);  tg.lineTo(x + 10, 0);  tg.lineTo(x + 14, 32); tg.lineTo(x + 6, 32); tg.closePath(); tg.fill();
+        tg.beginPath(); tg.moveTo(x + 6, 32); tg.lineTo(x + 14, 32); tg.lineTo(x + 10, 64); tg.lineTo(x + 2, 64); tg.closePath(); tg.fill();
+    }
+    const treadTex = new THREE.CanvasTexture(tc);
+    treadTex.wrapS = THREE.RepeatWrapping; treadTex.anisotropy = 4;
+    const treadMat = new THREE.MeshLambertMaterial({ map: treadTex });
+    const sideMat = M(0x1b1b1b), rimMat = M(0xc4c8cc), rimIn = M(0x6b7075), capM = M(0x2a2a2a);
+    const TW = 0.245;                                                // larghezza pneumatico
+
+    const wheels = [];
+    [[-WX, WZ], [WX, WZ], [-WX, -WZ], [WX, -WZ]].forEach(([x, z]) => {
+        const steer = new THREE.Group(); steer.name = 'steer';
+        steer.position.set(x, WY, z);
+        const spin = new THREE.Group(); spin.name = 'spin';
+        spin.add(new THREE.Mesh(new THREE.CylinderGeometry(WR, WR, TW, 28, 1, true).rotateZ(Math.PI / 2), treadMat));
+        for (const sg of [-1, 1]) {
+            const wall = new THREE.Mesh(new THREE.RingGeometry(0.205, WR, 28).rotateY(Math.PI / 2), sideMat);
+            wall.position.x = sg * TW / 2; spin.add(wall);
+        }
+        spin.add(new THREE.Mesh(new THREE.CylinderGeometry(0.205, 0.205, TW - 0.03, 28).rotateZ(Math.PI / 2), rimMat));
+        for (const sg of [-1, 1]) {
+            const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.004, 24).rotateZ(Math.PI / 2), rimIn);
+            ring.position.x = sg * (TW / 2 - 0.012); spin.add(ring);
+            const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.012, 16).rotateZ(Math.PI / 2), capM);
+            cap.position.x = sg * (TW / 2 - 0.01); spin.add(cap);
+        }
+        steer.add(spin); g.add(steer);
+        wheels.push({ front: z > 0 ? 1 : 0, steer, spin });
+    });
+
+    // ---------- LIVREA TRICOLORE ----------
+    _genericCarLivery(g, paint, o, 1, { sideMin: .85, sideY: .56, sideSp: .0295, sideHw: .0124, topMinY: .70 });
+
+    // ---------- DATI E CONTROLLI ----------
+    g.userData.wheels = wheels;
+    g.userData.dashW = 1.30;
+    g.userData.setGlassOpacity = v => { glass.opacity = v; };
+    g.userData.setNumbersVisible = () => {};
+
+    if (o.numbersVisible) {
+        const plates = carAddNumbers(g, bodyMeshes, {
+            raceNumber: o.raceNumber,
+            numberStripe: o.numberStripe,
+            numbersVisible: o.numbersVisible,
+            numberSize: 0.30, numberY: 0.58, numberZ: 0.20
+        });
+        plates.forEach((p, i) => {
+            p.userData.noCast = true;
+            p.userData.decal = true;
+            p.userData.side = i === 0 ? 1 : -1;
+            p.position.x += p.userData.side * 0.012;
+            p.renderOrder = 2;
+            p.material.polygonOffset = true;
+            p.material.polygonOffsetFactor = -4;
+            p.material.polygonOffsetUnits = -4;
+        });
+        g.userData.setNumbersVisible = v => plates.forEach(p => p.visible = v);
+    }
+
+    g.userData.brakeMat = brakeM;
+    g.userData.revMat   = revM;
+
+    return g;   // nessuno scale: dimensioni reali, passo 2.48 m
+}
 
 
 //fiat 127 sport!!!
@@ -4974,7 +5418,7 @@ function spawnCar(forceModel=-1){
 
   const dc=deltaColors[currentDeltaColor];
   
-  const spoilerOn=currentDeltaColor < 5 || Math.random() < 0.5;
+  const spoilerOn=currentDeltaColor < 5 || Math.random() < 0.75;
 
   model=buildCarWrapper({
     length:4.2, 
@@ -5415,11 +5859,12 @@ addEventListener('keydown',e=>{
  if (e.code==='Digit1') { setCamMode(1); camInside = false; }
  if (e.code==='Digit2') { setCamMode(2); camInside = true; }
  
- if (e.code==='Digit6') { if(flipG) return; currentDeltaColor=(currentDeltaColor+1)%deltaColors.length; spawnCar(0); }
- if (e.code==='Digit7') { if(flipG) return; currentDeltaColor=(currentDeltaColor+1)%deltaColors.length; spawnCar(1); }
- if (e.code==='Digit8') { if(flipG) return; currentDeltaColor=(currentDeltaColor+1)%deltaColors.length; spawnCar(2); }
- if (e.code==='Digit9') { if(flipG) return; currentDeltaColor=(currentDeltaColor+1)%deltaColors.length; spawnCar(3); }
- if (e.code==='Digit0') { if(flipG) return; currentDeltaColor=(currentDeltaColor+1)%deltaColors.length; spawnCar(4); }
+ if (e.code==='Digit5') { if(flipG) return; currentDeltaColor=(currentDeltaColor+1)%deltaColors.length; spawnCar(0); }
+ if (e.code==='Digit6') { if(flipG) return; currentDeltaColor=(currentDeltaColor+1)%deltaColors.length; spawnCar(1); }
+ if (e.code==='Digit7') { if(flipG) return; currentDeltaColor=(currentDeltaColor+1)%deltaColors.length; spawnCar(2); }
+ if (e.code==='Digit8') { if(flipG) return; currentDeltaColor=(currentDeltaColor+1)%deltaColors.length; spawnCar(3); }
+ if (e.code==='Digit9') { if(flipG) return; currentDeltaColor=(currentDeltaColor+1)%deltaColors.length; spawnCar(4); }
+ if (e.code==='Digit0') { if(flipG) return; currentDeltaColor=(currentDeltaColor+1)%deltaColors.length; spawnCar(5); }
  
  if (e.code==='KeyT') changeDelta();//texture
  if (e.code==='KeyH') hornBtnPlay();//horn
@@ -6650,7 +7095,8 @@ function useGLB(buffer){
   box.setFromObject(model);let sz=box.getSize(V());
   if(sz.x>sz.z)model.rotation.y=Math.PI/2;
   model.updateMatrixWorld(true);box.setFromObject(model);sz=box.getSize(V());
-  //model.scale.setScalar(4.2/sz.z);
+  if(Math.abs(sz.z)>6)
+  model.scale.setScalar(4.2/sz.z);//scala glb solo se e' davvero grande
   model.updateMatrixWorld(true);
   box.setFromObject(model);const c=box.getCenter(V());
   model.position.set(model.position.x-c.x,model.position.y-box.min.y,model.position.z-c.z);
@@ -7134,7 +7580,12 @@ function updateWorld(dt){
  while(gi<5&&Math.abs(kmh)>tops[gi])gi++;
  const low=gi?tops[gi-1]*.55:0;
  const frac=clamp((Math.abs(kmh)-low)/(tops[gi]-low),0,1);
- car.rpm=lerp(car.rpm,Math.max(.22+.78*frac,.22+ctl.gas*.4*(1-frac)),1-Math.exp(-9*dt));
+ car.rpm=lerp(
+	car.rpm,
+	Math.max(
+		.22 + .78 * frac,
+		.22 + ctl.gas * .4 * (1 - frac) ),
+	1-Math.exp(-9*dt));
  const slip=Math.max(Math.abs(car.v-1.3*car.r),Math.abs(car.v+1.3*car.r))/9+car.spin*.5;
  
  ////////updAudio(running?slip:0);
