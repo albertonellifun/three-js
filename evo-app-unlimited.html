@@ -45,10 +45,6 @@
         text-shadow: 0 2px 6px rgba(0, 0, 0, .6);
       }
 
-	  #gauges{
-	    xxxopacity: 0.8;
-	  }
-
 	  #rpm {
 	    width: 150px;
 	    height: 150px;
@@ -589,9 +585,10 @@ let fpsSmooth=60;
 const dmg={toe:[0,0,0,0],camber:[0,0,0,0],lost:[false,false,false,false],pull:0,
 			zone:[0,0,0,0]}; // zone: muso, coda, sx, dx
 function repairCar(){ 
-  spawnCar(); 
-  Object.assign(dmg,{toe:[0,0,0,0],camber:[0,0,0,0],lost:[false,false,false,false],pull:0,
-			zone:[0,0,0,0]}); 
+  spawnCar(CURRENT_CAR_ID); 
+  Object.assign(
+	dmg,{toe:[0,0,0,0],camber:[0,0,0,0],lost:[false,false,false,false],pull:0,
+	zone:[0,0,0,0]}); 
 }
 
 
@@ -949,7 +946,7 @@ const crashVol=sp=>clamp(.3+sp/30,.3,1);  // più veloce = più forte
 colorsBtn.addEventListener('pointerdown', e => {
   e.preventDefault();
   e.stopPropagation();
-  changeDelta();
+  changeCarColor();
 });
 
 /* ============ RENDERER / SCENA ============ */
@@ -2294,12 +2291,9 @@ function buildTile(tx,tz){
  const ads=new Float32Array(M*M);
  const sf=new Uint8Array(M*M);
  for(let a=-1;a<=N;a++)for(let b=-1;b<=N;b++){terrain(x0+a*CS,z0+b*CS,TQ);const k=(a+1)*M+b+1;
-  ///xxx
-  ////////////////////hs[k]=TQ.y-.4*(1-sm(TQ.ad,5.2,8.5));
+  
   //hs[k]=TQ.y-(.4+6*TQ.sl)*(1-sm(TQ.ad,5.2,8.5));//gradino bordo strada, non mi piace
   hs[k]=TQ.y-(0.08+1.5*TQ.sl)*(1-sm(TQ.ad,5.2,8.5));//no gradino?
-  
-  
   
   hy[k]=TQ.y;ads[k]=TQ.ad;sf[k]=TQ.surf;}
   
@@ -2418,7 +2412,7 @@ function placeFordSign(p,ch){
 const FORD_LEN_MIN = 5;//lunghezza minima lungo la strada (m)
 const FORD_LEN_VAR = 20;//+0..20 m casuali -> 5-25 m totali
 const FORD_SIGN = 90;//cartello prima del guado (90m)
-const FORD_ZONE = 500;//FORD_ZONE (500 m) è la lunghezza di ogni zona, con al massimo un guado per zona
+const FORD_ZONE = 400;//FORD_ZONE (400 m) è la lunghezza di ogni zona, con al massimo un guado per zona
 const FORD_DY = 0.5;//FORD_DY (0.2 m) è il dislivello massimo dal piano stradale oltre il quale l’acqua non viene disegnata
 const FORD_CELL = 2.5;//FORD_CELL (2.5 m) è la dimensione delle celle del film d’acqua. Più è basso, più bordi precisi ma più triangoli
 const fords = new Set();
@@ -2704,6 +2698,31 @@ function manageTiles(){
  }
 }
 
+
+
+/* ===== MODALITÀ CAMERA: 0 chase, 1 cofano, 2 abitacolo ===== */
+let camMode=0;
+const hoodBtn=$('hoodBtn'), cockpitBtn=$('cockpitBtn');
+const CAM_HOOD=new THREE.Vector3(0,1.50,0.50);      // sopra il cofano era a 1.25
+const CAM_COCKPIT=new THREE.Vector3(0.4,1.32,-0.1);// occhi del pilota (volante a x=.4)
+const _cp=new THREE.Vector3(), _ct=new THREE.Vector3();
+function setCamMode(m){
+  camMode=(camMode===m)?0:m;
+  hoodBtn.classList.toggle('toggled-red',camMode===1);
+  cockpitBtn.classList.toggle('toggled-red',camMode===2);
+  camera.near=camMode===2?0.08:0.3;
+  camera.updateProjectionMatrix();
+  cam.zoom=1;cam.el=0;cam.yaw=0;
+}
+hoodBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();setCamMode(1); camInside = false;});
+cockpitBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();setCamMode(2); camInside = true;});
+
+
+
+
+
+
+
 /* ============ AUTO ============ */
 const car={x:0,z:0,th:0,u:0,v:0,r:0,steer:0,idx:3,yS:0,
 		pitch:0,roll:0,pitchT:0,rollT:0,
@@ -2720,22 +2739,23 @@ const wheelMeshes=[];
 
 
 const CAR_SPECS={
-  pandina:         {power: 45000, fmax:4200, mass: 880, drag:.95, tops:[35,55,80,100,120,140],  maxSpeed: 160,  maxRpm: 6500, startSkidSpeed: 0  },
-  centoventisette: {power: 70000, fmax:5500, mass: 840, drag:.85, tops:[40,70,90,120,140,160],  maxSpeed: 160,  maxRpm: 7000, startSkidSpeed: 0  },
-  bianchina:       {power: 80000, fmax:6500, mass: 800, drag:.85, tops:[45,70,95,125,150,170],  maxSpeed: 160,  maxRpm: 7000, startSkidSpeed: 0  },
-  tipozza:         {power:100000, fmax:7500, mass:1050, drag:.85, tops:[45,75,105,135,165,195], maxSpeed: 180,  maxRpm: 7000, startSkidSpeed: 0  },
-  deltona:         {power:150000, fmax:9000, mass:1300, drag:.80, tops:[55,85,115,145,180,215], maxSpeed: 200,  maxRpm: 9000, startSkidSpeed: 16 },
-  evo:             {power:150000, fmax:9000, mass:1300, drag:.80, tops:[55,85,115,145,180,215], maxSpeed: 200,  maxRpm: 9000, startSkidSpeed: 16 }
+  centoventisette: {power: 70000, fmax:5500, mass: 840, drag:.85, tops:[40,70,90,120,140,160],  maxSpeed: 160,  maxRpm: 7000, startSkidSpeed: 0,  CAM_COCKPIT_Y: 1.45},
+  pandina:         {power: 45000, fmax:4200, mass: 880, drag:.95, tops:[35,55,80,100,120,140],  maxSpeed: 160,  maxRpm: 6500, startSkidSpeed: 0,  CAM_COCKPIT_Y: 1.50},
+  bianchina:       {power: 80000, fmax:6500, mass: 780, drag:.85, tops:[45,70,95,125,150,170],  maxSpeed: 160,  maxRpm: 7000, startSkidSpeed: 0,  CAM_COCKPIT_Y: 1.30},
+  tipozza:         {power:100000, fmax:7500, mass:1050, drag:.85, tops:[45,75,105,135,165,195], maxSpeed: 180,  maxRpm: 7000, startSkidSpeed: 0,  CAM_COCKPIT_Y: 1.30},
+  deltona:         {power:150000, fmax:9000, mass:1300, drag:.80, tops:[55,85,115,145,180,215], maxSpeed: 200,  maxRpm: 9000, startSkidSpeed: 16, CAM_COCKPIT_Y: 1.25},
+  evo:             {power:150000, fmax:9000, mass:1300, drag:.80, tops:[55,85,115,145,180,215], maxSpeed: 200,  maxRpm: 9000, startSkidSpeed: 16, CAM_COCKPIT_Y: 1.30}
 };
 
+let CURRENT_CAR_ID = 5;
 let CURRENT_CAR_SPEC = CAR_SPECS.evo;
 let tachRpm=makeTachRpm();
 let tachSpeed=makeTachSpeed();
 
 function buildCarWrapper(o,forceModel){
-  let rrr = forceModel===-1 ? Math.floor( Math.random() * Object.keys(CAR_SPECS).length ) : forceModel;
+  CURRENT_CAR_ID = forceModel===-1 ? Math.floor( Math.random() * Object.keys(CAR_SPECS).length ) : forceModel;
   let mod = null;
-  switch(rrr) {
+  switch(CURRENT_CAR_ID) {
 	case 0 : CURRENT_CAR_SPEC = CAR_SPECS['centoventisette']; mod = buildCarCentoventisette(o); break;
 	case 1 : CURRENT_CAR_SPEC = CAR_SPECS['pandina']; mod = buildCarPandina(o); break;
 	case 2 : CURRENT_CAR_SPEC = CAR_SPECS['bianchina']; mod = buildCarBianchina(o); break;
@@ -2747,6 +2767,10 @@ function buildCarWrapper(o,forceModel){
   //aggiorna tachimetro
   tachRpm=makeTachRpm();
   tachSpeed=makeTachSpeed();
+  
+  //aggiorna anche altezza occhi dal cockpit
+  CAM_COCKPIT.y = CURRENT_CAR_SPEC.CAM_COCKPIT_Y;
+  
   return mod;
 }
 
@@ -2893,28 +2917,121 @@ function _triGlsl(P) {
 
 
 
+
+
+
+//texture battistrada è identica per tutte le buildCar, la creo una sola volta
+let _BattistradaMat = null;
+function getBattistradaMat() {
+    if (_BattistradaMat) return _BattistradaMat;
+    const c = document.createElement('canvas'); 
+	c.width = 448; c.height = 64;
+    const t = c.getContext('2d');
+    t.fillStyle = '#171717'; 
+	t.fillRect(0, 0, 448, 64); 
+	t.fillStyle = '#353535';
+    for (let i = 0; i < 28; i++) {
+        const x = i * 16;
+        t.beginPath(); t.moveTo(x + 2, 0);  t.lineTo(x + 10, 0);  t.lineTo(x + 14, 32); t.lineTo(x + 6, 32); t.closePath(); t.fill();
+        t.beginPath(); t.moveTo(x + 6, 32); t.lineTo(x + 14, 32); t.lineTo(x + 10, 64); t.lineTo(x + 2, 64); t.closePath(); t.fill();
+    }
+    const tex = new THREE.CanvasTexture(c); 
+	tex.wrapS = THREE.RepeatWrapping; 
+	tex.anisotropy = 4;
+    return _BattistradaMat = new THREE.MeshLambertMaterial({ map: tex });
+}
+
+//insieme di funzioni condivise per tutte le buildCar
+function getSharedCarKit(g, opacity, paintColor) {
+    const M  = c => new THREE.MeshLambertMaterial({ color: c, side: THREE.DoubleSide, shadowSide: THREE.BackSide });
+    const B  = c => new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide });
+    const MS = c => new THREE.MeshStandardMaterial({ color: c, side: THREE.DoubleSide, shadowSide: THREE.BackSide, metalness: 0, roughness: 0.5 });
+    const put = (m, x, y, z, rx = 0, ry = 0, rz = 0) => { m.position.set(x, y, z); m.rotation.set(rx, ry, rz); g.add(m); return m; };
+    const box  = (w, h, d, mat, x, y, z, rx, ry, rz) => put(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat), x, y, z, rx, ry, rz);
+    const cylZ = (r, len, mat, x, y, z, seg = 24) => put(new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, seg).rotateX(Math.PI / 2), mat), x, y, z);
+    const cylX = (r, len, mat, x, y, z, seg = 12) => put(new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, seg).rotateZ(Math.PI / 2), mat), x, y, z);
+    const prism = (pts, width, mat, cx = 0) => {
+        const sh = new THREE.Shape();
+        pts.forEach((p, i) => i ? sh.lineTo(p[0], p[1]) : sh.moveTo(p[0], p[1]));
+        sh.closePath();
+        const geo = new THREE.ExtrudeGeometry(sh, { depth: width, bevelEnabled: false, steps: 1 });
+        geo.rotateY(-Math.PI / 2); geo.translate(width / 2 + cx, 0, 0);
+        const m = new THREE.Mesh(geo, mat); g.add(m); return m;
+    };
+    const panel = (v, mat) => {
+        const a = v.map(q => new THREE.Vector3(q[0], q[1], q[2])), p = [];
+        [0, 1, 2, 0, 2, 3].forEach(i => p.push(...a[i].toArray()));
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
+        geo.computeVertexNormals();
+        const m = new THREE.Mesh(geo, mat); g.add(m); return m;
+    };
+    // le due che dipendono dalla carrozzeria si "configurano" una volta
+    const sidePolyFor = sx => (s, pts, holes, mat, dx = 0) => {
+        const sh = new THREE.Shape(pts.map(p => new THREE.Vector2(p[0], p[1])));
+        (holes || []).forEach(h => sh.holes.push(new THREE.Path(h.map(p => new THREE.Vector2(p[0], p[1])))));
+        const geo = new THREE.ShapeGeometry(sh), pos = geo.attributes.position;
+        for (let i = 0; i < pos.count; i++) { const z = pos.getX(i), y = pos.getY(i); pos.setXYZ(i, s * (sx(y) + dx), y, z); }
+        geo.computeVertexNormals();
+        const m = new THREE.Mesh(geo, mat); g.add(m); return m;
+    };
+    const archPtsFor = (SILL, WY, AR) => zc => {
+        const a0 = Math.asin((SILL - WY) / AR), p = [];
+        for (let i = 0; i <= 12; i++) { const a = a0 + (Math.PI - 2 * a0) * i / 12; p.push([zc + AR * Math.cos(a), WY + AR * Math.sin(a)]); }
+        return p;
+    };
+	
+	//colori
+	const paint      = MS(paintColor);
+	const black      = M(0x000000);
+	const plastic    = M(0x222222);
+	const steel      = M(0x888899);
+	const chrome     = M(0xaaaaaa);
+	const grey       = M(0x666666);
+	const dark       = M(0x333333);
+	const floorM     = M(0x111122);
+	
+    const white      = B(0xffffff);
+	const panna      = B(0xffffdd); 
+	const orange     = B(0xee6600); 
+	const red        = B(0xdd2222); 
+	const yellow     = B(0xffff00);
+	const blueLancia = B(0x112266);
+	const blueFiat   = B(0x2233cc);
+	const redTrim    = M(0xdd2222);		 //filetti rossi paraurti
+	
+    const brakeM     = B(0x330000);          // stop: spento
+    const revM       = B(0x666666);          // retromarcia: spenta
+	
+	
+	const glass = new THREE.MeshLambertMaterial({ color: 0x223333, transparent: true, opacity: opacity, side: THREE.DoubleSide });
+    glass.depthWrite = false;
+    glass.userData.noCast = true;
+    glass.userData.noRecv = true;
+    
+    return { 
+		M, B, MS, put, box, cylZ, cylX, prism, panel, sidePolyFor, archPtsFor,//funzioni
+		paint, //materiali MS
+		glass, //materiale speciale
+		black, plastic, steel, chrome, grey, dark, floorM, //materiali M
+		white, panna, orange, red, yellow, blueLancia, blueFiat, redTrim, brakeM, revM //materiali B
+	};
+}
+
+
+
+
+
+
+
+
 //deltona!
 //lancia delta hf integrale evoluzione - quote ricavate dal blueprint (3898 x 1767 x 1365 mm, passo 2479 mm)
 //lancia delta hf integrale evoluzione - quote ricavate dal blueprint (3898 x 1767 x 1365 mm, passo 2479 mm)
 function buildCarDeltona(o) {
     const g = new THREE.Group();
 
-    // ---------- materiali ----------
-    const M  = c => new THREE.MeshLambertMaterial({ color: c, side: THREE.DoubleSide, shadowSide: THREE.BackSide });
-    const B  = c => new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide });
-    const MS = c => new THREE.MeshStandardMaterial({ color: c, side: THREE.DoubleSide, shadowSide: THREE.BackSide, metalness: 0, roughness: 0.5 });
-
-    const paint = MS(o.paint);
-    const black = M(0x000000), plastic = M(0x222222), steel = M(0x888899), dark = M(0x333333), floorM = M(0x111122);
-    const glass = new THREE.MeshLambertMaterial({ color: 0x223333, transparent: true, opacity: o.glassOpacity, side: THREE.DoubleSide });
-    glass.depthWrite = false;
-    glass.userData.noCast = true;
-    glass.userData.noRecv = true;
-    const white = B(0xffffff), panna = B(0xffffdd), orange = B(0xee6600), red = B(0xdd2222), blue = B(0x112266), yellow = B(0xffff00);
-    const brakeM = B(0x330000);          // stop: spento
-    const revM   = B(0x666666);          // retromarcia: spenta
-    
-    // targa: sfondo chiaro, testo nero centrato (makeTargaTexture spezza il testo in 2 campi, qui serve una riga sola)
+	// targa: sfondo chiaro, testo nero centrato (makeTargaTexture spezza il testo in 2 campi, qui serve una riga sola)
     const PLATE = 'Rally 3170TR';
     const plateTex = () => {
         const c = document.createElement('canvas'); c.width = 600; c.height = 100;
@@ -2942,43 +3059,20 @@ function buildCarDeltona(o) {
         }
         return HOOD[HOOD.length - 1][1];
     };
+	
+	//helper + materiali
+	const { 
+			M, B, MS, box, cylZ, cylX, prism, panel, sidePolyFor, archPtsFor, //funzioni helper
+			paint, //materiali MS
+			glass, //materiale speciale
+			black, plastic, steel, chrome, grey, dark, floorM, //materiali M
+			white, panna, orange, red, yellow, blueLancia, blueFiat, redTrim, brakeM, revM //materiali B
+	} = getSharedCarKit(g, o.glassOpacity, o.paint);
+	const sidePoly = sidePolyFor(sx), archPts = archPtsFor(SILL, WY, AR);
+	
 
     // ---------- helper ----------
-    const box = (w, h, d, mat, x, y, z, rx = 0, ry = 0, rz = 0) => {
-        const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
-        m.position.set(x, y, z); m.rotation.set(rx, ry, rz);
-        g.add(m); return m;
-    };
-    const cylZ = (r, len, mat, x, y, z, seg = 12, rx = 0, ry = 0, rz = 0) => {
-        const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, seg).rotateX(Math.PI / 2), mat);
-        m.position.set(x, y, z); m.rotation.set(rx, ry, rz); g.add(m); return m;
-    };
-    const cylX = (r, len, mat, x, y, z, seg = 12) => {
-        const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, seg).rotateZ(Math.PI / 2), mat);
-        m.position.set(x, y, z); g.add(m); return m;
-    };
-    // estrusione lungo X di un profilo [z,y], centrata in cx
-    const prism = (pts, width, mat, cx = 0) => {
-        const sh = new THREE.Shape();
-        pts.forEach((p, i) => i ? sh.lineTo(p[0], p[1]) : sh.moveTo(p[0], p[1]));
-        sh.closePath();
-        const geo = new THREE.ExtrudeGeometry(sh, { depth: width, bevelEnabled: false, steps: 1 });
-        geo.rotateY(-Math.PI / 2);
-        geo.translate(width / 2 + cx, 0, 0);
-        const m = new THREE.Mesh(geo, mat);
-        g.add(m); return m;
-    };
-    // quadrilatero 3D
-    const panel = (v, mat) => {
-        const a = v.map(q => new THREE.Vector3(q[0], q[1], q[2])), p = [];
-        [0, 1, 2, 0, 2, 3].forEach(i => p.push(...a[i].toArray()));
-        const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
-        geo.computeVertexNormals();
-        const m = new THREE.Mesh(geo, mat);
-        g.add(m); return m;
-    };
-    // solido a sezioni [z, yBasso, yAlto, semilarghezza]: sopra, sotto, fianchi e due tappi
+	// solido a sezioni [z, yBasso, yAlto, semilarghezza]: sopra, sotto, fianchi e due tappi
     const shell = (S, mat) => {
         const p = [];
         const q = (a, b, c, d) => p.push(...a, ...b, ...c, ...a, ...c, ...d);
@@ -3000,32 +3094,13 @@ function buildCarDeltona(o) {
         const m = new THREE.Mesh(geo, mat);
         g.add(m); return m;
     };
-    // poligono [z,y] (con eventuali buchi) appoggiato sulla fiancata alta inclinata (dx = sporgenza)
-    const sidePoly = (s, pts, holes, mat, dx = 0) => {
-        const sh = new THREE.Shape(pts.map(p => new THREE.Vector2(p[0], p[1])));
-        (holes || []).forEach(h => sh.holes.push(new THREE.Path(h.map(p => new THREE.Vector2(p[0], p[1])))));
-        const geo = new THREE.ShapeGeometry(sh);
-        const pos = geo.attributes.position;
-        for (let i = 0; i < pos.count; i++) { const z = pos.getX(i), y = pos.getY(i); pos.setXYZ(i, s * (sx(y) + dx), y, z); }
-        geo.computeVertexNormals();
-        const m = new THREE.Mesh(geo, mat);
-        g.add(m); return m;
-    };
-    // allarga un poligono radialmente di d metri
+	// allarga un poligono radialmente di d metri
     const grow = (pts, d) => {
         const cz = pts.reduce((a, p) => a + p[0], 0) / pts.length, cy = pts.reduce((a, p) => a + p[1], 0) / pts.length;
         return pts.map(p => { const dz = p[0] - cz, dy = p[1] - cy, L = Math.hypot(dz, dy) || 1; return [p[0] + dz / L * d, p[1] + dy / L * d]; });
     };
-    // punti dell'arco del passaruota (percorso in senso z decrescente)
-    const archPts = zc => {
-        const a0 = Math.asin((SILL - WY) / AR), p = [];
-        for (let i = 0; i <= 12; i++) {
-            const a = a0 + (Math.PI - 2 * a0) * i / 12;
-            p.push([zc + AR * Math.cos(a), WY + AR * Math.sin(a)]);
-        }
-        return p;
-    };
-
+	
+	
     // ---------- SCOCCA BASSA ----------
 	const bodyMeshes = [];
     // fiancate sottili (da z=1.62=LIM_FRONT a z=-1.575=LIM_REAR) con passaruota; muso e coda sono solidi rastremati
@@ -3213,7 +3288,7 @@ function buildCarDeltona(o) {
     }
     box(0.76, 0.17, 0.016, steel, 0, 0.61, 1.921);                   // cornice calandra
     cylZ(0.04, 0.02, steel, 0, 0.68, 1.93, 12);                      // stemma Lancia bordo
-	cylZ(0.03, 0.02,  blue, 0, 0.68, 1.94, 12);                      // stemma Lancia centro
+	cylZ(0.03, 0.02,  blueLancia, 0, 0.68, 1.94, 12);                      // stemma Lancia centro
     box(0.70, 0.12, 0.02, black, 0, 0.425, 1.994);                   // presa d'aria bassa
     for (let i = -2; i <= 2; i++) box(0.012, 0.12, 0.02, paint, i * 0.14, 0.425, 1.996);
     box(1.30, 0.12, 0.04, black, 0, 0.31, 1.975);                    // spoiler anteriore nero
@@ -3259,24 +3334,13 @@ function buildCarDeltona(o) {
     box(0.14, 0.05, 0.02, black, 0, 0.635, -1.797);                  // maniglia portellone
     box(0.14, 0.07, 0.012, paint, 0, 0.32, -1.776);                  // gancio traino
 	
-	box(0.14, 0.05, 0.02, blue, -0.45, 0.635, -1.797);                // integrale
+	box(0.14, 0.05, 0.02, blueLancia, -0.45, 0.635, -1.797);                // integrale
 	box(0.12, 0.01, 0.02, yellow, -0.45, 0.635, -1.800);               // integrale
 	cylZ(0.04, 0.02, steel, 0, 0.95, -1.750, 12, 0.75, 0, 0);        // stemma Lancia bordo inclinato circa 45'
-	cylZ(0.03, 0.02,  blue, 0, 0.955, -1.753, 12, 0.75, 0, 0);       // stemma Lancia centro inclinato circa 45'
+	cylZ(0.03, 0.02,  blueLancia, 0, 0.955, -1.753, 12, 0.75, 0, 0);       // stemma Lancia centro inclinato circa 45'
     
     // ---------- RUOTE: gomma tassellata + cerchio in lega ----------
-    const tc = document.createElement('canvas'); tc.width = 448; tc.height = 64;
-    const tg = tc.getContext('2d');
-    tg.fillStyle = '#171717'; tg.fillRect(0, 0, 448, 64);
-    tg.fillStyle = '#353535';
-    for (let i = 0; i < 28; i++) {
-        const x = i * 16;
-        tg.beginPath(); tg.moveTo(x + 2, 0);  tg.lineTo(x + 10, 0);  tg.lineTo(x + 14, 32); tg.lineTo(x + 6, 32); tg.closePath(); tg.fill();
-        tg.beginPath(); tg.moveTo(x + 6, 32); tg.lineTo(x + 14, 32); tg.lineTo(x + 10, 64); tg.lineTo(x + 2, 64); tg.closePath(); tg.fill();
-    }
-    const treadTex = new THREE.CanvasTexture(tc);
-    treadTex.wrapS = THREE.RepeatWrapping; treadTex.anisotropy = 4;
-    const treadMat = new THREE.MeshLambertMaterial({ map: treadTex });
+    const treadMat = getBattistradaMat();
     const sideMat = M(0x1b1b1b), rimMat = M(0xc4c8cc), rimIn = M(0x6b7075), capM = M(0x2a2a2a);
     const TW = 0.245;                                                // larghezza pneumatico
 
@@ -3340,35 +3404,8 @@ function buildCarDeltona(o) {
 //fiat 127 sport!!!
 function buildCarCentoventisette(o) {
     const g = new THREE.Group();
-
-    // ---------- materiali ----------
-    const M = c => new THREE.MeshLambertMaterial({ color: c, side: THREE.DoubleSide, shadowSide: THREE.BackSide });
-    const B = c => new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide });
-    const nc = m => (m.userData.noCast = true, m);
-	const MS = c => new THREE.MeshStandardMaterial({ color:c, side:THREE.DoubleSide, shadowSide: THREE.BackSide, metalness:0, roughness:0.5 });
-
-    const paint = MS(o.paint);
-    const black = M(0x000000);
-    const plastic = M(0x222222);
-    const steel = M(0x888899);
-    const dark = M(0x333333);
-    const floorM = M(0x111122);
 	
-    const glass = new THREE.MeshLambertMaterial({
-        color: 0x223333, transparent: true, opacity: o.glassOpacity, side: THREE.DoubleSide
-    });
-    glass.depthWrite = false;
-    glass.userData.noCast = true;
-    glass.userData.noRecv = true;
-    const white = B(0xffffff);
-	const panna = B(0xffffdd);
-	const red = B(0xdd2222);
-	const orange = B(0xee6600);
-	const blue = B(0x2233cc);
-	const brakeM = B(0x330000);   // stop: spento
-	const revM   = B(0x666666);   // retromarcia: spenta
-
-    // ---------- quote (metri, z+ = muso, x+ = sinistra) ----------
+	// ---------- quote (metri, z+ = muso, x+ = sinistra) ----------
     const HW = 0.73;                    // semilarghezza carrozzeria
     const ZF = 1.66, ZR = -1.72;        // muso e coda (paraurti esclusi)
     const BELT = 0.90, ROOF = 1.32;     // cintura e tetto (127: bassa e vetrata)
@@ -3392,61 +3429,17 @@ function buildCarCentoventisette(o) {
 	const RY1 = 0.95, RZ1 = rz(RY1);           // fondo lunotto
 	const RZ2 = rz(BELT);                      // incrocio con la cintura
 
-    // ---------- helper ----------
-    const box = (w, h, d, mat, x, y, z, rx = 0, ry = 0, rz = 0) => {
-        const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
-        m.position.set(x, y, z); m.rotation.set(rx, ry, rz);
-        g.add(m); return m;
-    };
-    const cylZ = (r, len, mat, x, y, z, seg = 24) => {            // asse lungo Z (fari)
-        const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, seg).rotateX(Math.PI / 2), mat);
-        m.position.set(x, y, z); g.add(m); return m;
-    };
-    const cylX = (r, len, mat, x, y, z, seg = 12) => {            // asse lungo X (assali)
-        const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, seg).rotateZ(Math.PI / 2), mat);
-        m.position.set(x, y, z); g.add(m); return m;
-    };
-    // estrusione lungo X di un profilo [z,y], centrata in cx
-    const prism = (pts, width, mat, cx = 0) => {
-        const sh = new THREE.Shape();
-        pts.forEach((p, i) => i ? sh.lineTo(p[0], p[1]) : sh.moveTo(p[0], p[1]));
-        sh.closePath();
-        const geo = new THREE.ExtrudeGeometry(sh, { depth: width, bevelEnabled: false, steps: 1 });
-        geo.rotateY(-Math.PI / 2);
-        geo.translate(width / 2 + cx, 0, 0);
-        const m = new THREE.Mesh(geo, mat);
-        g.add(m); return m;
-    };
-    // quadrilatero 3D
-    const panel = (v, mat) => {
-        const a = v.map(q => new THREE.Vector3(q[0], q[1], q[2])), p = [];
-        [0, 1, 2, 0, 2, 3].forEach(i => p.push(...a[i].toArray()));
-        const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
-        geo.computeVertexNormals();
-        const m = new THREE.Mesh(geo, mat);
-        g.add(m); return m;
-    };
-    // poligono [z,y] (con eventuali buchi) appoggiato sulla fiancata superiore inclinata (dx = sporgenza)
-    const sidePoly = (s, pts, holes, mat, dx = 0) => {
-        const sh = new THREE.Shape(pts.map(p => new THREE.Vector2(p[0], p[1])));
-        (holes || []).forEach(h => sh.holes.push(new THREE.Path(h.map(p => new THREE.Vector2(p[0], p[1])))));
-        const geo = new THREE.ShapeGeometry(sh);
-        const pos = geo.attributes.position;
-        for (let i = 0; i < pos.count; i++) { const z = pos.getX(i), y = pos.getY(i); pos.setXYZ(i, s * (sx(y) + dx), y, z); }
-        geo.computeVertexNormals();
-        const m = new THREE.Mesh(geo, mat);
-        g.add(m); return m;
-    };
-    // punti dell'arco del passaruota (percorso in senso z decrescente)
-    const archPts = zc => {
-        const a0 = Math.asin((SILL - WY) / AR), p = [];
-        for (let i = 0; i <= 12; i++) {
-            const a = a0 + (Math.PI - 2 * a0) * i / 12;
-            p.push([zc + AR * Math.cos(a), WY + AR * Math.sin(a)]);
-        }
-        return p;
-    };
+	//helper + materiali
+	const { 
+			M, B, MS, box, cylZ, cylX, prism, panel, sidePolyFor, archPtsFor, //funzioni helper
+			paint, //materiali MS
+			glass, //materiale speciale
+			black, plastic, steel, chrome, grey, dark, floorM, //materiali M
+			white, panna, orange, red, yellow, blueLancia, blueFiat, redTrim, brakeM, revM //materiali B
+	} = getSharedCarKit(g, o.glassOpacity, o.paint);
+	const sidePoly = sidePolyFor(sx), archPts = archPtsFor(SILL, WY, AR);
+
+	
 
     // ---------- SCOCCA ----------
     const bodyMeshes = [];
@@ -3740,37 +3733,8 @@ function buildCarCentoventisette(o) {
 //fiat tipozza 16vongole
 function buildCarTipozza(o) {
     const g = new THREE.Group();
-
-    // ---------- materiali ----------
-    const M = c =>  new THREE.MeshLambertMaterial({ color: c, side: THREE.DoubleSide, shadowSide: THREE.BackSide });
-    const B = c =>  new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide });
-    const MS = c => new THREE.MeshStandardMaterial({ color: c, side: THREE.DoubleSide, shadowSide: THREE.BackSide, metalness: 0, roughness: 0.5 });
-
-    const paint = MS(o.paint);
-    const black = M(0x000000);
-    const plastic = M(0x222222);
-    const steel = M(0x666677);
-    const chrome = M(0xaaaaaa);
-    const dark = M(0x333333);
-    const floorM = M(0x111122);
-    const glass = new THREE.MeshLambertMaterial({
-        color: 0x223333, transparent: true, opacity: o.glassOpacity, side: THREE.DoubleSide
-    });
-    glass.depthWrite = false;
-    glass.userData.noCast = true;
-    glass.userData.noRecv = true;
-    const white = B(0xffffff), grey = B(0x666666), red = B(0xdd2222), orange = B(0xee6600), blue = B(0x2233cc);
-    
-	const trim = M(0xdd2222);
-	const xtrim = new THREE.MeshBasicMaterial({          // filetti rossi paraurti / minigonne
-        color: 0xdd2222, side: THREE.DoubleSide,
-        polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2
-    });
-    
-	const brakeM = B(0x330000);        // stop: spento
-    const revM   = B(0x666666);        // retromarcia: spenta
-
-    // ---------- quote (metri, z+ = muso, x+ = sinistra) ----------
+	
+	// ---------- quote (metri, z+ = muso, x+ = sinistra) ----------
     const WZ = 1.30, WX = 0.80, WY = 0.30, WR = 0.30;   // ruote: PASSO 2.60 (assi a z = +-1.30)
     const AR = 0.335;                   // raggio passaruota
     const SILL = 0.17;                  // bordo basso fiancata tra i passaruota
@@ -3779,59 +3743,19 @@ function buildCarTipozza(o) {
     const FLOOR_Y = 0.40;               // quota pavimento
     const sx = y => 0.83 - (y - BELT) / (ROOF - BELT) * 0.25;   // semilarghezza della fiancata alta (tumblehome)
 	
-	// ---------- helper ----------
-    const box = (w, h, d, mat, x, y, z, rx = 0, ry = 0, rz = 0) => {
-        const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
-        m.position.set(x, y, z); m.rotation.set(rx, ry, rz);
-        g.add(m); return m;
-    };
-    const cylZ = (r, len, mat, x, y, z, seg = 24) => {            // asse lungo Z
-        const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, seg).rotateX(Math.PI / 2), mat);
-        m.position.set(x, y, z); g.add(m); return m;
-    };
-    // estrusione lungo X di un profilo [z,y], centrata in cx
-    const prism = (pts, width, mat, cx = 0) => {
-        const sh = new THREE.Shape();
-        pts.forEach((p, i) => i ? sh.lineTo(p[0], p[1]) : sh.moveTo(p[0], p[1]));
-        sh.closePath();
-        const geo = new THREE.ExtrudeGeometry(sh, { depth: width, bevelEnabled: false, steps: 1 });
-        geo.rotateY(-Math.PI / 2);
-        geo.translate(width / 2 + cx, 0, 0);
-        const m = new THREE.Mesh(geo, mat);
-        g.add(m); return m;
-    };
-    // quadrilatero 3D
-    const panel = (v, mat) => {
-        const a = v.map(q => new THREE.Vector3(q[0], q[1], q[2])), p = [];
-        [0, 1, 2, 0, 2, 3].forEach(i => p.push(...a[i].toArray()));
-        const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
-        geo.computeVertexNormals();
-        const m = new THREE.Mesh(geo, mat);
-        g.add(m); return m;
-    };
-	// poligono [z,y] (con eventuali buchi) appoggiato sulla fiancata alta inclinata
-    const sidePoly = (s, pts, holes, mat) => {
-        const sh = new THREE.Shape(pts.map(p => new THREE.Vector2(p[0], p[1])));
-        (holes || []).forEach(h => sh.holes.push(new THREE.Path(h.map(p => new THREE.Vector2(p[0], p[1])))));
-        const geo = new THREE.ShapeGeometry(sh);
-        const pos = geo.attributes.position;
-        for (let i = 0; i < pos.count; i++) { const z = pos.getX(i), y = pos.getY(i); pos.setXYZ(i, s * sx(y), y, z); }
-        geo.computeVertexNormals();
-        const m = new THREE.Mesh(geo, mat);
-        g.add(m); return m;
-    };
-    // punti dell'arco del passaruota (percorso in senso z decrescente)
-    const archPts = zc => {
-        const a0 = Math.asin((SILL - WY) / AR), p = [];
-        for (let i = 0; i <= 12; i++) {
-            const a = a0 + (Math.PI - 2 * a0) * i / 12;
-            p.push([zc + AR * Math.cos(a), WY + AR * Math.sin(a)]);
-        }
-        return p;
-    };
-
-    // ---------- SCOCCA BASSA ----------
+	
+	//helper + materiali
+	const { 
+			M, B, MS, box, cylZ, cylX, prism, panel, sidePolyFor, archPtsFor, //funzioni helper
+			paint, //materiali MS
+			glass, //materiale speciale
+			black, plastic, steel, chrome, grey, dark, floorM, //materiali M
+			white, panna, orange, red, yellow, blueLancia, blueFiat, redTrim, brakeM, revM //materiali B
+	} = getSharedCarKit(g, o.glassOpacity, o.paint);
+	const sidePoly = sidePolyFor(sx), archPts = archPtsFor(SILL, WY, AR);
+	
+	
+	// ---------- SCOCCA BASSA ----------
     const bodyMeshes = [];
     // fiancate sottili con passaruota
     const SIDE = [[ZN, 0.235], [1.70, 0.235], 
@@ -3921,10 +3845,10 @@ function buildCarTipozza(o) {
         box(0.006, 0.64, 0.008, black, s * 0.853, 0.62, -0.28);     // taglio porta anteriore / montante B
         box(0.006, 0.30, 0.008, black, s * 0.853, 0.78, -1.20);     // taglio porta posteriore
         
-		box(0.020, 0.04, 0.22, plastic, s * 0.862, 0.82, -0.08);    // maniglia anteriore
-        box(0.020, 0.04, 0.22, plastic, s * 0.862, 0.85, -1.00);    // maniglia posteriore
-        box(0.020, 0.03, 0.06, orange,  s * 0.855, 0.65, 1.00);       // freccia laterale
-        box(0.020, 0.03, 0.04, blue,    s * 0.855, 0.65, 0.94);       // targhetta DGT
+		box(0.020, 0.04, 0.22, plastic,  s * 0.862, 0.82, -0.08);    // maniglia anteriore
+        box(0.020, 0.04, 0.22, plastic,  s * 0.862, 0.85, -1.00);    // maniglia posteriore
+        box(0.020, 0.03, 0.06, orange,   s * 0.855, 0.65, 1.00);       // freccia laterale
+        box(0.020, 0.03, 0.04, blueFiat, s * 0.855, 0.65, 0.94);       // targhetta DGT
         
 		// specchio in tinta
         box(0.08, 0.03, 0.03, black, s * 0.84, 1.0, 0.73);         // braccetto
@@ -3934,18 +3858,18 @@ function buildCarTipozza(o) {
 
     // ---------- PARAURTI (neri, con filetto rosso fuori dalle facce del paraurti, spessore 1 cm)
     box(1.72, 0.325, 0.10,  plastic, 0, 0.395, 1.95);//ant
-	box(1.72, 0.014, 0.01,  trim,    0, 0.355, 2.00);//ant filetto
+	box(1.72, 0.014, 0.01,  redTrim, 0, 0.355, 2.00);//ant filetto
 	box(1.72, 0.340, 0.10,  plastic, 0, 0.43, -1.86);//post    
-    box(1.72, 0.014, 0.01,  trim,    0, 0.39, -1.91);//post filetto
+    box(1.72, 0.014, 0.01,  redTrim, 0, 0.39, -1.91);//post filetto
 	//laterali
     for (const s of [-1, 1]) {
 		box(0.010, 0.325,  0.48, plastic, s * 0.868, 0.395, 1.76);//ant
-        box(0.010, 0.014,  0.38, trim,    s * 0.878, 0.355, 1.81);//ant filetto
+        box(0.010, 0.014,  0.38, redTrim, s * 0.878, 0.355, 1.81);//ant filetto
         box(0.010, 0.340,  0.42, plastic, s * 0.868, 0.43, -1.69);//post
-        box(0.010, 0.014,  0.32, trim,    s * 0.878, 0.39, -1.74);//post filetto
+        box(0.010, 0.014,  0.32, redTrim, s * 0.878, 0.39, -1.74);//post filetto
 		// minigonne nere con filetto rosso
 		box(0.020, 0.150, 1.98,  plastic, s * 0.868, 0.25, 0);//minigonna
-        box(0.010, 0.014, 1.98,  trim,    s * 0.878, 0.28, 0);//minigonna filetto
+        box(0.010, 0.014, 1.98,  redTrim, s * 0.878, 0.28, 0);//minigonna filetto
     }
 	
     // ---------- FRONTALE ----------
@@ -3971,7 +3895,7 @@ function buildCarTipozza(o) {
     // logo Fiat a barrette
     box(0.10, 0.11, 0.01, grey, 0, 0.62, 1.926);
     for (let i = -1; i <= 1; i += 2) box(0.012, 0.11, 0.012, paint, i * 0.02, 0.62, 1.93);
-    box(0.11, 0.025, 0.01, blue, -0.35, 0.70, 1.926);              // scritta FIAT
+    box(0.11, 0.025, 0.01, blueFiat, -0.35, 0.70, 1.926);              // scritta FIAT
 
     // ---------- POSTERIORE ----------
     for (const s of [-1, 1]) {
@@ -3985,10 +3909,10 @@ function buildCarTipozza(o) {
     }
 	
     box(0.68, 0.08, 0.012, black, 0, 0.82, -1.83);           // fascia nera sopra la targa
-    box(0.64, 0.012, 0.012, trim, 0, 0.82, -1.835);          // scritta rossa sulla fascia
+    box(0.64, 0.012, 0.012, redTrim, 0, 0.82, -1.835);          // scritta rossa sulla fascia
     cylZ(0.02, 0.03, steel, 0, 0.85, -1.83, 12);             // serratura portellone
 	
-	box(0.13, 0.025, 0.01, blue,   0.48, 0.90, -1.832);             // FIAT
+	box(0.13, 0.025, 0.01, blueFiat,   0.48, 0.90, -1.832);             // FIAT
     box(0.13, 0.025, 0.01, steel, -0.48, 0.90, -1.832);             // Tipo 2.0 i.e.
     
     // targa posteriore
@@ -4035,18 +3959,7 @@ function buildCarTipozza(o) {
 
 
     // ---------- RUOTE: gomma tassellata + cerchi in lega bianchi a 4 fori ----------
-    const tc = document.createElement('canvas'); tc.width = 448; tc.height = 64;
-    const tg = tc.getContext('2d');
-    tg.fillStyle = '#171717'; tg.fillRect(0, 0, 448, 64);
-    tg.fillStyle = '#353535';
-    for (let i = 0; i < 28; i++) {
-        const x = i * 16;
-        tg.beginPath(); tg.moveTo(x + 2, 0);  tg.lineTo(x + 10, 0);  tg.lineTo(x + 14, 32); tg.lineTo(x + 6, 32); tg.closePath(); tg.fill();
-        tg.beginPath(); tg.moveTo(x + 6, 32); tg.lineTo(x + 14, 32); tg.lineTo(x + 10, 64); tg.lineTo(x + 2, 64); tg.closePath(); tg.fill();
-    }
-    const treadTex = new THREE.CanvasTexture(tc);
-    treadTex.wrapS = THREE.RepeatWrapping; treadTex.anisotropy = 4;
-    const treadMat = new THREE.MeshLambertMaterial({ map: treadTex });
+    const treadMat = getBattistradaMat();
     const sideMat = M(0x1b1b1b);
     const rimMat = M(0xe9e9e9), hubDark = M(0x4a4a4a), holeM = M(0x1c1c1c);
 
@@ -4120,29 +4033,7 @@ function buildCarTipozza(o) {
 function buildCarPandina(o) {
     const g = new THREE.Group();
 
-    // ---------- materiali ----------
-    const M = c => new THREE.MeshLambertMaterial({ color: c, side: THREE.DoubleSide, shadowSide: THREE.BackSide });
-    const B = c => new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide });
-    const nc = m => (m.userData.noCast = true, m);
-	const MS = c => new THREE.MeshStandardMaterial({ color:c, side:THREE.DoubleSide, shadowSide: THREE.BackSide, metalness:0, roughness:0.5 });
-
-    const paint = MS(o.paint);
-	const black = M(0x000000);
-    const plastic = M(0x222222);
-    const steel = M(0x666677);
-    const dark = M(0x333333);
-    const floorM = M(0x111122);
-    const glass = new THREE.MeshLambertMaterial({
-        color: 0x223333, transparent: true, opacity: o.glassOpacity, side: THREE.DoubleSide
-    });
-    glass.depthWrite = false;
-    glass.userData.noCast = true;
-    glass.userData.noRecv = true;
-    const white = B(0xffffff), panna = B(0xffffdd), red = B(0xdd2222), orange = B(0xee6600), blue = B(0x2233cc);
-	const brakeM = B(0x330000);   // stop: spento
-	const revM   = B(0x666666);   // retromarcia: spenta
-
-    // ---------- quote (metri, z+ = muso, x+ = sinistra) ----------
+	// ---------- quote (metri, z+ = muso, x+ = sinistra) ----------
     const HW = 0.73;                    // semilarghezza carrozzeria
     const ZF = 1.58, ZR = -1.58;        // muso e coda (paraurti esclusi)
     const BELT = 1.06, ROOF = 1.47;     // cintura e tetto
@@ -4152,62 +4043,17 @@ function buildCarPandina(o) {
 	const REAR_Y = 1.06;				// portellone quota
     const sx = y => 0.70 - (y - BELT) / (ROOF - BELT) * 0.16;   // semilarghezza della fiancata inclinata a quota y
 
-    // ---------- helper ----------
-    const box = (w, h, d, mat, x, y, z, rx = 0, ry = 0, rz = 0) => {
-        const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
-        m.position.set(x, y, z); m.rotation.set(rx, ry, rz);
-        g.add(m); return m;
-    };
-    const cylZ = (r, len, mat, x, y, z, seg = 24) => {            // asse lungo Z (fari)
-        const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, seg).rotateX(Math.PI / 2), mat);
-        m.position.set(x, y, z); g.add(m); return m;
-    };
-    const cylX = (r, len, mat, x, y, z, seg = 12) => {            // asse lungo X (assali)
-        const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, seg).rotateZ(Math.PI / 2), mat);
-        m.position.set(x, y, z); g.add(m); return m;
-    };
-    // estrusione lungo X di un profilo [z,y], centrata in cx
-    const prism = (pts, width, mat, cx = 0) => {
-        const sh = new THREE.Shape();
-        pts.forEach((p, i) => i ? sh.lineTo(p[0], p[1]) : sh.moveTo(p[0], p[1]));
-        sh.closePath();
-        const geo = new THREE.ExtrudeGeometry(sh, { depth: width, bevelEnabled: false, steps: 1 });
-        geo.rotateY(-Math.PI / 2);
-        geo.translate(width / 2 + cx, 0, 0);
-        const m = new THREE.Mesh(geo, mat);
-        g.add(m); return m;
-    };
-    // quadrilatero 3D
-    const panel = (v, mat) => {
-        const a = v.map(q => new THREE.Vector3(q[0], q[1], q[2])), p = [];
-        [0, 1, 2, 0, 2, 3].forEach(i => p.push(...a[i].toArray()));
-        const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
-        geo.computeVertexNormals();
-        const m = new THREE.Mesh(geo, mat);
-        g.add(m); return m;
-    };
-    // poligono [z,y] (con eventuali buchi) appoggiato sulla fiancata superiore inclinata
-    const sidePoly = (s, pts, holes, mat) => {
-        const sh = new THREE.Shape(pts.map(p => new THREE.Vector2(p[0], p[1])));
-        (holes || []).forEach(h => sh.holes.push(new THREE.Path(h.map(p => new THREE.Vector2(p[0], p[1])))));
-        const geo = new THREE.ShapeGeometry(sh);
-        const pos = geo.attributes.position;
-        for (let i = 0; i < pos.count; i++) { const z = pos.getX(i), y = pos.getY(i); pos.setXYZ(i, s * sx(y), y, z); }
-        geo.computeVertexNormals();
-        const m = new THREE.Mesh(geo, mat);
-        g.add(m); return m;
-    };
-    // punti dell'arco del passaruota (percorso in senso z decrescente)
-    const archPts = zc => {
-        const a0 = Math.asin((SILL - WY) / AR), p = [];
-        for (let i = 0; i <= 12; i++) {
-            const a = a0 + (Math.PI - 2 * a0) * i / 12;
-            p.push([zc + AR * Math.cos(a), WY + AR * Math.sin(a)]);
-        }
-        return p;
-    };
+	//helper + materiali
+	const { 
+			M, B, MS, box, cylZ, cylX, prism, panel, sidePolyFor, archPtsFor, //funzioni helper
+			paint, //materiali MS
+			glass, //materiale speciale
+			black, plastic, steel, chrome, grey, dark, floorM, //materiali M
+			white, panna, orange, red, yellow, blueLancia, blueFiat, redTrim, brakeM, revM //materiali B
+	} = getSharedCarKit(g, o.glassOpacity, o.paint);
+	const sidePoly = sidePolyFor(sx), archPts = archPtsFor(SILL, WY, AR);
 
+	
     // ---------- SCOCCA ----------
     const bodyMeshes = [];
     // fiancate sottili con passaruota (il centro dell'abitacolo resta vuoto per sedili e volante)
@@ -4334,7 +4180,7 @@ function buildCarPandina(o) {
     box(0.80, 0.19, 0.03, black, 0, 0.77, 1.595);                   // griglia nera
     for (let i = 0; i < 4; i++) box(0.80, 0.012, 0.012, steel, 0, 0.70 + i * 0.045, 1.612);
     box(0.14, 0.11, 0.012, black, 0, 0.77, 1.618);                   // logo FIAT a losanga
-    box(0.12, 0.02, 0.012, blue, 0, 0.77, 1.626);
+    box(0.12, 0.02, 0.012, blueFiat, 0, 0.77, 1.626);
     for (const s of [-1, 1]) {
         box(0.28, 0.19, 0.03, steel, s * 0.54, 0.765, 1.595);       // cornice faro rettangolare
 		box(0.22, 0.13, 0.03, white, s * 0.54, 0.765, 1.607);       // lente rettangolare
@@ -4360,7 +4206,7 @@ function buildCarPandina(o) {
 		box(0.13, 0.26, 0.02, black,  s * 0.62, 0.83,  -1.585);  // incasso fanale
     }
     cylZ(0.02, 0.03, steel, 0, 0.80, -1.59, 12);                    // serratura portellone
-    box(0.12, 0.025, 0.01, blue, -0.40, 0.86, -1.585);              // scritta FIAT logo
+    box(0.12, 0.025, 0.01, blueFiat, -0.40, 0.86, -1.585);              // scritta FIAT logo
     
 	//targa posteriore
     const rp = new THREE.Mesh(
@@ -4390,18 +4236,7 @@ function buildCarPandina(o) {
 	}
 
     // ---------- RUOTE: gomma tassellata + cerchio in lamiera grigia ----------
-    const tc = document.createElement('canvas'); tc.width = 448; tc.height = 64;
-    const tg = tc.getContext('2d');
-    tg.fillStyle = '#171717'; tg.fillRect(0, 0, 448, 64);
-    tg.fillStyle = '#353535';
-    for (let i = 0; i < 28; i++) {
-        const x = i * 16;
-        tg.beginPath(); tg.moveTo(x + 2, 0);  tg.lineTo(x + 10, 0);  tg.lineTo(x + 14, 32); tg.lineTo(x + 6, 32); tg.closePath(); tg.fill();
-        tg.beginPath(); tg.moveTo(x + 6, 32); tg.lineTo(x + 14, 32); tg.lineTo(x + 10, 64); tg.lineTo(x + 2, 64); tg.closePath(); tg.fill();
-    }
-    const treadTex = new THREE.CanvasTexture(tc);
-    treadTex.wrapS = THREE.RepeatWrapping; treadTex.anisotropy = 4;
-    const treadMat = new THREE.MeshLambertMaterial({ map: treadTex });
+    const treadMat = getBattistradaMat();
     const sideMat = M(0x1b1b1b);
     const rimMat = M(0xa8adb2), rimIn = M(0x6b7075);
 
@@ -4465,7 +4300,7 @@ function buildCarPandina(o) {
 
 
 
-//cinquino gpt modificata in a112 abarth imbruttita
+//cinquino gpt modificata in a112 abarth imbruttita (TODO: rimuovere zoom K)
 function buildCarBianchina(o) {
     const K = 1.26;
     const g = new THREE.Group();
@@ -5166,7 +5001,7 @@ function buildCarBianchina(o) {
 
 
 
-const deltaColors = [
+const CAR_COLORS = [
 	{base: 0xdddddd, lanciaBadge: true, liveryTricolore: {azz:0x006600, blu:0xffffff, red:0xdd1122} }, //bianco + tricolore alitalia
 	{base: 0xe9e9e9, lanciaBadge: true, liveryRepsol:    {ora:0xff8800, azz:0x112255, red:0xdd1122} }, //bianco + repsol
 	{base: 0xe9e9e9, lanciaBadge: true, liveryRepsol:    {ora:0x006600, azz:0xeeeeee, red:0x990000} }, //bianco + totip
@@ -5266,7 +5101,7 @@ function applyDirt(){
 
 let model=null;
 let steerWheel=null;
-let currentDeltaColor=new Date().getSeconds()%deltaColors.length;
+let CURRENT_CAR_COLOR=new Date().getSeconds()%CAR_COLORS.length;
 
 
 //numeri sulle fiancate, funzione usata dal cinquino/a112
@@ -5416,9 +5251,9 @@ function spawnCar(forceModel=-1){
   wheelPivots.length=0; 
   wheelMeshes.length=0;
 
-  const dc=deltaColors[currentDeltaColor];
+  const dc=CAR_COLORS[CURRENT_CAR_COLOR];
   
-  const spoilerOn=currentDeltaColor < 5 || Math.random() < 0.75;
+  const spoilerOn=CURRENT_CAR_COLOR < 5 || Math.random() < 0.75;
 
   model=buildCarWrapper({
     length:4.2, 
@@ -5575,10 +5410,10 @@ function buildInterior(parent,forceWidth=0){
 
 
 
-function changeDelta(){
+function changeCarColor(){
   if(flipG) return;
-  currentDeltaColor=(currentDeltaColor+1)%deltaColors.length;
-  spawnCar();
+  CURRENT_CAR_COLOR=(CURRENT_CAR_COLOR+1)%CAR_COLORS.length;
+  spawnCar(CURRENT_CAR_ID);
 }
 
 
@@ -5830,26 +5665,6 @@ document.addEventListener('visibilitychange',()=>{
 });
 
 
-/* ===== MODALITÀ CAMERA: 0 chase, 1 cofano, 2 abitacolo ===== */
-let camMode=0;
-const hoodBtn=$('hoodBtn'), cockpitBtn=$('cockpitBtn');
-const CAM_HOOD=new THREE.Vector3(0,1.50,0.50);      // sopra il cofano era a 1.25
-const CAM_COCKPIT=new THREE.Vector3(0.4,1.32,-0.1);// occhi del pilota (volante a x=.4)
-const _cp=new THREE.Vector3(), _ct=new THREE.Vector3();
-function setCamMode(m){
-  camMode=(camMode===m)?0:m;
-  hoodBtn.classList.toggle('toggled-red',camMode===1);
-  cockpitBtn.classList.toggle('toggled-red',camMode===2);
-  camera.near=camMode===2?0.08:0.3;
-  camera.updateProjectionMatrix();
-  cam.zoom=1;cam.el=0;cam.yaw=0;
-}
-hoodBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();setCamMode(1); camInside = false;});
-cockpitBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();setCamMode(2); camInside = true;});
-
-
-
-
 
 addEventListener('keydown',e=>{
  if (KM[e.code]){keys[KM[e.code]]=1;e.preventDefault();}
@@ -5859,14 +5674,14 @@ addEventListener('keydown',e=>{
  if (e.code==='Digit1') { setCamMode(1); camInside = false; }
  if (e.code==='Digit2') { setCamMode(2); camInside = true; }
  
- if (e.code==='Digit5') { if(flipG) return; currentDeltaColor=(currentDeltaColor+1)%deltaColors.length; spawnCar(0); }
- if (e.code==='Digit6') { if(flipG) return; currentDeltaColor=(currentDeltaColor+1)%deltaColors.length; spawnCar(1); }
- if (e.code==='Digit7') { if(flipG) return; currentDeltaColor=(currentDeltaColor+1)%deltaColors.length; spawnCar(2); }
- if (e.code==='Digit8') { if(flipG) return; currentDeltaColor=(currentDeltaColor+1)%deltaColors.length; spawnCar(3); }
- if (e.code==='Digit9') { if(flipG) return; currentDeltaColor=(currentDeltaColor+1)%deltaColors.length; spawnCar(4); }
- if (e.code==='Digit0') { if(flipG) return; currentDeltaColor=(currentDeltaColor+1)%deltaColors.length; spawnCar(5); }
+ if (e.code==='Digit5') { if(flipG) return; CURRENT_CAR_COLOR=(CURRENT_CAR_COLOR+1)%CAR_COLORS.length; spawnCar(0); }
+ if (e.code==='Digit6') { if(flipG) return; CURRENT_CAR_COLOR=(CURRENT_CAR_COLOR+1)%CAR_COLORS.length; spawnCar(1); }
+ if (e.code==='Digit7') { if(flipG) return; CURRENT_CAR_COLOR=(CURRENT_CAR_COLOR+1)%CAR_COLORS.length; spawnCar(2); }
+ if (e.code==='Digit8') { if(flipG) return; CURRENT_CAR_COLOR=(CURRENT_CAR_COLOR+1)%CAR_COLORS.length; spawnCar(3); }
+ if (e.code==='Digit9') { if(flipG) return; CURRENT_CAR_COLOR=(CURRENT_CAR_COLOR+1)%CAR_COLORS.length; spawnCar(4); }
+ if (e.code==='Digit0') { if(flipG) return; CURRENT_CAR_COLOR=(CURRENT_CAR_COLOR+1)%CAR_COLORS.length; spawnCar(5); }
  
- if (e.code==='KeyT') changeDelta();//texture
+ if (e.code==='KeyT') changeCarColor();//texture
  if (e.code==='KeyH') hornBtnPlay();//horn
  if (e.code === 'KeyL') toggleLights();//lights
  if (e.code === 'KeyN') toggleNumbers();//numbers
