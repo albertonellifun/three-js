@@ -950,9 +950,10 @@ colorsBtn.addEventListener('pointerdown', e => {
 });
 
 /* ============ RENDERER / SCENA ============ */
-const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
 renderer.setSize(innerWidth,innerHeight);
+renderer.dithering = true;//puntiricchiato!
 
 renderer.shadowMap.enabled = true;//prova ombre
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;//prova ombre THREE.BasicShadowMap
@@ -2704,7 +2705,7 @@ function manageTiles(){
 let camMode=0;
 const hoodBtn=$('hoodBtn'), cockpitBtn=$('cockpitBtn');
 const CAM_HOOD=new THREE.Vector3(0,1.50,0.50);      // sopra il cofano era a 1.25
-const CAM_COCKPIT=new THREE.Vector3(0.4,1.32,-0.1);// occhi del pilota (volante a x=.4)
+const CAM_COCKPIT=new THREE.Vector3(0.45,1.32,-0.1); // occhi del pilota (volante a x=.4)
 const _cp=new THREE.Vector3(), _ct=new THREE.Vector3();
 function setCamMode(m){
   camMode=(camMode===m)?0:m;
@@ -2739,12 +2740,12 @@ const wheelMeshes=[];
 
 
 const CAR_SPECS={
-  centoventisette: {power: 70000, fmax:5500, mass: 840, drag:.85, tops:[40,70,90,120,140,160],  maxSpeed: 160,  maxRpm: 7000, startSkidSpeed: 0,  CAM_COCKPIT_Y: 1.45},
-  pandina:         {power: 45000, fmax:4200, mass: 880, drag:.95, tops:[35,55,80,100,120,140],  maxSpeed: 160,  maxRpm: 6500, startSkidSpeed: 0,  CAM_COCKPIT_Y: 1.50},
-  bianchina:       {power: 80000, fmax:6500, mass: 780, drag:.85, tops:[45,70,95,125,150,170],  maxSpeed: 160,  maxRpm: 7000, startSkidSpeed: 0,  CAM_COCKPIT_Y: 1.30},
-  tipozza:         {power:100000, fmax:7500, mass:1050, drag:.85, tops:[45,75,105,135,165,195], maxSpeed: 180,  maxRpm: 7000, startSkidSpeed: 0,  CAM_COCKPIT_Y: 1.30},
-  deltona:         {power:150000, fmax:9000, mass:1300, drag:.80, tops:[55,85,115,145,180,215], maxSpeed: 200,  maxRpm: 9000, startSkidSpeed: 16, CAM_COCKPIT_Y: 1.25},
-  evo:             {power:150000, fmax:9000, mass:1300, drag:.80, tops:[55,85,115,145,180,215], maxSpeed: 200,  maxRpm: 9000, startSkidSpeed: 16, CAM_COCKPIT_Y: 1.30}
+  centoventisette: {power: 70000, fmax:5500, mass: 840, drag:.85, tops:[40,70,90,120,140,160],  maxSpeed: 160,  maxRpm: 7000, startSkidSpeed: 0,  CAM_COCKPIT_X: 0.40, CAM_COCKPIT_Y: 1.45},
+  pandina:         {power: 45000, fmax:4200, mass: 880, drag:.95, tops:[35,55,80,100,120,140],  maxSpeed: 160,  maxRpm: 6500, startSkidSpeed: 0,  CAM_COCKPIT_X: 0.45, CAM_COCKPIT_Y: 1.50},
+  bianchina:       {power: 80000, fmax:6500, mass: 780, drag:.85, tops:[45,70,95,125,150,170],  maxSpeed: 160,  maxRpm: 7000, startSkidSpeed: 0,  CAM_COCKPIT_X: 0.40, CAM_COCKPIT_Y: 1.30},
+  tipozza:         {power:100000, fmax:7500, mass:1050, drag:.85, tops:[45,75,105,135,165,195], maxSpeed: 180,  maxRpm: 7000, startSkidSpeed: 0,  CAM_COCKPIT_X: 0.45, CAM_COCKPIT_Y: 1.30},
+  deltona:         {power:150000, fmax:9000, mass:1300, drag:.80, tops:[55,85,115,145,180,215], maxSpeed: 200,  maxRpm: 9000, startSkidSpeed: 16, CAM_COCKPIT_X: 0.50, CAM_COCKPIT_Y: 1.25},
+  evo:             {power:150000, fmax:9000, mass:1300, drag:.80, tops:[55,85,115,145,180,215], maxSpeed: 200,  maxRpm: 9000, startSkidSpeed: 16, CAM_COCKPIT_X: 0.50, CAM_COCKPIT_Y: 1.30}
 };
 
 let CURRENT_CAR_ID = 5;
@@ -2770,6 +2771,7 @@ function buildCarWrapper(o,forceModel){
   
   //aggiorna anche altezza occhi dal cockpit
   CAM_COCKPIT.y = CURRENT_CAR_SPEC.CAM_COCKPIT_Y;
+  CAM_COCKPIT.x = CURRENT_CAR_SPEC.CAM_COCKPIT_X;
   
   return mod;
 }
@@ -2917,13 +2919,24 @@ function _triGlsl(P) {
 
 
 
+/*
+const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(256, {
+    generateMipmaps: true,
+    minFilter: THREE.LinearMipmapLinearFilter,
+    magFilter: THREE.LinearFilter,
+});
+// Creiamo la CubeCamera posizionata dove c'è l'auto (es. all'altezza della carrozzeria y=0.6)
+const cubeCamera = new THREE.CubeCamera(0.1, 1000, cubeRenderTarget);
+scene.add(cubeCamera);
+scene.environment = cubeRenderTarget.texture;
+*/
 
 
 
 //texture battistrada è identica per tutte le buildCar, la creo una sola volta
 let _BattistradaMat = null;
 function getBattistradaMat() {
-    if (_BattistradaMat) return _BattistradaMat;
+	if (_BattistradaMat) return _BattistradaMat;
     const c = document.createElement('canvas'); 
 	c.width = 448; c.height = 64;
     const t = c.getContext('2d');
@@ -2938,14 +2951,15 @@ function getBattistradaMat() {
     const tex = new THREE.CanvasTexture(c); 
 	tex.wrapS = THREE.RepeatWrapping; 
 	tex.anisotropy = 4;
-    return _BattistradaMat = new THREE.MeshLambertMaterial({ map: tex });
+    _BattistradaMat = new THREE.MeshLambertMaterial({ map: tex });
+	return _BattistradaMat;
 }
 
 //insieme di funzioni condivise per tutte le buildCar
 function getSharedCarKit(g, opacity, paintColor) {
     const M  = c => new THREE.MeshLambertMaterial({ color: c, side: THREE.DoubleSide, shadowSide: THREE.BackSide });
     const B  = c => new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide });
-    const MS = c => new THREE.MeshStandardMaterial({ color: c, side: THREE.DoubleSide, shadowSide: THREE.BackSide, metalness: 0, roughness: 0.5 });
+    const MS = c => new THREE.MeshStandardMaterial({ color: c, side: THREE.DoubleSide, shadowSide: THREE.BackSide, metalness: 0.30, roughness: 0.10 });
     const put = (m, x, y, z, rx = 0, ry = 0, rz = 0) => { m.position.set(x, y, z); m.rotation.set(rx, ry, rz); g.add(m); return m; };
     const box  = (w, h, d, mat, x, y, z, rx, ry, rz) => put(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat), x, y, z, rx, ry, rz);
     const cylZ = (r, len, mat, x, y, z, seg = 24) => put(new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, seg).rotateX(Math.PI / 2), mat), x, y, z);
@@ -3031,19 +3045,6 @@ function getSharedCarKit(g, opacity, paintColor) {
 function buildCarDeltona(o) {
     const g = new THREE.Group();
 
-	// targa: sfondo chiaro, testo nero centrato (makeTargaTexture spezza il testo in 2 campi, qui serve una riga sola)
-    const PLATE = 'Rally 3170TR';
-    const plateTex = () => {
-        const c = document.createElement('canvas'); c.width = 600; c.height = 100;
-        const t = c.getContext('2d');
-        t.fillStyle = '#eeeeee'; t.fillRect(0, 0, 600, 100);
-        t.strokeStyle = '#000000'; t.lineWidth = 10; t.strokeRect(5, 5, 590, 90);
-        t.fillStyle = '#000000'; t.font = '900 70px monospace'; t.textAlign = 'center'; t.textBaseline = 'middle';
-        t.fillText(PLATE, 300, 54);
-        const tex = new THREE.CanvasTexture(c); tex.anisotropy = 4;
-        return tex;
-    };
-
     // ---------- quote (metri, z+ = muso, x+ = sinistra) ----------
     const WZ = 1.24, WX = 0.7575, WY = 0.305, WR = 0.305;   // ruote: passo 2.48, carreggiata 1.515, 205/50 R15
     const AR = 0.345, SILL = 0.19;                           // raggio passaruota, bordo basso fiancata
@@ -3073,7 +3074,7 @@ function buildCarDeltona(o) {
 
     // ---------- helper ----------
 	// solido a sezioni [z, yBasso, yAlto, semilarghezza]: sopra, sotto, fianchi e due tappi
-    const shell = (S, mat) => {
+    const shellOLD = (S, mat) => {
         const p = [];
         const q = (a, b, c, d) => p.push(...a, ...b, ...c, ...a, ...c, ...d);
         const TL = s => [-s[3], s[2], s[0]], TR = s => [s[3], s[2], s[0]];
@@ -3094,6 +3095,62 @@ function buildCarDeltona(o) {
         const m = new THREE.Mesh(geo, mat);
         g.add(m); return m;
     };
+	
+	const shell = (S, mat) => {
+		const pos = [];
+		const idx = [];
+
+		// Helper che crea una fascia continua con vertici condivisi (superficie liscia)
+		const addStrip = (getLeft, getRight) => {
+			const base = pos.length / 3;
+			for (let i = 0; i < S.length; i++) {
+				pos.push(...getLeft(S[i]), ...getRight(S[i]));
+			}
+			for (let i = 0; i < S.length - 1; i++) {
+				const a = base + i * 2;
+				const b = a + 1;
+				const c = a + 2;
+				const d = a + 3;
+				idx.push(a, b, d, a, d, c);
+			}
+		};
+
+		// Helper per i tappi piatti anteriori/posteriori (spigolo vivo)
+		const addCap = (a, b, c, d) => {
+			const base = pos.length / 3;
+			pos.push(...a, ...b, ...c, ...d);
+			idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
+		};
+
+		const TL = s => [-s[3], s[2], s[0]], TR = s => [s[3], s[2], s[0]];
+		const BL = s => [-s[3], s[1], s[0]], BR = s => [s[3], s[1], s[0]];
+
+		// 1. Fasce longitudinali con normali morbide (cofano/tetto, fondo, fiancate)
+		addStrip(TL, TR); // Superiore (cofano, parabrezza, tetto)
+		addStrip(BR, BL); // Inferiore (pianale)
+		addStrip(BL, TL); // Fiancata sinistra
+		addStrip(TR, BR); // Fiancata destra
+
+		// 2. Tappi anteriore e posteriore con spigolo netto
+		const f = S[0], l = S[S.length - 1];
+		addCap(TL(f), TR(f), BR(f), BL(f));
+		addCap(TR(l), TL(l), BL(l), BR(l));
+
+		const geo = new THREE.BufferGeometry();
+		geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+		geo.setIndex(idx);
+		geo.computeVertexNormals();
+
+		const m = new THREE.Mesh(geo, mat);
+		g.add(m);
+		return m;
+	};
+	
+	
+	
+	
+	
+	
 	// allarga un poligono radialmente di d metri
     const grow = (pts, d) => {
         const cz = pts.reduce((a, p) => a + p[0], 0) / pts.length, cy = pts.reduce((a, p) => a + p[1], 0) / pts.length;
@@ -3285,17 +3342,18 @@ function buildCarDeltona(o) {
         }
         box(0.355, 0.14, 0.02, black, s * 0.194, 0.61, 1.926);       // mezza calandra
         box(0.11, 0.05, 0.03, orange, s * 0.60, 0.45, 1.982);        // freccia / luce nel paraurti
+		box(0.08, 0.08, 0.03,  white, s * 0.55, 0.30, 1.985);        // fendinebbia nel paraurti
     }
     box(0.76, 0.17, 0.016, steel, 0, 0.61, 1.921);                   // cornice calandra
     cylZ(0.04, 0.02, steel, 0, 0.68, 1.93, 12);                      // stemma Lancia bordo
-	cylZ(0.03, 0.02,  blueLancia, 0, 0.68, 1.94, 12);                      // stemma Lancia centro
+	cylZ(0.03, 0.02,  blueLancia, 0, 0.68, 1.94, 12);                // stemma Lancia centro
     box(0.70, 0.12, 0.02, black, 0, 0.425, 1.994);                   // presa d'aria bassa
     for (let i = -2; i <= 2; i++) box(0.012, 0.12, 0.02, paint, i * 0.14, 0.425, 1.996);
     box(1.30, 0.12, 0.04, black, 0, 0.31, 1.975);                    // spoiler anteriore nero
     
 	//targa anteriore bassa
 	const fp = new THREE.Mesh(new THREE.PlaneGeometry(0.50, 0.12),
-        new THREE.MeshLambertMaterial({ map: plateTex(), side: THREE.DoubleSide }));
+        new THREE.MeshLambertMaterial({ map: makeTargaTexture('Rally 3170TR',true,false), side: THREE.DoubleSide }));
     fp.position.set(0, 0.40, 2.01); g.add(fp);
 
     // ---------- POSTERIORE ----------
@@ -3327,7 +3385,7 @@ function buildCarDeltona(o) {
 	
 	//targa posteriore alta
     const rp = new THREE.Mesh(new THREE.PlaneGeometry(0.54, 0.12),
-        new THREE.MeshLambertMaterial({ map: plateTex(), side: THREE.DoubleSide }));
+        new THREE.MeshLambertMaterial({ map: makeTargaTexture('Rally 3170TR',true,false), side: THREE.DoubleSide }));
     rp.rotation.y = Math.PI;
     rp.position.set(0, 0.755, -1.808); g.add(rp);
 	
@@ -3339,10 +3397,10 @@ function buildCarDeltona(o) {
 	cylZ(0.04, 0.02, steel, 0, 0.95, -1.750, 12, 0.75, 0, 0);        // stemma Lancia bordo inclinato circa 45'
 	cylZ(0.03, 0.02,  blueLancia, 0, 0.955, -1.753, 12, 0.75, 0, 0);       // stemma Lancia centro inclinato circa 45'
     
-    // ---------- RUOTE: gomma tassellata + cerchio in lega ----------
+    // ---------- RUOTE: gomma tassellata + cerchio in lega anche sulla deltona ----------
     const treadMat = getBattistradaMat();
     const sideMat = M(0x1b1b1b), rimMat = M(0xc4c8cc), rimIn = M(0x6b7075), capM = M(0x2a2a2a);
-    const TW = 0.245;                                                // larghezza pneumatico
+    const TW = 0.245;// larghezza pneumatico
 
     const wheels = [];
     [[-WX, WZ], [WX, WZ], [-WX, -WZ], [WX, -WZ]].forEach(([x, z]) => {
@@ -3370,7 +3428,11 @@ function buildCarDeltona(o) {
 
     // ---------- DATI E CONTROLLI ----------
     g.userData.wheels = wheels;
-    g.userData.dashW = 1.30;
+    g.userData.dashW = 1.55;
+	g.userData.dashL = 1.20;
+	g.userData.dashZ = 0.75;//plancia piu avanti (0.62) per deltona
+	g.userData.dashY = 0.78;//plancia piu in basso (0.88) per la deltona
+	g.userData.logoColor = blueLancia;
     g.userData.setGlassOpacity = v => { glass.opacity = v; };
     g.userData.setNumbersVisible = () => {};
 
@@ -3692,8 +3754,11 @@ function buildCarCentoventisette(o) {
     
 	// ---------- DATI E CONTROLLI ----------
     g.userData.wheels = wheels;
-    g.userData.dashW = 1.00;//127 e' stretta... e pure corta!
+    g.userData.dashW = 1.20;//127 e' stretta... e pure corta!
 	g.userData.dashL = 1.00;
+	g.userData.dashZ = 0.55;//plancia piu avanti (0.62) per la 127
+	g.userData.dashY = 0.78;//plancia piu in basso (0.88) per la 127
+	g.userData.logoColor = red;
     g.userData.setGlassOpacity = v => { glass.opacity = v; };
     g.userData.setNumbersVisible = () => {};
 
@@ -3957,48 +4022,58 @@ function buildCarTipozza(o) {
 	
 	
 
-
+	//tipozza ha i cerchioni fighi assai!
     // ---------- RUOTE: gomma tassellata + cerchi in lega bianchi a 4 fori ----------
-    const treadMat = getBattistradaMat();
-    const sideMat = M(0x1b1b1b);
+    const TW = 0.205;// larghezza pneumatico
+	const treadMat = getBattistradaMat();
+	const sideMat = M(0x1b1b1b);
     const rimMat = M(0xe9e9e9), hubDark = M(0x4a4a4a), holeM = M(0x1c1c1c);
-
-    const wheels = [];
+	const wheels = [];
     [[-WX, WZ], [WX, WZ], [-WX, -WZ], [WX, -WZ]].forEach(([x, z]) => {
         const steer = new THREE.Group(); steer.name = 'steer';
         steer.position.set(x, WY, z);
         const spin = new THREE.Group(); spin.name = 'spin';
-
-        // battistrada (cilindro aperto) + due fianchi ad anello
-        spin.add(new THREE.Mesh(new THREE.CylinderGeometry(WR, WR, 0.20, 28, 1, true).rotateZ(Math.PI / 2), treadMat));
-        for (const sg of [-1, 1]) {
-            const wall = new THREE.Mesh(new THREE.RingGeometry(0.19, WR, 28).rotateY(Math.PI / 2), sideMat);
-            wall.position.x = sg * 0.100; spin.add(wall);
+		
+		// battistrada (cilindro aperto) + due fianchi ad anello
+		spin.add(new THREE.Mesh(new THREE.CylinderGeometry(WR, WR, TW, 28, 1, true).rotateZ(Math.PI / 2), treadMat));
+		for (const sg of [-1, 1]) {
+            const wall = new THREE.Mesh(new THREE.RingGeometry(0.205, WR, 28).rotateY(Math.PI / 2), sideMat);
+            wall.position.x = sg * TW / 2; spin.add(wall);
         }
-        // cerchio bianco
-        spin.add(new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.20, 0.205, 28).rotateZ(Math.PI / 2), rimMat));
+		//cerchio bianco
+        spin.add(new THREE.Mesh(new THREE.CylinderGeometry(0.205, 0.205, TW - 0.03, 28).rotateZ(Math.PI / 2), rimMat));
         for (const sg of [-1, 1]) {
             const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.004, 6).rotateZ(Math.PI / 2), hubDark);
             hub.position.x = sg * 0.1055; spin.add(hub);
-            const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.012, 6).rotateZ(Math.PI / 2), steel);
+			const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.012, 6).rotateZ(Math.PI / 2), steel);
             cap.position.x = sg * 0.108; spin.add(cap);
+			
             for (let k = 0; k < 5; k++) {
                 const a = k * 2 * Math.PI / 5; //+ k * Math.PI / 2;
                 const hole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.004, 6).rotateZ(Math.PI / 2), holeM);//Math.PI / 2), holeM);
                 hole.position.set(sg * 0.1055, 0.14 * Math.cos(a), 0.14 * Math.sin(a)); spin.add(hole);
             }
         }
-
         steer.add(spin); g.add(steer);
         wheels.push({ front: z > 0 ? 1 : 0, steer, spin });
     });
+	
+
+	
+	
+	
+	
 
     // ---------- LIVREA TRICOLORE (cofano, tetto, portellone, fascia laterale) ----------
 	_genericCarLivery(g, paint, o, 1, { sideMin:.81, sideY:.65, sideSp:.0276, sideHw:.0116, topMinY:.72 });
     
 	// ---------- DATI E CONTROLLI ----------
     g.userData.wheels = wheels;
-    g.userData.dashW = 1.30;
+    g.userData.dashW = 1.40;
+	g.userData.dashL = 1.20;
+	g.userData.dashZ = 0.85;//plancia piu avanti (0.62) per la tipozza
+	g.userData.dashY = 0.88;//plancia piu in basso (0.88) per la tipozza
+	g.userData.logoColor = blueFiat;
     g.userData.setGlassOpacity = v => { glass.opacity = v; };
     g.userData.setNumbersVisible = () => {};
 
@@ -4235,6 +4310,7 @@ function buildCarPandina(o) {
 		}
 	}
 
+	//pandina 4x4 si arrampica
     // ---------- RUOTE: gomma tassellata + cerchio in lamiera grigia ----------
     const treadMat = getBattistradaMat();
     const sideMat = M(0x1b1b1b);
@@ -4264,7 +4340,11 @@ function buildCarPandina(o) {
     
 	// ---------- DATI E CONTROLLI ----------
     g.userData.wheels = wheels;
-    g.userData.dashW = 1.10;//pandina e' stretta
+    g.userData.dashW = 1.30;//pandina e' stretta
+	g.userData.dashL = 1.20;//
+	g.userData.dashZ = 0.70;//plancia piu avanti (0.62) per la pandina
+	g.userData.dashY = 0.94;//plancia piu in alto (0.88) per la pandina
+	g.userData.logoColor = blueFiat;
     g.userData.setGlassOpacity = v => { glass.opacity = v; };
     g.userData.setNumbersVisible = () => {};
 
@@ -4298,10 +4378,216 @@ function buildCarPandina(o) {
     return g;
 }
 
+function buildCarBianchina(o) { return buildCarBianchinaOLD(o);  }
+
+//autobianchi a112 abarth modificata imbruttita!
+//autobianchi a112 abarth (imbruttita) - dimensioni reali: 3.30 x 1.50 x 1.35 m, passo 2.10 m (nessuno scale)
+function buildCarBianchinaNEW(o) {
+    const g = new THREE.Group();
+
+    //helper + materiali
+    const {
+            M, B, MS, put, box, cylZ, cylX, prism, panel, archPtsFor, //funzioni helper
+            paint, //materiali MS
+            glass, //materiale speciale
+            black, plastic, steel, chrome, grey, dark, floorM, //materiali M
+            white, panna, orange, red, yellow, blueLancia, blueFiat, redTrim, brakeM, revM //materiali B
+    } = getSharedCarKit(g, o.glassOpacity, o.paint);
+    glass.polygonOffset = true; glass.polygonOffsetFactor = 1; glass.polygonOffsetUnits = 1;   // fix sfarfallio vetri
+
+    // ---------- quote (metri, z+ = muso, x+ = sinistra) ----------
+    const WZ = 1.05, WX = 0.64, WY = 0.285, WR = 0.285;   // ruote: passo 2.10, carreggiata 1.28
+    const AR = 0.33, SILL = 0.22;                          // raggio passaruota, bordo basso fiancata
+    const WALL = 0.695;                                    // asse delle fiancate (faccia esterna a 0.72, passaruota a 0.75 -> larghezza 1.50)
+    const BELT = 0.80, ROOF = 1.35;                        // cintura e tetto (altezza 1.35)
+    const ZF = 1.58, ZR = -1.58;                           // muso e coda (paraurti esclusi: lunghezza totale 3.30)
+    const archPts = archPtsFor(SILL, WY, AR);
+    const sphere = (rx, ry, rz, mat, x, y, z) => {
+        const m = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), mat);
+        m.scale.set(rx, ry, rz); return put(m, x, y, z);
+    };
+
+    // ---------- SCOCCA BASSA ----------
+    const bodyMeshes = [];
+    // fiancate sottili con passaruota (il centro dell'abitacolo resta vuoto per sedili e volante)
+    const SIDE = [[ZF, 0.30], [1.46, 0.30], ...archPts(WZ), ...archPts(-WZ), [-1.46, 0.30], [ZR, 0.30],
+                  [ZR, 0.82], [0.90, BELT], [1.50, 0.74], [ZF, 0.70]];
+    for (const s of [-1, 1]) bodyMeshes.push(prism(SIDE, 0.05, paint, s * WALL));
+    // cofano, muso e coda tra le fiancate
+    prism([[0.90, 0.62], [ZF, 0.62], [ZF, 0.70], [1.50, 0.74], [0.90, BELT]], 2 * WALL, paint);
+    prism([[1.30, 0.30], [ZF, 0.30], [ZF, 0.62], [1.30, 0.62]], 2 * WALL, paint);
+    prism([[-1.30, 0.30], [-1.50, 0.30], [ZR, 0.40], [ZR, 0.55], [-1.52, 0.78], [-1.42, 0.84], [-1.30, 0.84]], 2 * WALL, paint);
+    // pavimento abitacolo
+    box(1.30, 0.03, 2.40, floorM, 0, 0.30, -0.15);
+
+    // ---------- ABITACOLO E TETTO ----------
+    const TOPW = 0.98;             // larghezza tetto
+    const SB = 0.19;               // sbalzo: la base e' piu' larga altrimenti il sopra sembra una lavatrice
+    const x0 = TOPW / 2;
+    const ZWT = 0.35, ZWB = 0.90;      // parabrezza: alto / basso (45 gradi: lascia spazio alla plancia)
+    const ZB = -0.40;                  // montante centrale
+    const ZRT = -1.05, ZRB = -1.40;    // lunotto: alto / basso
+    box(TOPW, 0.05, ZWT - ZRT, paint, 0, ROOF - 0.029, (ZWT + ZRT) / 2);                  // tetto (faccia alta a 1.346)
+    box(TOPW * 0.70, 0.004, 0.50, black, 0, ROOF - 0.002, -0.10);                         // tetto apribile
+
+    for (const s of [-1, 1]) {
+        const xb = s * (x0 + SB + 0.01), xt = s * (x0 + 0.01), xi = s * (x0 - 0.04), xbi = s * (x0 - 0.04 + SB);
+        // montante A (laterale + frontale)
+        panel([[xb, BELT, ZWB - 0.05], [xt, ROOF, ZWT], [xt, ROOF, ZWT + 0.06], [xb, BELT, ZWB + 0.01]], paint);
+        panel([[xb, BELT, ZWB + 0.01], [xt, ROOF, ZWT + 0.06], [xi, ROOF, ZWT + 0.06], [xbi, BELT, ZWB + 0.01]], paint);
+        // montante centrale
+        panel([[xb, BELT, ZB + 0.05], [xt, ROOF, ZB + 0.05], [xt, ROOF, ZB - 0.05], [xb, BELT, ZB - 0.05]], paint);
+        // montante C (laterale + frontale)
+        panel([[xb, BELT, ZRB + 0.15], [xt, ROOF, ZRT], [xt, ROOF, ZRT - 0.06], [xb, BELT, ZRB - 0.02]], paint);
+        panel([[xb, BELT, ZRB - 0.02], [xt, ROOF, ZRT - 0.06], [xi, ROOF, ZRT - 0.06], [xbi, BELT, ZRB - 0.02]], paint);
+        // finestrini laterali
+        const gx = s * (x0 - 0.02), gb = s * (x0 - 0.02 + SB);
+        panel([[gx, ROOF, ZWT], [gx, ROOF, ZB], [gb, BELT, ZB], [gb, BELT, ZWB]], glass);
+        panel([[gx, ROOF, ZB], [gx, ROOF, ZRT], [gb, BELT, ZRB], [gb, BELT, ZB]], glass);
+    }
+    // parabrezza e lunotto
+    panel([[-x0, ROOF, ZWT], [x0, ROOF, ZWT], [x0 + SB, BELT, ZWB], [-x0 - SB, BELT, ZWB]], glass);
+    panel([[-x0, ROOF, ZRT], [x0, ROOF, ZRT], [x0 + SB, BELT, ZRB], [-x0 - SB, BELT, ZRB]], glass);
+
+    // ---------- FIANCATE: maniglie, frecce, fascioni, specchietti ----------
+    for (const s of [-1, 1]) {
+        box(0.025, 0.035, 0.13, chrome, s * 0.725, 0.68, ZB + 0.12);   // maniglia
+        box(0.0125, 0.039, 0.14, chrome, s * 0.7225, 0.55, 1.46);      // freccia laterale (cornice)
+        box(0.025, 0.035, 0.10, orange, s * 0.725, 0.55, 1.46);        // freccia laterale
+        box(0.03, 0.10, 1.40, steel, s * 0.735, 0.27, 0);              // fascione tra i passaruota
+        box(0.025, 0.10, 0.035, chrome, s * 0.72, 0.93, 0.75);         // zeppo specchietto
+        sphere(0.075, 0.056, 0.049, chrome, s * 0.77, 0.99, 0.75).name = 'mirror';   // calotta specchietto
+    }
+    // passaruota: tubo a filo della fiancata (arriva a 0.75)
+    for (const s of [-1, 1]) for (const zc of [WZ, -WZ]) {
+        const pts = [];
+        for (let i = 0; i <= 16; i++) {
+            const a = 0.02 + (Math.PI - 0.04) * i / 16;
+            pts.push(new THREE.Vector3(s * 0.72, WY + (AR + 0.01) * Math.sin(a), zc + (AR + 0.01) * Math.cos(a)));
+        }
+        g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, 0.03, 8, false), steel));
+    }
+
+    // ---------- FRONTALE ----------
+    // cornice + logo Abarth (cerchio diviso a 45': meta' gialla, meta' rossa)
+    box(0.80, 0.05, 0.025, chrome, 0, 0.68, 1.585);
+    cylZ(0.047, 0.025, chrome, 0, 0.68, 1.595, 16);
+    put(new THREE.Mesh(new THREE.CircleGeometry(0.040, 32, Math.PI / 4, Math.PI), B(0xffcc00)), 0, 0.68, 1.609);
+    put(new THREE.Mesh(new THREE.CircleGeometry(0.040, 32, Math.PI / 4 + Math.PI, Math.PI), B(0xdd1122)), 0, 0.68, 1.609);
+    // griglia nera con listelli
+    box(0.70, 0.22, 0.02, black, 0, 0.47, 1.585);
+    for (let i = 0; i < 4; i++) {
+        box(0.72, 0.012, 0.025, chrome, 0, 0.40 + i * 0.045, 1.59);
+        box(0.025, 0.22, 0.025, chrome, -0.36 + i * 0.24, 0.47, 1.59);
+    }
+    // presa d'aria sul cofano
+    box(0.30, 0.02, 0.20, black, 0, 0.775, 1.07);
+    box(0.34, 0.04, 0.24, chrome, 0, 0.80, 1.09);
+    // paraurti cromato
+    box(1.44, 0.10, 0.10, chrome, 0, 0.36, 1.60);
+    for (const s of [-1, 1]) {
+        // bombatura del cofano sopra i fari + gruppo ottico tondo
+        cylZ(0.14, 0.65, paint, s * 0.50, 0.66, 1.225);
+        cylZ(0.12, 0.25, chrome, s * 0.50, 0.66, 1.465);
+        sphere(0.095, 0.095, 0.025, white, s * 0.50, 0.66, 1.595);
+        if (o.spoilerEnabled) {                                   // doppio faro interno
+            cylZ(0.09, 0.25, chrome, s * 0.28, 0.64, 1.465);
+            sphere(0.065, 0.065, 0.025, white, s * 0.28, 0.64, 1.595);
+        }
+        box(0.124, 0.064, 0.025, black, s * 0.55, 0.47, 1.575);   // freccette ant
+        box(0.120, 0.060, 0.025, orange, s * 0.55, 0.47, 1.585);
+        box(0.07, 0.19, 0.11, black, s * 0.40, 0.38, 1.595);      // rostri paraurti
+    }
+    // targa anteriore
+    put(new THREE.Mesh(new THREE.PlaneGeometry(0.50, 0.12),
+        new THREE.MeshLambertMaterial({ map: makeTargaTexture('Roma 75823F', false), side: THREE.DoubleSide })), 0, 0.46, 1.625);
+
+    // ---------- POSTERIORE ----------
+    const FARO_BACK = -1.575, FARO_HEIGHT = 0.62;
+    box(1.44, 0.12, 0.10, chrome, 0, 0.36, -1.60);                // paraurti posteriore
+    box(0.46, 0.24, 0.05, chrome, 0, FARO_HEIGHT, FARO_BACK);     // porta targa
+    for (const s of [-1, 1]) {
+        box(0.42, 0.24, 0.06, chrome, s * 0.46, FARO_HEIGHT, FARO_BACK);          // alloggiamento fanali
+        box(0.22, 0.14, 0.05, brakeM, s * 0.46, FARO_HEIGHT + 0.03, FARO_BACK - 0.005);   // stop
+        box(0.06, 0.14, 0.05, orange, s * 0.60, FARO_HEIGHT + 0.03, FARO_BACK - 0.005);   // freccia
+        box(0.06, 0.14, 0.05, revM,   s * 0.32, FARO_HEIGHT + 0.03, FARO_BACK - 0.005);   // retromarcia
+        box(0.07, 0.16, 0.10, black, s * 0.40, 0.38, -1.60);                      // rostri
+        cylZ(0.05, 0.10, chrome, s * 0.45, 0.23, -1.59, 16);                      // doppio cannone
+    }
+    put(new THREE.Mesh(new THREE.PlaneGeometry(0.54, 0.13),
+        new THREE.MeshLambertMaterial({ map: makeTargaTexture('Roma 75823F', false), side: THREE.DoubleSide })), 0, FARO_HEIGHT, -1.605).rotation.y = Math.PI;
+    box(0.30, 0.025, 0.025, chrome, 0, 0.78, -1.53);              // maniglia portellone
+    cylZ(0.047, 0.025, chrome, 0, 0.78, -1.53, 16);               // logo Fiat (cerchio diviso a 45')
+    put(new THREE.Mesh(new THREE.CircleGeometry(0.040, 32, Math.PI / 4, Math.PI), B(0xffcc00)), 0, 0.78, -1.5435).rotation.y = Math.PI;
+    put(new THREE.Mesh(new THREE.CircleGeometry(0.040, 32, Math.PI / 4 + Math.PI, Math.PI), B(0xdd1122)), 0, 0.78, -1.5435).rotation.y = Math.PI;
+
+    // alettone (supporti + ala inclinata di ~22 gradi)
+    if (o.spoilerEnabled) {
+        for (const s of [-1, 1]) box(0.055, 0.22, 0.07, black, s * 0.40, 0.92, -1.50, -Math.PI / 12);
+        box(1.40, 0.025, 0.16, chrome, 0, 1.02, -1.56, Math.PI / 8);
+    }
+
+    // ---------- RUOTE ----------
+    const wheels = [];
+    [[-WX, WZ], [WX, WZ], [-WX, -WZ], [WX, -WZ]].forEach(([x, z]) => {
+        const steer = new THREE.Group(); steer.name = 'steer';
+        steer.position.set(x, WY, z);
+        const spin = new THREE.Group(); spin.name = 'spin';
+        const tire = new THREE.Mesh(new THREE.CylinderGeometry(WR, WR, 0.17, 32), plastic);
+        tire.rotation.z = Math.PI / 2; spin.add(tire);
+        const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.18, 32), panna);        // cerchio (fascia bianca)
+        rim.rotation.z = Math.PI / 2; spin.add(rim);
+        const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.07, 0.03, 32), chrome);        // borchia centrale
+        cap.position.x = x > 0 ? 0.095 : -0.095;
+        cap.rotation.z = x > 0 ? Math.PI / 2 : -Math.PI / 2; spin.add(cap);
+        steer.add(spin); g.add(steer);
+        wheels.push({ front: z > 0 ? 1 : 0, steer, spin });
+    });
+
+    // ---------- LIVREA TRICOLORE ----------
+    _genericCarLivery(g, paint, o, 1, { sideMin: .71, sideY: .70, sideSp: .0353, sideHw: .0147, topMinY: .95, topMaxX: .19, topSp: .12, topHw: .05, topZMin: -1.1 });
+
+    // ---------- DATI E CONTROLLI ----------
+    g.userData.wheels = wheels;
+    g.userData.dashW = 1.20; // abitacolo stretto (fiancate interne a ~0.67) bianchina new
+    g.userData.dashL = 0.90; // divano posteriore piu' avanti: il lunotto e' inclinato bianchina new
+	g.userData.dashZ = 0.50; // plancia piu indietro (0.62) bianchina new
+	g.userData.dashY = 0.85;//plancia piu in basso (0.88) bianchina new
+	g.userData.logoColor = red;
+    g.userData.setGlassOpacity = v => { glass.opacity = v; };
+    g.userData.setNumbersVisible = () => {};
+
+    //Numeri
+    if (o.numbersVisible) {
+        const plates = carAddNumbers(g, bodyMeshes, {
+            raceNumber: o.raceNumber,
+            numberStripe: o.numberStripe,
+            numbersVisible: o.numbersVisible,
+            numberSize: 0.40, numberY: 0.52, numberZ: 0.15
+        });
+        plates.forEach((p, i) => {
+            p.userData.noCast = true;
+            p.userData.decal = true;
+            p.userData.side = i === 0 ? 1 : -1;
+            p.position.x += p.userData.side * 0.012;
+            p.renderOrder = 2;
+            p.material.polygonOffset = true;
+            p.material.polygonOffsetFactor = -4;
+            p.material.polygonOffsetUnits = -4;
+        });
+        g.userData.setNumbersVisible = v => plates.forEach(p => p.visible = v);
+    }
+
+    g.userData.brakeMat = brakeM;
+    g.userData.revMat   = revM;
+
+    return g;   // nessuno scale: dimensioni reali 3.30 x 1.50 x 1.35 m, passo 2.10 m
+}
+
 
 
 //cinquino gpt modificata in a112 abarth imbruttita (TODO: rimuovere zoom K)
-function buildCarBianchina(o) {
+function buildCarBianchinaOLD(o) {
     const K = 1.26;
     const g = new THREE.Group();
 
@@ -5031,6 +5317,11 @@ const dirtU={uDirt:{value:0}, uDirtCol:{value:dirtCol}, uInv:{value:new THREE.Ma
 
 
 function patchDirtMat(m){
+
+  // Se questo materiale è già stato patchato per lo sporco, usciamo subito!
+  if (m.userData.isDirtPatched) return;
+  m.userData.isDirtPatched = true;
+
   const prevCompile = m.onBeforeCompile;//la salvo altrimenti sovrascrive le livery
   const prevKey = m.customProgramCacheKey;
   m.onBeforeCompile=sh=>{
@@ -5192,7 +5483,7 @@ function carAddNumbers(car, bodyMeshes, opts) {
 }
 
 
-function makeTargaTexture(text,inv=false) {
+function makeTargaTexture(text,inv=false,split=true) {
   const c = document.createElement('canvas');
   c.width = 600;
   c.height = 100; // targhe vecchie non hanno rapporto 2:1
@@ -5208,17 +5499,16 @@ function makeTargaTexture(text,inv=false) {
   g.strokeRect(6, 6, c.width - 12, c.height - 12);
   
   // Provincia scritto in arancione
-  console.log(text);
-  const arr = text.split(' ');
-  const prov = arr.length?arr[0]:'Roma';
-  const numb = arr.length>1?arr[1]:'12345F';
+  const arr = split ? text.split(' ') : null;
+  const prov = split ? (arr.length ? arr[0]:'Roma') : text;
+  const numb = split ? (arr.length > 1 ? arr[1] : '12345F') : '';
   
   //provincia
   g.fillStyle = inv ? '#000000' : '#ee8800';
   g.font = '900 85px monospace';
-  g.textAlign = 'left'; 
+  g.textAlign = split ? 'left' : 'center'; 
   g.textBaseline = 'middle';
-  g.fillText(String(prov), 50, 55);
+  g.fillText(String(prov), split ? 50 : 300, 55);
 
   //numeri
   g.fillStyle = inv ? '#000000' : '#ffffff';
@@ -5339,25 +5629,34 @@ function spawnCar(forceModel=-1){
 }
 
 //sedili, cruscotto, volante, etc...
-function buildInterior(parent,forceWidth=0){
+function buildInterior(parent){
   const IZ=-0.1;
   const IY=0;// se non combacia con la scocca, sposta questi due valori
   let steerWheel;
 
   const L = (parent.userData && parent.userData.dashL) || 1.20;
+  
+  // Posizioni configurabili dall'auto (con i relativi fallback)
+  const DASHZ = (parent.userData && parent.userData.dashZ) !== undefined ? parent.userData.dashZ : 0.82;
+  const DASHY = (parent.userData && parent.userData.dashY) !== undefined ? parent.userData.dashY : 0.88;
+  const DASH_DEPTH = 0.25; // Spessore ridotto della plancia lungo l'asse Z
 
   // larghezza utile dell'abitacolo, dichiarata dall'auto (Panda 1.20, altra auto 1.36)
-  const W = forceWidth || (parent.userData && parent.userData.dashW) || 1.36;
-  const SX = W/2 - 0.28;                          // x dei sedili: il fianchetto esterno resta a 2.5 cm dalla fiancata
-  const RW = W - 0.16;                            // divano posteriore: più stretto, per le ruote posteriori
+  const W = (parent.userData && parent.userData.dashW) || 1.56;
+  const SX = W/2 - 0.28;                        // x dei sedili: il fianchetto esterno resta a 2.5 cm dalla fiancata
+  const RW = W - 0.16;                          // divano posteriore: più stretto, per le ruote posteriori
   const TW = Math.min(0.22, 2*(SX-0.23) - 0.01);  // tunnel: non entra nei sedili se l'auto è stretta
 
   const M = c => new THREE.MeshBasicMaterial({ color: c });//no luce!
   const seatM=M(0x2a2d33);
   const bolM=M(0x3c4350);
   const dashM=M(0x15171c);
-  const rimM=M(0x0d0d0f);
-  const g=new THREE.Group();g.position.set(0,IY,IZ);
+  const rimM=M(0x0d0d0f);//volante
+  const rimR=M(0x333333);//razze
+  const steelM=M(0x888899);//logo bordo
+  const logoM=parent.userData && parent.userData.logoColor || M(0x112266);//logo centro
+  const g=new THREE.Group();
+  g.position.set(0,IY,IZ);
   const box=(w,h,d,m,x,y,z,rx)=>{
     const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);
     o.position.set(x,y,z);
@@ -5367,42 +5666,64 @@ function buildInterior(parent,forceWidth=0){
   };
 
   for(const x of[-SX,SX]){
-    box(.46,.12,.5,seatM, x,0.50,-.05);              // seduta
+    box(.46,.12,.5,seatM, x,0.50,-.05);             // seduta
     box(.46,.62,.12,seatM,x,0.84,-.36,-.18);       // schienale
-    box(.22,.2,.09,bolM,  x,1.18,-.41,-.18);        // poggiatesta
+    box(.22,.2,.09,bolM,  x,1.18,-.41,-.18);       // poggiatesta
     for(const s of[-1,1]) box(.07,.45,.2,bolM,x+s*.22,.82,-.3,-.18);   // fianchetti
   }
 
-  box(RW,.14,.5,seatM,0,.50,-L+0.25);                // divano posteriore
-  box(RW,.6,.12,seatM,0,.85,-L+0.00,-.12);           // divano posteriore
-  box(W,.22,.4,dashM,0,.88,.62);                  // plancia
-  box(TW,.25,.9,dashM,0,.55,.1);                  // tunnel centrale
+  box(RW,.14,.5,seatM,0,.50,-L+0.25);               // divano posteriore
+  box(RW,.6,.12,seatM,0,.85,-L+0.00,-.12);         // divano posteriore
+  
+  // 1. PLANCIA posizionata dinamicamente in DASHY e DASHZ
+  box(W, .22, DASH_DEPTH, dashM, 0, DASHY, DASHZ); 
+  
+  box(TW,.25,.9,dashM,0,.55,.1);                    // tunnel centrale
 
+  // 2. VOLANTE: posizionato agganciandosi a DASHY e DASHZ
+  const dashBackZ = DASHZ - (DASH_DEPTH / 2); 
+  const steerZ = dashBackZ - 0.15;            
+  const steerY = DASHY + 0.07;                // Il volante rimane proporzionato sopra l'altezza della plancia
+  
   const tilt=new THREE.Group();
-  tilt.position.set(SX,.98,.33);
-  tilt.rotation.x=.5;
+  tilt.position.set(SX, steerY, steerZ);
+  tilt.rotation.x = .5;
   g.add(tilt);
 
-  // volante
+  // volante (mesh geometriche)
   steerWheel=new THREE.Group();
   tilt.add(steerWheel);
-  steerWheel.add(new THREE.Mesh(new THREE.TorusGeometry(.17,.022,8,24),rimM));
+  steerWheel.add(new THREE.Mesh(new THREE.TorusGeometry(.16,.022,12,24),rimM));
 
   // striscia gialla a ore 12 sul volante
   const markM = M(0xffaa00);
   const markArc = 0.05;
-  const mark = new THREE.Mesh(new THREE.TorusGeometry(.17, .0235, 8, 4, markArc), markM);
+  const mark = new THREE.Mesh(new THREE.TorusGeometry(.16, .0235, 12, 8, markArc), markM);
   mark.rotation.z = Math.PI / 2 - markArc / 2;
   steerWheel.add(mark);
 
-  const sp1=new THREE.Mesh(new THREE.BoxGeometry(.3,.03,.02),rimM);
-  const sp2=new THREE.Mesh(new THREE.BoxGeometry(.03,.17,.02),rimM);
+  // razze
+  const sp1=new THREE.Mesh(new THREE.BoxGeometry(.3,.03,.02),rimR);
+  const sp2=new THREE.Mesh(new THREE.BoxGeometry(.03,.16,.02),rimR);
   sp2.position.y=-.09;
+  
+  // mozzo
   const hub=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,.03,10).rotateX(Math.PI/2),rimM);
-  steerWheel.add(sp1,sp2,hub);
+  
+  // logo
+  const logoOUT=new THREE.Mesh(new THREE.CylinderGeometry(.020,.020,.035,12).rotateX(Math.PI/2),steelM);
+  const logoIN=new THREE.Mesh(new THREE.CylinderGeometry(.016,.016,.040,12).rotateX(Math.PI/2),logoM);
+  
+  steerWheel.add(sp1,sp2,hub,logoOUT,logoIN);
 
-  const col=new THREE.Mesh(new THREE.CylinderGeometry(.03,.03,.35,8).rotateX(Math.PI/2),dashM);
-  col.position.set(SX,.92,.5);g.add(col);
+  // PIANTONE DELLO STERZO inclinato insieme al tilt, e' gran figlio di tilt!
+  const colLength = 0.25;
+  const col = new THREE.Mesh(
+    new THREE.CylinderGeometry(.03, .03, colLength, 8).rotateX(Math.PI/2), 
+    dashM
+  );
+  col.position.set(0, -0.03, colLength / 2);
+  tilt.add(col);
 
   parent.add(g);
   return steerWheel;
@@ -6320,8 +6641,6 @@ function emitWheels(dt){
  const speed=Math.abs(car.u);
  const slipR=Math.abs(car.v-1.3*car.r);
  const slipF=Math.abs(car.v+1.3*car.r);
- 
- console.log(slipR);
  
  for(let w=0;w<4;w++){
   //guadi
@@ -7825,6 +8144,19 @@ function frame(now){
  sky.rotation.y+=dt*0.003; // nuvole che scorrono lentissime
  
  updateWorld(dt);
+ 
+ 
+ /* 
+ // --- AGGIORNA I RIFLESSI DELLA CUBE CAMERA ---
+ if (hudTick%600 === 0 && model) {
+	model.visible = false;//nascondo l'auto -> scatto la foto -> ripristino modello
+    cubeCamera.position.copy(model.position);
+    cubeCamera.position.y += 0.6; // altezza cofano/abitacolo
+	cubeCamera.update(renderer, scene);
+	model.visible = true;
+ }
+ */
+ 
  renderer.render(scene,camera);
 }
 requestAnimationFrame(frame);
