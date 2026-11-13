@@ -2711,12 +2711,15 @@ function setCamMode(m){
   camMode=(camMode===m)?0:m;
   hoodBtn.classList.toggle('toggled-red',camMode===1);
   cockpitBtn.classList.toggle('toggled-red',camMode===2);
+  
+  camInside=(camMode===2);
+  
   camera.near=camMode===2?0.08:0.3;
   camera.updateProjectionMatrix();
   cam.zoom=1;cam.el=0;cam.yaw=0;
 }
-hoodBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();setCamMode(1); camInside = false;});
-cockpitBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();setCamMode(2); camInside = true;});
+hoodBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();setCamMode(1); });
+cockpitBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();setCamMode(2); });
 
 
 
@@ -2740,9 +2743,10 @@ const wheelMeshes=[];
 
 
 const CAR_SPECS={
+  bianchina:       {power: 40000, fmax:4000, mass: 650, drag:.85, tops:[30,45,60,75,90,115],  maxSpeed: 120,  maxRpm: 6000, startSkidSpeed: 0,  CAM_COCKPIT_X: 0.40, CAM_COCKPIT_Y: 1.30},
   centoventisette: {power: 70000, fmax:5500, mass: 840, drag:.85, tops:[40,70,90,120,140,160],  maxSpeed: 160,  maxRpm: 7000, startSkidSpeed: 0,  CAM_COCKPIT_X: 0.40, CAM_COCKPIT_Y: 1.45},
   pandina:         {power: 45000, fmax:4200, mass: 880, drag:.95, tops:[35,55,80,100,120,140],  maxSpeed: 160,  maxRpm: 6500, startSkidSpeed: 0,  CAM_COCKPIT_X: 0.45, CAM_COCKPIT_Y: 1.50},
-  bianchina:       {power: 80000, fmax:6500, mass: 780, drag:.85, tops:[45,70,95,125,150,170],  maxSpeed: 160,  maxRpm: 7000, startSkidSpeed: 0,  CAM_COCKPIT_X: 0.40, CAM_COCKPIT_Y: 1.30},
+  centododici:     {power: 80000, fmax:6500, mass: 780, drag:.85, tops:[45,70,95,125,150,170],  maxSpeed: 160,  maxRpm: 7000, startSkidSpeed: 0,  CAM_COCKPIT_X: 0.40, CAM_COCKPIT_Y: 1.30},
   tipozza:         {power:100000, fmax:7500, mass:1050, drag:.85, tops:[45,75,105,135,165,195], maxSpeed: 180,  maxRpm: 7000, startSkidSpeed: 0,  CAM_COCKPIT_X: 0.45, CAM_COCKPIT_Y: 1.30},
   deltona:         {power:150000, fmax:9000, mass:1300, drag:.80, tops:[55,85,115,145,180,215], maxSpeed: 200,  maxRpm: 9000, startSkidSpeed: 16, CAM_COCKPIT_X: 0.50, CAM_COCKPIT_Y: 1.25},
   evo:             {power:150000, fmax:9000, mass:1300, drag:.80, tops:[55,85,115,145,180,215], maxSpeed: 200,  maxRpm: 9000, startSkidSpeed: 16, CAM_COCKPIT_X: 0.50, CAM_COCKPIT_Y: 1.30}
@@ -2757,12 +2761,13 @@ function buildCarWrapper(o,forceModel){
   CURRENT_CAR_ID = forceModel===-1 ? Math.floor( Math.random() * Object.keys(CAR_SPECS).length ) : forceModel;
   let mod = null;
   switch(CURRENT_CAR_ID) {
-	case 0 : CURRENT_CAR_SPEC = CAR_SPECS['centoventisette']; mod = buildCarCentoventisette(o); break;
-	case 1 : CURRENT_CAR_SPEC = CAR_SPECS['pandina']; mod = buildCarPandina(o); break;
-	case 2 : CURRENT_CAR_SPEC = CAR_SPECS['bianchina']; mod = buildCarBianchina(o); break;
-	case 3 : CURRENT_CAR_SPEC = CAR_SPECS['tipozza']; mod = buildCarTipozza(o); break;
-	case 4 : CURRENT_CAR_SPEC = CAR_SPECS['deltona']; mod = buildCarDeltona(o); break;
-	case 5 : CURRENT_CAR_SPEC = CAR_SPECS['evo']; mod = buildCarEvo(o); break;
+	case 0 : CURRENT_CAR_SPEC = CAR_SPECS['bianchina']; mod = buildCarBianchina(o); break;
+	case 1 : CURRENT_CAR_SPEC = CAR_SPECS['centoventisette']; mod = buildCarCentoventisette(o); break;
+	case 2 : CURRENT_CAR_SPEC = CAR_SPECS['pandina']; mod = buildCarPandina(o); break;
+	case 3 : CURRENT_CAR_SPEC = CAR_SPECS['centododici']; mod = buildCarCentododici(o); break;
+	case 4 : CURRENT_CAR_SPEC = CAR_SPECS['tipozza']; mod = buildCarTipozza(o); break;
+	case 5 : CURRENT_CAR_SPEC = CAR_SPECS['deltona']; mod = buildCarDeltona(o); break;
+	case 6 : CURRENT_CAR_SPEC = CAR_SPECS['evo']; mod = buildCarEvo(o); break;
 	default: CURRENT_CAR_SPEC = CAR_SPECS['evo']; mod = buildCarEvo(o);
   }
   //aggiorna tachimetro
@@ -2960,6 +2965,8 @@ function getSharedCarKit(g, opacity, paintColor) {
     const M  = c => new THREE.MeshLambertMaterial({ color: c, side: THREE.DoubleSide, shadowSide: THREE.BackSide });
     const B  = c => new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide });
     const MS = c => new THREE.MeshStandardMaterial({ color: c, side: THREE.DoubleSide, shadowSide: THREE.BackSide, metalness: 0.30, roughness: 0.10 });
+	const E  = (c,e) => new THREE.MeshStandardMaterial({ color: c, emissive: e, emissiveIntensity: 0.0, side: THREE.DoubleSide });
+	
     const put = (m, x, y, z, rx = 0, ry = 0, rz = 0) => { m.position.set(x, y, z); m.rotation.set(rx, ry, rz); g.add(m); return m; };
     const box  = (w, h, d, mat, x, y, z, rx, ry, rz) => put(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat), x, y, z, rx, ry, rz);
     const cylZ = (r, len, mat, x, y, z, seg = 24) => put(new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, seg).rotateX(Math.PI / 2), mat), x, y, z);
@@ -2996,8 +3003,8 @@ function getSharedCarKit(g, opacity, paintColor) {
     };
 	
 	//colori
-	const paint      = MS(paintColor);
-	const black      = M(0x000000);
+	const paint      = MS(paintColor);//metallizzata
+	const black      = M(0x000000);//sono M
 	const plastic    = M(0x222222);
 	const steel      = M(0x888899);
 	const chrome     = M(0xaaaaaa);
@@ -3005,17 +3012,23 @@ function getSharedCarKit(g, opacity, paintColor) {
 	const dark       = M(0x333333);
 	const floorM     = M(0x111122);
 	
-    const white      = B(0xffffff);
+    const white      = B(0xffffff);//sono B 
 	const panna      = B(0xffffdd); 
-	const orange     = B(0xee6600); 
+	const orange     = B(0xff7700);
 	const red        = B(0xdd2222); 
 	const yellow     = B(0xffff00);
 	const blueLancia = B(0x112266);
 	const blueFiat   = B(0x2233cc);
-	const redTrim    = M(0xdd2222);		 //filetti rossi paraurti
 	
-    const brakeM     = B(0x330000);          // stop: spento
-    const revM       = B(0x666666);          // retromarcia: spenta
+	const redTrim    = M(0xdd2222);//filetti rossi paraurti - ocho e' M causa fango!
+	
+    const brakeM_OLD     = M(0xcc2d13);// stop: spento - ocho e' B, non e' M come la evo
+	const revM_OLD       = M(0x666666);// retromarcia: spenta - ocho e' B, non e' M come la evo
+	
+	const brakeM     = E(0xcc2d13,0xff0000);
+	const revM       = E(0x666666,0xffffff);
+	const headlightM = E(0xcccccc,0xffffff);
+	const blinkerM   = E(0xaa4400,0xff7700);
 	
 	
 	const glass = new THREE.MeshLambertMaterial({ color: 0x223333, transparent: true, opacity: opacity, side: THREE.DoubleSide });
@@ -3024,11 +3037,11 @@ function getSharedCarKit(g, opacity, paintColor) {
     glass.userData.noRecv = true;
     
     return { 
-		M, B, MS, put, box, cylZ, cylX, prism, panel, sidePolyFor, archPtsFor,//funzioni
+		M, B, MS, E, put, box, cylZ, cylX, prism, panel, sidePolyFor, archPtsFor,//funzioni
 		paint, //materiali MS
 		glass, //materiale speciale
 		black, plastic, steel, chrome, grey, dark, floorM, //materiali M
-		white, panna, orange, red, yellow, blueLancia, blueFiat, redTrim, brakeM, revM //materiali B
+		white, panna, orange, red, yellow, blueLancia, blueFiat, redTrim, brakeM, revM, headlightM, blinkerM //materiali B+Emissive
 	};
 }
 
@@ -3063,11 +3076,11 @@ function buildCarDeltona(o) {
 	
 	//helper + materiali
 	const { 
-			M, B, MS, box, cylZ, cylX, prism, panel, sidePolyFor, archPtsFor, //funzioni helper
-			paint, //materiali MS
-			glass, //materiale speciale
-			black, plastic, steel, chrome, grey, dark, floorM, //materiali M
-			white, panna, orange, red, yellow, blueLancia, blueFiat, redTrim, brakeM, revM //materiali B
+		M, B, MS, E, put, box, cylZ, cylX, prism, panel, sidePolyFor, archPtsFor,//funzioni
+		paint, //materiali MS
+		glass, //materiale speciale
+		black, plastic, steel, chrome, grey, dark, floorM, //materiali M
+		white, panna, orange, red, yellow, blueLancia, blueFiat, redTrim, brakeM, revM, headlightM, blinkerM //materiali B+Emissive
 	} = getSharedCarKit(g, o.glassOpacity, o.paint);
 	const sidePoly = sidePolyFor(sx), archPts = archPtsFor(SILL, WY, AR);
 	
@@ -3309,7 +3322,7 @@ function buildCarDeltona(o) {
         box(0.08, 0.03, 0.03, black, s * 0.86, 0.88, 0.57,   0, s * 0.5, 0);        // braccetto specchio
         box(0.15, 0.10, 0.08, paint, s * 0.905, 0.91, 0.53,  0, s * 0.5, 0);        // specchio
         box(0.13, 0.08, 0.01, steel, s * 0.885, 0.91, 0.485, 0, s * 0.5, 0);        // vetro specchio
-        box(0.02, 0.04, 0.08, orange, s * 0.862, 0.66, 0.88);        // freccia laterale
+        box(0.02, 0.04, 0.08, blinkerM, s * 0.862, 0.66, 0.88);        // freccia laterale
     }
     cylX(0.05, 0.012, dark, -0.862, 0.80, -1.518);                   // sportellino benzina (lato destro)
 
@@ -3332,17 +3345,17 @@ function buildCarDeltona(o) {
     for (const zz of [1.70, 1.75, 1.80]) slat(zz,0.80 + (1.80-zz)/2);	//in punta o quasi
     for (const s of [-1, 1]) box(0.50, 0.012, 0.02, black, s * 0.30, 0.98, 0.80);//tergi
 
-    // ---------- FRONTALE ----------
+    // ---------- FRONTALE deltona sembra 037 wowww----------
     // fari tondi: 2 per lato, dentro un alloggiamento nero
     for (const s of [-1, 1]) {
         box(0.30, 0.12, 0.02, black, s * 0.555, 0.617, 1.921);
         for (const x of [0.48, 0.63]) {
             cylZ(0.066, 0.02, steel, s * x, 0.617, 1.926);
-            cylZ(0.052, 0.02, panna, s * x, 0.617, 1.934);
+            cylZ(0.052, 0.02, headlightM, s * x, 0.617, 1.934);
         }
         box(0.355, 0.14, 0.02, black, s * 0.194, 0.61, 1.926);       // mezza calandra
-        box(0.11, 0.05, 0.03, orange, s * 0.60, 0.45, 1.982);        // freccia / luce nel paraurti
-		box(0.08, 0.08, 0.03,  white, s * 0.55, 0.30, 1.985);        // fendinebbia nel paraurti
+        box(0.11, 0.05, 0.03, blinkerM, s * 0.60, 0.45, 1.982);        // freccia / luce nel paraurti
+		box(0.08, 0.08, 0.03,  headlightM, s * 0.55, 0.30, 1.985);        // fendinebbia nel paraurti
     }
     box(0.76, 0.17, 0.016, steel, 0, 0.61, 1.921);                   // cornice calandra
     cylZ(0.04, 0.02, steel, 0, 0.68, 1.93, 12);                      // stemma Lancia bordo
@@ -3375,7 +3388,7 @@ function buildCarDeltona(o) {
 				[s * 0.605, 0.69, TZ - 0.008], 
 				[s * 0.61, 0.73, TZ - 0.008], 
 				[s * 0.75, 0.73, TZ - 0.008]], 
-				orange);
+				blinkerM);
 		box(0.085, 0.14, 0.01, black,  s * 0.33, 0.76, TZ - 0.007);     // retromarcia deve essere bordata di nero
 		box(0.065, 0.12, 0.02, revM,   s * 0.33, 0.76, TZ - 0.010);     // retromarcia deve essere centrale
 		
@@ -3392,10 +3405,10 @@ function buildCarDeltona(o) {
     box(0.14, 0.05, 0.02, black, 0, 0.635, -1.797);                  // maniglia portellone
     box(0.14, 0.07, 0.012, paint, 0, 0.32, -1.776);                  // gancio traino
 	
-	box(0.14, 0.05, 0.02, blueLancia, -0.45, 0.635, -1.797);                // integrale
-	box(0.12, 0.01, 0.02, yellow, -0.45, 0.635, -1.800);               // integrale
+	box(0.14, 0.05, 0.02, blueLancia, -0.45, 0.635, -1.797);         // integrale
+	box(0.12, 0.01, 0.02, yellow, -0.45, 0.635, -1.800);             // integrale
 	cylZ(0.04, 0.02, steel, 0, 0.95, -1.750, 12, 0.75, 0, 0);        // stemma Lancia bordo inclinato circa 45'
-	cylZ(0.03, 0.02,  blueLancia, 0, 0.955, -1.753, 12, 0.75, 0, 0);       // stemma Lancia centro inclinato circa 45'
+	cylZ(0.03, 0.02,  blueLancia, 0, 0.955, -1.753, 12, 0.75, 0, 0); // stemma Lancia centro inclinato circa 45'
     
     // ---------- RUOTE: gomma tassellata + cerchio in lega anche sulla deltona ----------
     const treadMat = getBattistradaMat();
@@ -3428,7 +3441,7 @@ function buildCarDeltona(o) {
 
     // ---------- DATI E CONTROLLI ----------
     g.userData.wheels = wheels;
-    g.userData.dashW = 1.55;
+    g.userData.dashW = 1.50;
 	g.userData.dashL = 1.20;
 	g.userData.dashZ = 0.75;//plancia piu avanti (0.62) per deltona
 	g.userData.dashY = 0.78;//plancia piu in basso (0.88) per la deltona
@@ -3458,6 +3471,8 @@ function buildCarDeltona(o) {
 
     g.userData.brakeMat = brakeM;
     g.userData.revMat   = revM;
+	g.userData.headlightMat = headlightM;
+	g.userData.blinkerMat = blinkerM;
 
     return g;   // nessuno scale: dimensioni reali, passo 2.48 m
 }
@@ -3493,11 +3508,11 @@ function buildCarCentoventisette(o) {
 
 	//helper + materiali
 	const { 
-			M, B, MS, box, cylZ, cylX, prism, panel, sidePolyFor, archPtsFor, //funzioni helper
-			paint, //materiali MS
-			glass, //materiale speciale
-			black, plastic, steel, chrome, grey, dark, floorM, //materiali M
-			white, panna, orange, red, yellow, blueLancia, blueFiat, redTrim, brakeM, revM //materiali B
+		M, B, MS, E, put, box, cylZ, cylX, prism, panel, sidePolyFor, archPtsFor,//funzioni
+		paint, //materiali MS
+		glass, //materiale speciale
+		black, plastic, steel, chrome, grey, dark, floorM, //materiali M
+		white, panna, orange, red, yellow, blueLancia, blueFiat, redTrim, brakeM, revM, headlightM, blinkerM //materiali B+Emissive
 	} = getSharedCarKit(g, o.glassOpacity, o.paint);
 	const sidePoly = sidePolyFor(sx), archPts = archPtsFor(SILL, WY, AR);
 
@@ -3564,17 +3579,17 @@ function buildCarCentoventisette(o) {
     panel([[-sx(RY1), RY1, RZ1], [sx(RY1), RY1, RZ1], [0.69, BELT, RZ2], [-0.69, BELT, RZ2]], paint);
     panel([[-0.69, BELT, RZ2], [0.69, BELT, RZ2], [0.69, TY, ZR], [-0.69, TY, ZR]], paint);
 
-    // ---------- PORTE E DETTAGLI LATERALI ----------
+    // ---------- PORTE E DETTAGLI LATERALI 127 ----------
     for (const s of [-1, 1]) {
         box(0.006, 0.57, 0.008, black, s * 0.731, 0.615, -0.32);    // taglio porta / montante B
         box(0.006, 0.58, 0.008, black, s * 0.731, 0.61, 0.695);     // taglio porta / parafango
         box(0.02, 0.05, 0.20, black, s * 0.745, 0.76, -0.20);       // maniglia NERA
 		box(0.02, 0.03, 0.10, steel, s * 0.750, 0.75, -0.20);       // maniglia steel
-        box(0.02, 0.04, 0.06, orange, s * 0.745, 0.75, 1.46);       // freccetta laterale
+        box(0.02, 0.04, 0.06, blinkerM, s * 0.745, 0.75, 1.46);       // freccetta laterale
 		
 		if (s === 1) {
 			box(0.08, 0.03, 0.03,   plastic, s * 0.695, 0.92, 0.57);    // braccetto zeppetto
-			box(0.14, 0.10, 0.04,   plastic, s * 0.755, 0.95, 0.55, 0, s*0.5, 0);    // corpo specchio, ora a ridosso della fiancata
+			box(0.14, 0.10, 0.04,   plastic, s * 0.765, 0.95, 0.55, 0, s*0.5, 0);    // corpo specchio, ora a ridosso della fiancata
 			box(0.12, 0.08, 0.01,   steel,   s * 0.755, 0.95, 0.53, 0, s*0.5, 0);    // vetro specchio (rivolto verso dietro)
 		}
     }
@@ -3614,8 +3629,8 @@ function buildCarCentoventisette(o) {
 		
 		
         box(0.28, 0.18, 0.03, steel,  s * 0.57, 0.695, ZF + 0.005);  // cornice faro rettangolare
-        box(0.22, 0.13, 0.03, white,  s * 0.57, 0.695, ZF + 0.012);  // lente rettangolare
-        box(0.19, 0.06, 0.03, orange, s * 0.58, 0.53, ZF + 0.005);  // freccetta sotto il faro
+        box(0.22, 0.13, 0.03, headlightM,  s * 0.57, 0.695, ZF + 0.012);  // lente rettangolare
+        box(0.19, 0.06, 0.03, blinkerM, s * 0.58, 0.53, ZF + 0.005);  // freccetta sotto il faro
     }
 
     // ---------- POSTERIORE ----------
@@ -3625,7 +3640,7 @@ function buildCarCentoventisette(o) {
         box(0.04, 0.12, 0.20, steel, s * 0.74, 0.40, ZR + 0.02);    // risvolto paraurti
 		box(0.33, 0.14, 0.03, black, s * 0.58, 0.60, ZR - 0.005);   // incasso fanale a 60cm da terra
         for (const dx of [-0.105, 0, 0.105])                        // fanale orizzontale a 3 settori
-			box(0.095, 0.10, 0.03, dx * s > 0 ? orange : s===1 && dx===-0.105 ? revM : brakeM, s * 0.58 + dx, 0.60, ZR - 0.012);//freccette
+			box(0.095, 0.10, 0.03, dx * s > 0 ? blinkerM : s===1 && dx===-0.105 ? revM : brakeM, s * 0.58 + dx, 0.60, ZR - 0.012);//freccette
 			
 		cylZ(0.04, 0.45, steel, s * 0.50, 0.25, -1.555, 12);        // scarico doppio sotto il paraurti
     }
@@ -3789,6 +3804,8 @@ function buildCarCentoventisette(o) {
 	
 	g.userData.brakeMat = brakeM;
 	g.userData.revMat   = revM;
+	g.userData.headlightMat = headlightM;
+	g.userData.blinkerMat = blinkerM;
 
     return g;
 }
@@ -3811,11 +3828,11 @@ function buildCarTipozza(o) {
 	
 	//helper + materiali
 	const { 
-			M, B, MS, box, cylZ, cylX, prism, panel, sidePolyFor, archPtsFor, //funzioni helper
-			paint, //materiali MS
-			glass, //materiale speciale
-			black, plastic, steel, chrome, grey, dark, floorM, //materiali M
-			white, panna, orange, red, yellow, blueLancia, blueFiat, redTrim, brakeM, revM //materiali B
+		M, B, MS, E, put, box, cylZ, cylX, prism, panel, sidePolyFor, archPtsFor,//funzioni
+		paint, //materiali MS
+		glass, //materiale speciale
+		black, plastic, steel, chrome, grey, dark, floorM, //materiali M
+		white, panna, orange, red, yellow, blueLancia, blueFiat, redTrim, brakeM, revM, headlightM, blinkerM //materiali B+Emissive
 	} = getSharedCarKit(g, o.glassOpacity, o.paint);
 	const sidePoly = sidePolyFor(sx), archPts = archPtsFor(SILL, WY, AR);
 	
@@ -3904,7 +3921,7 @@ function buildCarTipozza(o) {
     for (const x of [-0.28, 0.28]) box(0.50, 0.012, 0.02, black, x, 1.006, 0.83, 0.635);
     box(0.48, 0.012, 0.02, black, 0.26, 1.06, -1.76, -0.60);            // tergilunotto
 
-    // ---------- PORTE, SPECCHI, DETTAGLI LATERALI ----------
+    // ---------- PORTE, SPECCHI, DETTAGLI LATERALI tipo ----------
     for (const s of [-1, 1]) {
         box(0.006, 0.64, 0.008, black, s * 0.853, 0.62, 0.86);      // taglio parafango / porta
         box(0.006, 0.64, 0.008, black, s * 0.853, 0.62, -0.28);     // taglio porta anteriore / montante B
@@ -3912,13 +3929,13 @@ function buildCarTipozza(o) {
         
 		box(0.020, 0.04, 0.22, plastic,  s * 0.862, 0.82, -0.08);    // maniglia anteriore
         box(0.020, 0.04, 0.22, plastic,  s * 0.862, 0.85, -1.00);    // maniglia posteriore
-        box(0.020, 0.03, 0.06, orange,   s * 0.855, 0.65, 1.00);       // freccia laterale
+        box(0.020, 0.03, 0.06, blinkerM,   s * 0.855, 0.65, 1.00);       // freccia laterale
         box(0.020, 0.03, 0.04, blueFiat, s * 0.855, 0.65, 0.94);       // targhetta DGT
         
 		// specchio in tinta
-        box(0.08, 0.03, 0.03, black, s * 0.84, 1.0, 0.73);         // braccetto
-        box(0.16, 0.12, 0.11, paint, s * 0.91, 1.0, 0.71, 0, s*0.5, 0);        // corpo specchio
-        box(0.14, 0.10, 0.01, steel, s * 0.88, 1.0, 0.652,0, s*0.5, 0);        // vetro specchio
+        box(0.10, 0.03, 0.03, black, s * 0.84, 1.0, 0.73);         // braccetto
+        box(0.16, 0.12, 0.11, paint, s * 0.91, 1.0, 0.715, 0, s*0.5, 0);        // corpo specchio
+        box(0.14, 0.10, 0.01, steel, s * 0.88, 1.0, 0.660,0, s*0.5, 0);        // vetro specchio
     }
 
     // ---------- PARAURTI (neri, con filetto rosso fuori dalle facce del paraurti, spessore 1 cm)
@@ -3950,9 +3967,9 @@ function buildCarTipozza(o) {
 
     box(1.15, 0.07, 0.01, black, 0, 0.285, 2.003);                  // griglia bassa
     for (const s of [-1, 1]) {
-        box(0.10, 0.10, 0.012, white, s * 0.685, 0.285, 2.004);     // fendinebbia
+        box(0.10, 0.10, 0.012, headlightM, s * 0.685, 0.285, 2.004);     // fendinebbia
         // fari rettangolari avvolgenti
-        box(0.34, 0.175, 0.01, white,  s * 0.64,  0.64, 1.92);//faro
+        box(0.34, 0.175, 0.01, headlightM,  s * 0.64,  0.64, 1.92);//faro
         box(0.04, 0.175, 0.11, grey, s * 0.835, 0.64, 1.88);//freccia
         // feritoie nere nella mascherina in tinta
         box(0.34, 0.08, 0.01, black, s * 0.245, 0.63, 1.925);
@@ -3968,8 +3985,8 @@ function buildCarTipozza(o) {
         //box(0.24, 0.28, 0.16, plastic, s * 0.72,  0.75, -1.77);     // alloggiamento
         box(0.09, 0.26, 0.04, brakeM,  s * 0.685, 0.75, -1.84);     // stop lato verticale   (x 0.61–0.70)
 		box(0.14, 0.08, 0.04, brakeM,  s * 0.80,  0.84, -1.84);     // stop lato superiore   (y 0.80–0.88)//
-		box(0.14, 0.08, 0.04, grey,    s * 0.80,  0.75, -1.84);     // freccia               (y 0.71–0.79)//
-		box(0.14, 0.08, 0.04, revM,    s * 0.80,  0.66, -1.84);     // retro                 (y 0.62–0.70)//
+		box(0.14, 0.08, 0.04, grey,    s * 0.80,  0.76, -1.84);     // freccia               (y 0.72–0.80)//
+		box(0.14, 0.10, 0.04, revM,    s * 0.80,  0.67, -1.84);     // retro                 (y 0.62–0.70)//
 		box(0.05, 0.26, 0.10, brakeM,  s * 0.85,  0.75, -1.775);    // alloggiamento laterale
     }
 	
@@ -4099,6 +4116,8 @@ function buildCarTipozza(o) {
 
     g.userData.brakeMat = brakeM;
     g.userData.revMat   = revM;
+	g.userData.headlightMat = headlightM;
+	g.userData.blinkerMat = blinkerM;
 
     return g;   // nessuno scale: dimensioni reali, passo 2.60 m
 }
@@ -4120,11 +4139,11 @@ function buildCarPandina(o) {
 
 	//helper + materiali
 	const { 
-			M, B, MS, box, cylZ, cylX, prism, panel, sidePolyFor, archPtsFor, //funzioni helper
-			paint, //materiali MS
-			glass, //materiale speciale
-			black, plastic, steel, chrome, grey, dark, floorM, //materiali M
-			white, panna, orange, red, yellow, blueLancia, blueFiat, redTrim, brakeM, revM //materiali B
+		M, B, MS, E, put, box, cylZ, cylX, prism, panel, sidePolyFor, archPtsFor,//funzioni
+		paint, //materiali MS
+		glass, //materiale speciale
+		black, plastic, steel, chrome, grey, dark, floorM, //materiali M
+		white, panna, orange, red, yellow, blueLancia, blueFiat, redTrim, brakeM, revM, headlightM, blinkerM //materiali B+Emissive
 	} = getSharedCarKit(g, o.glassOpacity, o.paint);
 	const sidePoly = sidePolyFor(sx), archPts = archPtsFor(SILL, WY, AR);
 
@@ -4206,12 +4225,12 @@ function buildCarPandina(o) {
         box(0.006, 0.64, 0.008, black, s * 0.731, 0.745, -0.43);    // taglio porta / montante B
         box(0.006, 0.60, 0.008, black, s * 0.731, 0.74, 0.60);      // taglio porta / parafango
         box(0.02,  0.03, 0.10,  plastic, s * 0.74,  0.94, -0.33);   // maniglia
-        box(0.02,  0.03, 0.03,  orange,  s * 0.736, 0.80, 0.72);    // freccia laterale
+        box(0.02,  0.03, 0.03,  blinkerM,  s * 0.736, 0.80, 0.72);    // freccia laterale
 		box(0.02,  0.04, 0.08,  plastic, s * 0.736, 0.92, 0.63);    // copri cerniera plastica
 		box(0.02,  0.04, 0.08,  plastic, s * 0.736, 0.67, 0.63);    // copri cerniera plastica
-		box(0.08, 0.03, 0.03,   plastic, s * 0.695, 1.12, 0.57);    // braccetto zeppetto
-		box(0.14, 0.10, 0.04,   plastic, s * 0.755, 1.14, 0.55, 0, s*0.5, 0);    // corpo specchio, ora a ridosso della fiancata
-		box(0.12, 0.08, 0.01,   steel,   s * 0.755, 1.14, 0.53, 0, s*0.5, 0);    // vetro specchio (rivolto verso dietro)
+		box(0.08, 0.03, 0.03,   plastic, s * 0.700, 1.12, 0.57);    // braccetto zeppetto
+		box(0.14, 0.10, 0.04,   plastic, s * 0.765, 1.14, 0.55, 0, s*0.5, 0);    // corpo specchio, ora a ridosso della fiancata
+		box(0.12, 0.08, 0.01,   steel,   s * 0.760, 1.14, 0.53, 0, s*0.5, 0);    // vetro specchio (rivolto verso dietro)
     }
 	
 	// presa d'aria sul cofano, davanti al parabrezza
@@ -4258,10 +4277,10 @@ function buildCarPandina(o) {
     box(0.12, 0.02, 0.012, blueFiat, 0, 0.77, 1.626);
     for (const s of [-1, 1]) {
         box(0.28, 0.19, 0.03, steel, s * 0.54, 0.765, 1.595);       // cornice faro rettangolare
-		box(0.22, 0.13, 0.03, white, s * 0.54, 0.765, 1.607);       // lente rettangolare
-        box(0.03, 0.15, 0.03, orange, s * 0.70, 0.765, 1.595);      // freccia
+		box(0.22, 0.13, 0.03, headlightM, s * 0.54, 0.765, 1.607);       // lente rettangolare
+        box(0.03, 0.15, 0.03, blinkerM, s * 0.70, 0.765, 1.595);      // freccia
         cylZ(0.085, 0.02, steel, s * 0.20, 0.77, 1.608);            // fari supplementari nella griglia
-        cylZ(0.068, 0.03, white, s * 0.20, 0.77, 1.618);
+        cylZ(0.068, 0.03, headlightM, s * 0.20, 0.77, 1.618);
     }
 
     // ---------- POSTERIORE ----------
@@ -4276,7 +4295,7 @@ function buildCarPandina(o) {
         box(0.22, 0.32, 0.022, black, s * 0.62, 0.30, -1.50);        // paraspruzzi rivolto verso dietro 
         // fanale alto e stretto: rosso, arancio, retromarcia
 		box(0.11, 0.09, 0.04, brakeM,    s * 0.62, 0.895, -1.60);   // 0.85 - 0.94
-		box(0.11, 0.06, 0.04, orange, s * 0.62, 0.81,  -1.60);   // 0.78 - 0.84
+		box(0.11, 0.06, 0.04, blinkerM, s * 0.62, 0.81,  -1.60);   // 0.78 - 0.84
 		box(0.11, 0.05, 0.04, s===1 ? revM : brakeM,  s * 0.62, 0.745, -1.60);   // 0.72 - 0.77
 		box(0.13, 0.26, 0.02, black,  s * 0.62, 0.83,  -1.585);  // incasso fanale
     }
@@ -4374,186 +4393,194 @@ function buildCarPandina(o) {
 	
 	g.userData.brakeMat = brakeM;
 	g.userData.revMat   = revM;
+	g.userData.headlightMat = headlightM;
+	g.userData.blinkerMat = blinkerM;
 
     return g;
 }
 
-function buildCarBianchina(o) { return buildCarBianchinaOLD(o);  }
 
-//autobianchi a112 abarth modificata imbruttita!
 //autobianchi a112 abarth (imbruttita) - dimensioni reali: 3.30 x 1.50 x 1.35 m, passo 2.10 m (nessuno scale)
-function buildCarBianchinaNEW(o) {
+//profilo ripreso dalla versione originale (fiancate/cofano/coda con smusso) e riportato in metri reali
+function buildCarBianchina(o) {
     const g = new THREE.Group();
 
     //helper + materiali
-    const {
-            M, B, MS, put, box, cylZ, cylX, prism, panel, archPtsFor, //funzioni helper
-            paint, //materiali MS
-            glass, //materiale speciale
-            black, plastic, steel, chrome, grey, dark, floorM, //materiali M
-            white, panna, orange, red, yellow, blueLancia, blueFiat, redTrim, brakeM, revM //materiali B
-    } = getSharedCarKit(g, o.glassOpacity, o.paint);
+    const { 
+		M, B, MS, E, put, box, cylZ, cylX, prism, panel, sidePolyFor, archPtsFor,//funzioni
+		paint, //materiali MS
+		glass, //materiale speciale
+		black, plastic, steel, chrome, grey, dark, floorM, //materiali M
+		white, panna, orange, red, yellow, blueLancia, blueFiat, redTrim, brakeM, revM, headlightM, blinkerM //materiali B+Emissive
+	} = getSharedCarKit(g, o.glassOpacity, o.paint);
     glass.polygonOffset = true; glass.polygonOffsetFactor = 1; glass.polygonOffsetUnits = 1;   // fix sfarfallio vetri
 
-    // ---------- quote (metri, z+ = muso, x+ = sinistra) ----------
-    const WZ = 1.05, WX = 0.64, WY = 0.285, WR = 0.285;   // ruote: passo 2.10, carreggiata 1.28
-    const AR = 0.33, SILL = 0.22;                          // raggio passaruota, bordo basso fiancata
-    const WALL = 0.695;                                    // asse delle fiancate (faccia esterna a 0.72, passaruota a 0.75 -> larghezza 1.50)
-    const BELT = 0.80, ROOF = 1.35;                        // cintura e tetto (altezza 1.35)
-    const ZF = 1.58, ZR = -1.58;                           // muso e coda (paraurti esclusi: lunghezza totale 3.30)
-    const archPts = archPtsFor(SILL, WY, AR);
+    // ---------- helper locali (il kit non ha smussi, coni e sfere) ----------
     const sphere = (rx, ry, rz, mat, x, y, z) => {
         const m = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), mat);
         m.scale.set(rx, ry, rz); return put(m, x, y, z);
     };
+    const coneZ = (rFront, rBack, len, mat, x, y, z, seg = 24) =>
+        put(new THREE.Mesh(new THREE.CylinderGeometry(rFront, rBack, len, seg).rotateX(Math.PI / 2), mat), x, y, z);
+    // estrusione lungo X di un profilo [z,y] con spigoli arrotondati (lo smusso allarga il profilo di "bevel")
+    const profile = (pts, depth, mat, bevel, cx = 0) => {
+        const sh = new THREE.Shape();
+        pts.forEach((p, i) => i ? sh.lineTo(p[0], p[1]) : sh.moveTo(p[0], p[1]));
+        sh.closePath();
+        const geo = new THREE.ExtrudeGeometry(sh, { depth, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 3, curveSegments: 12, steps: 1 });
+        geo.rotateY(-Math.PI / 2);
+        geo.translate(depth * 0.5 + cx, 0, 0);
+        const m = new THREE.Mesh(geo, mat);
+        g.add(m); return m;
+    };
+
+    // ---------- quote (metri, z+ = muso, x+ = sinistra) ----------
+    const WZ = 1.05, WX = 0.654, WY = 0.28, WR = 0.28;   // ruote: passo 2.10, carreggiata 1.31
+    const Y0 = 0.794, Y1 = 1.35;                    // cintura (vetri) e tetto: altezza 1.35
 
     // ---------- SCOCCA BASSA ----------
     const bodyMeshes = [];
-    // fiancate sottili con passaruota (il centro dell'abitacolo resta vuoto per sedili e volante)
-    const SIDE = [[ZF, 0.30], [1.46, 0.30], ...archPts(WZ), ...archPts(-WZ), [-1.46, 0.30], [ZR, 0.30],
-                  [ZR, 0.82], [0.90, BELT], [1.50, 0.74], [ZF, 0.70]];
-    for (const s of [-1, 1]) bodyMeshes.push(prism(SIDE, 0.05, paint, s * WALL));
-    // cofano, muso e coda tra le fiancate
-    prism([[0.90, 0.62], [ZF, 0.62], [ZF, 0.70], [1.50, 0.74], [0.90, BELT]], 2 * WALL, paint);
-    prism([[1.30, 0.30], [ZF, 0.30], [ZF, 0.62], [1.30, 0.62]], 2 * WALL, paint);
-    prism([[-1.30, 0.30], [-1.50, 0.30], [ZR, 0.40], [ZR, 0.55], [-1.52, 0.78], [-1.42, 0.84], [-1.30, 0.84]], 2 * WALL, paint);
+    // fiancate sottili (smusso .03) con passaruota; muso e coda sono blocchi a tutta larghezza (smusso .045)
+    const SIDE = [[-1.334, 0.805], [0.639, 0.805], [0.639, 0.244], [0, 0.244], [-0.639, 0.244],
+                  [-0.753, 0.508], [-1.05, 0.635], [-1.334, 0.508]];
+    const FRONT = [[0.639, 0.244], [0.753, 0.508], [1.05, 0.635], [1.304, 0.508], [1.401, 0.244],
+                   [1.45, 0.339], [1.538, 0.762], [1.518, 0.805], [1.372, 0.805], [0.639, 0.805]];
+    const REAR  = [[-1.334, 0.508], [-1.443, 0.244], [-1.497, 0.265], [-1.552, 0.36], [-1.552, 0.455],
+                   [-1.465, 0.741], [-1.41, 0.805], [-1.334, 0.805]];
+    for (const s of [-1, 1]) bodyMeshes.push(profile(SIDE, 0.02, paint, 0.03, s * 0.669));
+    profile(FRONT, 1.319, paint, 0.045);
+    profile(REAR,  1.319, paint, 0.045);
     // pavimento abitacolo
-    box(1.30, 0.03, 2.40, floorM, 0, 0.30, -0.15);
+    box(1.309, 0.03, 1.986, floorM, 0, 0.328, -0.354);
 
     // ---------- ABITACOLO E TETTO ----------
-    const TOPW = 0.98;             // larghezza tetto
-    const SB = 0.19;               // sbalzo: la base e' piu' larga altrimenti il sopra sembra una lavatrice
-    const x0 = TOPW / 2;
-    const ZWT = 0.35, ZWB = 0.90;      // parabrezza: alto / basso (45 gradi: lascia spazio alla plancia)
-    const ZB = -0.40;                  // montante centrale
-    const ZRT = -1.05, ZRB = -1.40;    // lunotto: alto / basso
-    box(TOPW, 0.05, ZWT - ZRT, paint, 0, ROOF - 0.029, (ZWT + ZRT) / 2);                  // tetto (faccia alta a 1.346)
-    box(TOPW * 0.70, 0.004, 0.50, black, 0, ROOF - 0.002, -0.10);                         // tetto apribile
+    const XT = 0.463, XB = 0.664, XI = 0.413, XBI = 0.614;   // montanti: alto / basso / interno alto / interno basso
+    const XW = 0.453, XWB = 0.654, XG = 0.433, XGB = 0.634;  // parabrezza e finestrini: alto / basso
+    box(0.906, 0.05, 0.422 - -1.17, paint, 0, Y1 - 0.027, (0.422 + -1.17) / 2);   // tetto (faccia alta a 1.348)
+    put(new THREE.Mesh(new THREE.PlaneGeometry(0.634, 0.559).rotateX(-Math.PI / 2), black), 0, Y1, -0.114);   // tetto apribile (piano a 2 mm sopra il tetto)
 
     for (const s of [-1, 1]) {
-        const xb = s * (x0 + SB + 0.01), xt = s * (x0 + 0.01), xi = s * (x0 - 0.04), xbi = s * (x0 - 0.04 + SB);
         // montante A (laterale + frontale)
-        panel([[xb, BELT, ZWB - 0.05], [xt, ROOF, ZWT], [xt, ROOF, ZWT + 0.06], [xb, BELT, ZWB + 0.01]], paint);
-        panel([[xb, BELT, ZWB + 0.01], [xt, ROOF, ZWT + 0.06], [xi, ROOF, ZWT + 0.06], [xbi, BELT, ZWB + 0.01]], paint);
+        panel([[s * XB, Y0, 0.628], [s * XT, Y1, 0.342], [s * XT, Y1, 0.399], [s * XB, Y0, 0.799]], paint);
+        panel([[s * XB, Y0, 0.799], [s * XT, Y1, 0.399], [s * XI, Y1, 0.399], [s * XBI, Y0, 0.799]], paint);
         // montante centrale
-        panel([[xb, BELT, ZB + 0.05], [xt, ROOF, ZB + 0.05], [xt, ROOF, ZB - 0.05], [xb, BELT, ZB - 0.05]], paint);
+        panel([[s * XB, Y0, -0.399], [s * XT, Y1, -0.399], [s * XT, Y1, -0.514], [s * XB, Y0, -0.514]], paint);
         // montante C (laterale + frontale)
-        panel([[xb, BELT, ZRB + 0.15], [xt, ROOF, ZRT], [xt, ROOF, ZRT - 0.06], [xb, BELT, ZRB - 0.02]], paint);
-        panel([[xb, BELT, ZRB - 0.02], [xt, ROOF, ZRT - 0.06], [xi, ROOF, ZRT - 0.06], [xbi, BELT, ZRB - 0.02]], paint);
+        panel([[s * XB, Y0, -1.279], [s * XT, Y1, -1.083], [s * XT, Y1, -1.137], [s * XB, Y0, -1.443]], paint);
+        panel([[s * XB, Y0, -1.443], [s * XT, Y1, -1.137], [s * XI, Y1, -1.137], [s * XBI, Y0, -1.443]], paint);
         // finestrini laterali
-        const gx = s * (x0 - 0.02), gb = s * (x0 - 0.02 + SB);
-        panel([[gx, ROOF, ZWT], [gx, ROOF, ZB], [gb, BELT, ZB], [gb, BELT, ZWB]], glass);
-        panel([[gx, ROOF, ZB], [gx, ROOF, ZRT], [gb, BELT, ZRB], [gb, BELT, ZB]], glass);
+        panel([[s * XG, Y1, 0.342], [s * XG, Y1, -0.457], [s * XGB, Y0, -0.457], [s * XGB, Y0, 0.799]], glass);
+        panel([[s * XG, Y1, -0.457], [s * XG, Y1, -1.083], [s * XGB, Y0, -1.41], [s * XGB, Y0, -0.457]], glass);
     }
     // parabrezza e lunotto
-    panel([[-x0, ROOF, ZWT], [x0, ROOF, ZWT], [x0 + SB, BELT, ZWB], [-x0 - SB, BELT, ZWB]], glass);
-    panel([[-x0, ROOF, ZRT], [x0, ROOF, ZRT], [x0 + SB, BELT, ZRB], [-x0 - SB, BELT, ZRB]], glass);
+    panel([[-XW, Y1, 0.342], [XW, Y1, 0.342], [XWB, Y0, 0.799], [-XWB, Y0, 0.799]], glass);
+    panel([[-XW, Y1, -1.083], [XW, Y1, -1.083], [XWB, Y0, -1.41], [-XWB, Y0, -1.41]], glass);
 
     // ---------- FIANCATE: maniglie, frecce, fascioni, specchietti ----------
     for (const s of [-1, 1]) {
-        box(0.025, 0.035, 0.13, chrome, s * 0.725, 0.68, ZB + 0.12);   // maniglia
-        box(0.0125, 0.039, 0.14, chrome, s * 0.7225, 0.55, 1.46);      // freccia laterale (cornice)
-        box(0.025, 0.035, 0.10, orange, s * 0.725, 0.55, 1.46);        // freccia laterale
-        box(0.03, 0.10, 1.40, steel, s * 0.735, 0.27, 0);              // fascione tra i passaruota
-        box(0.025, 0.10, 0.035, chrome, s * 0.72, 0.93, 0.75);         // zeppo specchietto
-        sphere(0.075, 0.056, 0.049, chrome, s * 0.77, 0.99, 0.75).name = 'mirror';   // calotta specchietto
+        box(0.025, 0.037, 0.148, steel, s * 0.73, 0.72, -0.32);      // maniglia
+        box(0.0125, 0.041, 0.137, steel, s * 0.717, 0.614, 1.323);     // freccia laterale (cornice)
+        box(0.025, 0.037, 0.098, blinkerM, s * 0.73, 0.614, 1.323);      // freccia laterale
+        box(0.05, 0.116, 1.427, steel, s * 0.725, 0.286, 0);               // fascione tra i passaruota
+        box(0.025, 0.106, 0.035, steel, s * 0.654, 0.9, 0.651);              // zeppo specchietto
+        sphere(0.065, 0.052, 0.048, steel, s * 0.705, 0.953, 0.651).name = 'mirror';   // calotta specchietto
     }
-    // passaruota: tubo a filo della fiancata (arriva a 0.75)
+    // passaruota: tubo che arriva a 0.75 (larghezza 1.50)
     for (const s of [-1, 1]) for (const zc of [WZ, -WZ]) {
         const pts = [];
         for (let i = 0; i <= 16; i++) {
-            const a = 0.02 + (Math.PI - 0.04) * i / 16;
-            pts.push(new THREE.Vector3(s * 0.72, WY + (AR + 0.01) * Math.sin(a), zc + (AR + 0.01) * Math.cos(a)));
+            const a = -0.18 + (Math.PI + 0.36) * i / 16;
+            pts.push(new THREE.Vector3(s * 0.705, WY + 0.318 * Math.sin(a), zc + 0.293 * Math.cos(a)));
         }
-        g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, 0.03, 8, false), steel));
+        g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, 0.046, 8, false), steel));
     }
 
     // ---------- FRONTALE ----------
     // cornice + logo Abarth (cerchio diviso a 45': meta' gialla, meta' rossa)
-    box(0.80, 0.05, 0.025, chrome, 0, 0.68, 1.585);
-    cylZ(0.047, 0.025, chrome, 0, 0.68, 1.595, 16);
-    put(new THREE.Mesh(new THREE.CircleGeometry(0.040, 32, Math.PI / 4, Math.PI), B(0xffcc00)), 0, 0.68, 1.609);
-    put(new THREE.Mesh(new THREE.CircleGeometry(0.040, 32, Math.PI / 4 + Math.PI, Math.PI), B(0xdd1122)), 0, 0.68, 1.609);
+    box(0.836, 0.053, 0.025, steel, 0, 0.72, 1.567);
+    cylZ(0.048, 0.025, steel, 0, 0.72, 1.587, 16);
+    put(new THREE.Mesh(new THREE.CircleGeometry(0.041, 32, Math.PI / 4, Math.PI), B(0xffcc00)), 0, 0.72, 1.6 + 0.002);
+    put(new THREE.Mesh(new THREE.CircleGeometry(0.041, 32, Math.PI / 4 + Math.PI, Math.PI), B(0xdd1122)), 0, 0.72, 1.6 + 0.002);
     // griglia nera con listelli
-    box(0.70, 0.22, 0.02, black, 0, 0.47, 1.585);
+    box(0.705, 0.233, 0.02, black, 0, 0.582, 1.572);
     for (let i = 0; i < 4; i++) {
-        box(0.72, 0.012, 0.025, chrome, 0, 0.40 + i * 0.045, 1.59);
-        box(0.025, 0.22, 0.025, chrome, -0.36 + i * 0.24, 0.47, 1.59);
+        box(0.725, 0.013, 0.025, steel, 0, 0.508 + i * 0.048, 1.577);
+        box(0.025, 0.222, 0.025, steel, -0.362 + i * 0.242, 0.582, 1.577);
     }
     // presa d'aria sul cofano
-    box(0.30, 0.02, 0.20, black, 0, 0.775, 1.07);
-    box(0.34, 0.04, 0.24, chrome, 0, 0.80, 1.09);
-    // paraurti cromato
-    box(1.44, 0.10, 0.10, chrome, 0, 0.36, 1.60);
+    box(0.302, 0.02, 0.195, black, 0, 0.868, 1.05);
+    box(0.342, 0.04, 0.234, steel, 0, 0.901, 1.07);
+    // paraurti
+    box(1.309, 0.106, 0.093, steel, 0, 0.381, 1.557);
     for (const s of [-1, 1]) {
-        // bombatura del cofano sopra i fari + gruppo ottico tondo
-        cylZ(0.14, 0.65, paint, s * 0.50, 0.66, 1.225);
-        cylZ(0.12, 0.25, chrome, s * 0.50, 0.66, 1.465);
-        sphere(0.095, 0.095, 0.025, white, s * 0.50, 0.66, 1.595);
+        // bombatura del cofano sopra i fari (conica, piu' larga davanti) + gruppo ottico tondo
+        coneZ(0.155, 0.124, 0.8, paint, s * 0.523, 0.72, 1.187);
+        cylZ(0.124, 0.249, steel, s * 0.523, 0.72, 1.479);
+        sphere(0.096, 0.101, 0.024, headlightM, s * 0.523, 0.72, 1.596);
         if (o.spoilerEnabled) {                                   // doppio faro interno
-            cylZ(0.09, 0.25, chrome, s * 0.28, 0.64, 1.465);
-            sphere(0.065, 0.065, 0.025, white, s * 0.28, 0.64, 1.595);
+            cylZ(0.093, 0.249, steel, s * 0.302, 0.699, 1.479);
+            sphere(0.065, 0.069, 0.024, headlightM, s * 0.302, 0.699, 1.596);
         }
-        box(0.124, 0.064, 0.025, black, s * 0.55, 0.47, 1.575);   // freccette ant
-        box(0.120, 0.060, 0.025, orange, s * 0.55, 0.47, 1.585);
-        box(0.07, 0.19, 0.11, black, s * 0.40, 0.38, 1.595);      // rostri paraurti
+        box(0.125, 0.068, 0.025, black, s * 0.554, 0.487, 1.538);    // freccette ant
+        box(0.121, 0.064, 0.025, blinkerM, s * 0.554, 0.487, 1.548);
+        box(0.07, 0.201, 0.107, black, s * 0.403, 0.408, 1.596);  // rostri paraurti
     }
     // targa anteriore
     put(new THREE.Mesh(new THREE.PlaneGeometry(0.50, 0.12),
-        new THREE.MeshLambertMaterial({ map: makeTargaTexture('Roma 75823F', false), side: THREE.DoubleSide })), 0, 0.46, 1.625);
+        new THREE.MeshLambertMaterial({ map: makeTargaTexture('Roma 75823F', false), side: THREE.DoubleSide })), 0, 0.386, 1.606 + 0.001);
 
     // ---------- POSTERIORE ----------
-    const FARO_BACK = -1.575, FARO_HEIGHT = 0.62;
-    box(1.44, 0.12, 0.10, chrome, 0, 0.36, -1.60);                // paraurti posteriore
-    box(0.46, 0.24, 0.05, chrome, 0, FARO_HEIGHT, FARO_BACK);     // porta targa
+    box(1.309, 0.127, 0.109, steel, 0, 0.381, -1.574);                       // paraurti
+    box(0.483, 0.254, 0.055, steel, 0, 0.551, -1.563);                        // porta targa
     for (const s of [-1, 1]) {
-        box(0.42, 0.24, 0.06, chrome, s * 0.46, FARO_HEIGHT, FARO_BACK);          // alloggiamento fanali
-        box(0.22, 0.14, 0.05, brakeM, s * 0.46, FARO_HEIGHT + 0.03, FARO_BACK - 0.005);   // stop
-        box(0.06, 0.14, 0.05, orange, s * 0.60, FARO_HEIGHT + 0.03, FARO_BACK - 0.005);   // freccia
-        box(0.06, 0.14, 0.05, revM,   s * 0.32, FARO_HEIGHT + 0.03, FARO_BACK - 0.005);   // retromarcia
-        box(0.07, 0.16, 0.10, black, s * 0.40, 0.38, -1.60);                      // rostri
-        cylZ(0.05, 0.10, chrome, s * 0.45, 0.23, -1.59, 16);                      // doppio cannone
+        box(0.423, 0.254, 0.082, steel, s * 0.453, 0.551, -1.552);         // alloggiamento fanali
+        box(0.242, 0.148, 0.065, brakeM, s * 0.453, 0.582, -1.563 - 0.008);         // stop
+        box(0.06, 0.148, 0.065, blinkerM, s * 0.604, 0.582, -1.563 - 0.008);         // freccia
+        box(0.06, 0.148, 0.065, revM,   s * 0.302, 0.582, -1.563 - 0.008);         // retromarcia
+        box(0.07, 0.169, 0.109, black, s * 0.403, 0.408, -1.595);         // rostri
+        cylZ(0.05, 0.12, steel, s * 0.453, 0.244, -1.585, 16);                              // doppio cannone (dentro i 3.30 m)
     }
-    put(new THREE.Mesh(new THREE.PlaneGeometry(0.54, 0.13),
-        new THREE.MeshLambertMaterial({ map: makeTargaTexture('Roma 75823F', false), side: THREE.DoubleSide })), 0, FARO_HEIGHT, -1.605).rotation.y = Math.PI;
-    box(0.30, 0.025, 0.025, chrome, 0, 0.78, -1.53);              // maniglia portellone
-    cylZ(0.047, 0.025, chrome, 0, 0.78, -1.53, 16);               // logo Fiat (cerchio diviso a 45')
-    put(new THREE.Mesh(new THREE.CircleGeometry(0.040, 32, Math.PI / 4, Math.PI), B(0xffcc00)), 0, 0.78, -1.5435).rotation.y = Math.PI;
-    put(new THREE.Mesh(new THREE.CircleGeometry(0.040, 32, Math.PI / 4 + Math.PI, Math.PI), B(0xdd1122)), 0, 0.78, -1.5435).rotation.y = Math.PI;
+    put(new THREE.Mesh(new THREE.PlaneGeometry(0.60, 0.145),
+        new THREE.MeshLambertMaterial({ map: makeTargaTexture('Roma 75823F', false), side: THREE.DoubleSide })), 0, 0.589, -1.595 - 0.005).rotation.y = Math.PI;   // targa (5 mm dietro le lenti)
+    box(0.302, 0.026, 0.026, steel, 0, 0.72, -1.519);                                    // maniglia portellone
+    cylZ(0.048, 0.025, steel, 0, 0.72, -1.519, 16);                                        // logo Fiat (cerchio diviso a 45')
+    put(new THREE.Mesh(new THREE.CircleGeometry(0.041, 32, Math.PI / 4, Math.PI), B(0xffcc00)), 0, 0.72, -1.541 - 0.002).rotation.y = Math.PI;
+    put(new THREE.Mesh(new THREE.CircleGeometry(0.041, 32, Math.PI / 4 + Math.PI, Math.PI), B(0xdd1122)), 0, 0.72, -1.541 - 0.002).rotation.y = Math.PI;
 
-    // alettone (supporti + ala inclinata di ~22 gradi)
+    // alettone: supporti + ala inclinata di ~22 gradi (spostato in avanti di 8 cm per restare nei 3.30 m)
     if (o.spoilerEnabled) {
-        for (const s of [-1, 1]) box(0.055, 0.22, 0.07, black, s * 0.40, 0.92, -1.50, -Math.PI / 12);
-        box(1.40, 0.025, 0.16, chrome, 0, 1.02, -1.56, Math.PI / 8);
+        for (const s of [-1, 1]) box(0.056, 0.275, 0.08, black, s * 0.403, 0.826, -1.47, -Math.PI / 12);
+        box(1.359, 0.026, 0.18, steel, 0, 0.958, -1.56, Math.PI / 8);
     }
 
-    // ---------- RUOTE ----------
+    // ---------- RUOTE: cerchio in tinta panna ----------
     const wheels = [];
     [[-WX, WZ], [WX, WZ], [-WX, -WZ], [WX, -WZ]].forEach(([x, z]) => {
         const steer = new THREE.Group(); steer.name = 'steer';
         steer.position.set(x, WY, z);
         const spin = new THREE.Group(); spin.name = 'spin';
-        const tire = new THREE.Mesh(new THREE.CylinderGeometry(WR, WR, 0.17, 32), plastic);
+        const tire = new THREE.Mesh(new THREE.CylinderGeometry(WR, WR, 0.16, 32), plastic);          // pneumatico
         tire.rotation.z = Math.PI / 2; spin.add(tire);
-        const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.18, 32), panna);        // cerchio (fascia bianca)
+        const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.17, 32), panna);         // cerchio (fascia bianca)
         rim.rotation.z = Math.PI / 2; spin.add(rim);
-        const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.07, 0.03, 32), chrome);        // borchia centrale
-        cap.position.x = x > 0 ? 0.095 : -0.095;
+        const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.077, 0.03, 32), steel);        // borchia centrale
+        cap.position.x = x > 0 ? 0.08 : -0.08;
         cap.rotation.z = x > 0 ? Math.PI / 2 : -Math.PI / 2; spin.add(cap);
         steer.add(spin); g.add(steer);
         wheels.push({ front: z > 0 ? 1 : 0, steer, spin });
     });
 
     // ---------- LIVREA TRICOLORE ----------
-    _genericCarLivery(g, paint, o, 1, { sideMin: .71, sideY: .70, sideSp: .0353, sideHw: .0147, topMinY: .95, topMaxX: .19, topSp: .12, topHw: .05, topZMin: -1.1 });
+    _genericCarLivery(g, paint, o, 1, { sideMin: 0.685, sideY: 0.72, sideSp: .0353, sideHw: .0147, topMinY: 0.826, topMaxX: .19, topSp: .12, topHw: .05, topZMin: -1.246 });
 
     // ---------- DATI E CONTROLLI ----------
     g.userData.wheels = wheels;
-    g.userData.dashW = 1.20; // abitacolo stretto (fiancate interne a ~0.67) bianchina new
-    g.userData.dashL = 0.90; // divano posteriore piu' avanti: il lunotto e' inclinato bianchina new
-	g.userData.dashZ = 0.50; // plancia piu indietro (0.62) bianchina new
-	g.userData.dashY = 0.85;//plancia piu in basso (0.88) bianchina new
-	g.userData.logoColor = red;
+    g.userData.dashW = 1.10;      // abitacolo stretto (fiancate interne a ~0.63)
+    g.userData.dashL = 0.90;      // divano posteriore piu' avanti: il lunotto e' inclinato
+    g.userData.dashZ = 0.50;     // plancia piu' indietro: il parabrezza e' piu' inclinato e la base e' dietro l'asse
+	g.userData.dashY = 0.80;//plancia piu in basso (0.88) bianchina new
+	
+	
     g.userData.setGlassOpacity = v => { glass.opacity = v; };
     g.userData.setNumbersVisible = () => {};
 
@@ -4563,7 +4590,7 @@ function buildCarBianchinaNEW(o) {
             raceNumber: o.raceNumber,
             numberStripe: o.numberStripe,
             numbersVisible: o.numbersVisible,
-            numberSize: 0.40, numberY: 0.52, numberZ: 0.15
+            numberSize: 0.40, numberY: 0.551, numberZ: 0.171
         });
         plates.forEach((p, i) => {
             p.userData.noCast = true;
@@ -4580,23 +4607,32 @@ function buildCarBianchinaNEW(o) {
 
     g.userData.brakeMat = brakeM;
     g.userData.revMat   = revM;
+	g.userData.headlightMat = headlightM;
+	g.userData.blinkerMat = blinkerM;
 
     return g;   // nessuno scale: dimensioni reali 3.30 x 1.50 x 1.35 m, passo 2.10 m
 }
 
 
-
 //cinquino gpt modificata in a112 abarth imbruttita (TODO: rimuovere zoom K)
-function buildCarBianchinaOLD(o) {
+function buildCarCentododici(o) {
     const K = 1.26;
     const g = new THREE.Group();
-
-	const M = c => new THREE.MeshLambertMaterial({ color: c, side: THREE.DoubleSide, shadowSide: THREE.BackSide });
-	const B = c => new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide, shadowSide: THREE.BackSide });
-	const nc = m => (m.userData.noCast = true, m);   // mesh che non proietta ombra
-	const MS = c => new THREE.MeshStandardMaterial({ color:c, side:THREE.DoubleSide, shadowSide: THREE.BackSide, metalness:0, roughness:0.5 });
 	
-    const paint = MS(o.paint);
+	const nc = m => (m.userData.noCast = true, m);   // mesh che non proietta ombra
+	
+	//helper + materiali
+    const { 
+		M, B, MS, E, 
+		//put, box, cylZ, cylX, prism, panel, sidePolyFor, archPtsFor,//funzioni
+		paint, //materiali MS
+		glass, //materiale speciale
+		black, plastic, steel, chrome, grey, dark, floorM, //materiali M
+		white, panna, orange, red, yellow, blueLancia, blueFiat, redTrim, brakeM, revM, headlightM, blinkerM //materiali B+Emissive
+	} = getSharedCarKit(g, o.glassOpacity, o.paint);
+    glass.polygonOffset = true; glass.polygonOffsetFactor = 1; glass.polygonOffsetUnits = 1;   // fix sfarfallio vetri
+
+	
 	// vernice dei montanti: leggermente "avanti" rispetto ai vetri, non riceve ombra
 	const paintMontanti = paint.clone();
 	paintMontanti.polygonOffset = true;
@@ -4604,17 +4640,8 @@ function buildCarBianchinaOLD(o) {
 	paintMontanti.polygonOffsetUnits = -1;
 	paintMontanti.userData.noRecv = true;
 	
-    const black = M(0x000000);
-    const rubber = M(0x222222);
-    const steel = M(0x444455);
-
-    const glass = new THREE.MeshLambertMaterial({
-        color: 0x223333,
-        transparent: true,
-        opacity: o.glassOpacity,
-        side: THREE.DoubleSide
-    });
-	
+	const rubber = M(0x222222);
+    
 	//fix sfarfallio
 	glass.depthWrite = false;      //il vetro non scrive depth
 	glass.polygonOffset = true;    //vetro spinto indietro
@@ -4622,14 +4649,7 @@ function buildCarBianchinaOLD(o) {
 	glass.polygonOffsetUnits = 1;
 	glass.userData.noCast=true;
 	glass.userData.noRecv=true;
-
-    const white = B(0xffffff);
-	const panna = B(0xffffdd);
-    const red = B(0xdd2222);
-    const orange = B(0xee5500);
-	const brakeM = B(0x330000);   // stop: spento
-	const revM   = B(0x666666);   // retromarcia: spenta
-
+	
 	// --------------------------------------------------
     // FUNZIONI GEOMETRICHE
     // --------------------------------------------------
@@ -4889,7 +4909,7 @@ function buildCarBianchinaOLD(o) {
         );
 		box(
             0.025,0.035,0.10,
-            orange,s*0.725,0.58,1.20
+            blinkerM,s*0.725,0.58,1.20
         );
     }
 
@@ -4958,7 +4978,7 @@ function buildCarBianchinaOLD(o) {
         // Vetro faro
         sphere(
             0.095,0.095,0.025,
-            white,s*0.52,0.68,1.48
+            headlightM,s*0.52,0.68,1.48
         );
 		
 		if (o.spoilerEnabled) {		
@@ -4971,7 +4991,7 @@ function buildCarBianchinaOLD(o) {
 			// Vetro faro
 			sphere(
 				0.065,0.065,0.025,
-				white,s*0.30,0.66,1.48
+				headlightM,s*0.30,0.66,1.48
 			);
 		}
 		
@@ -4984,7 +5004,7 @@ function buildCarBianchinaOLD(o) {
         );
 		box(
             0.120,0.060,0.025,
-            orange,s*0.55,0.46,1.43
+            blinkerM,s*0.55,0.46,1.43
         );
 		
 		//rostri paraurti
@@ -5035,7 +5055,7 @@ function buildCarBianchinaOLD(o) {
         // freccette posteriori
         box(
             0.06,0.14,0.06,
-            orange,
+            blinkerM,
 			s*0.60,FARO_HEIGHT+0.03,FARO_BACK
         );
 		
@@ -5113,8 +5133,6 @@ function buildCarBianchinaOLD(o) {
 	}
 
 	// PASSARUOTA ARANCIONI?
-	const orangeFender = steel;//M(0xffaa22);
-
 	function addFender(x, z) {
 		const radius = 0.30;
 		const tube = 0.045;
@@ -5144,7 +5162,7 @@ function buildCarBianchinaOLD(o) {
 			false
 		);
 
-		g.add(new THREE.Mesh(geometry, orangeFender));
+		g.add(new THREE.Mesh(geometry, steel));
 	}
 
 	// Quattro passaruota
@@ -5244,6 +5262,10 @@ function buildCarBianchinaOLD(o) {
 	_genericCarLivery(g, paint, o, K, { sideMin:.68, sideY:.68, sideSp:.0353, sideHw:.0147, topMinY:.78, topMaxX:.19, topSp:.12, topHw:.05, topZMin:-1.1 });
 	
     g.userData.wheels = wheels;
+	g.userData.dashW = 1.20; // abitacolo stretto (fiancate interne a ~0.67) bianchina new
+    g.userData.dashL = 0.90; // divano posteriore piu' avanti: il lunotto e' inclinato bianchina new
+	g.userData.dashZ = 0.50; // plancia piu indietro (0.62) bianchina new
+	g.userData.dashY = 0.85;//plancia piu in basso (0.88) bianchina new
 
     g.userData.setGlassOpacity = v => {
         glass.opacity = v;
@@ -5277,6 +5299,8 @@ function buildCarBianchinaOLD(o) {
 
 	g.userData.brakeMat = brakeM;
 	g.userData.revMat   = revM;
+	g.userData.headlightMat = headlightM;
+	g.userData.blinkerMat = blinkerM;
 
     return g;
 }
@@ -5764,12 +5788,15 @@ function changeCarColor(){
  scene.add(carG);
 //})();
 
+
 // Esempio di posizioni dei due scarichi posteriori (speculari sull'asse X)
 const exhaustOffsets = [
   { x: -0.60, y: 0.40, z: -2.1 }, // Scarico sinistro
   { x: 0.60, y: 0.40, z: -2.1 }  // Scarico destro
 ];
 
+
+//illuminazione artificiosa del retrotreno
 const stopLightOffsets = [
   { x: -0.70, y: 0.90, z: -2.1 }, // stop sinistro
   { x: 0.70, y: 0.90, z: -2.1 }  // stop destro
@@ -5813,6 +5840,8 @@ const backLight2 = carG.children.find(c => c.name==='backLight2');
 //frontlight le mantengo altrimenti i fari sembrano spenti!
 const frontLight1 = carG.children.find(c => c.name==='frontLight1');
 const frontLight2 = carG.children.find(c => c.name==='frontLight2');
+
+
 
 const S0={},SHD={},wheelDat=[0,1,2,3].map(()=>({x:0,y:0,z:0,d:0,surf:0}));
 const SEMI_CARREGGIATA = 0.80;//distanza tra i mozzi dello stesso asse diviso 2, nella delta circa 150cm
@@ -5992,15 +6021,16 @@ addEventListener('keydown',e=>{
  if (e.code==='ArrowLeft'||e.code==='KeyA') keys.left=1;
  if (e.code==='ArrowRight'||e.code==='KeyD') keys.right=1;
  if (e.code==='KeyR') resetCar();
- if (e.code==='Digit1') { setCamMode(1); camInside = false; }
- if (e.code==='Digit2') { setCamMode(2); camInside = true; }
+ if (e.code==='Digit1') { setCamMode(1); }
+ if (e.code==='Digit2') { setCamMode(2); }
  
- if (e.code==='Digit5') { if(flipG) return; CURRENT_CAR_COLOR=(CURRENT_CAR_COLOR+1)%CAR_COLORS.length; spawnCar(0); }
- if (e.code==='Digit6') { if(flipG) return; CURRENT_CAR_COLOR=(CURRENT_CAR_COLOR+1)%CAR_COLORS.length; spawnCar(1); }
- if (e.code==='Digit7') { if(flipG) return; CURRENT_CAR_COLOR=(CURRENT_CAR_COLOR+1)%CAR_COLORS.length; spawnCar(2); }
- if (e.code==='Digit8') { if(flipG) return; CURRENT_CAR_COLOR=(CURRENT_CAR_COLOR+1)%CAR_COLORS.length; spawnCar(3); }
- if (e.code==='Digit9') { if(flipG) return; CURRENT_CAR_COLOR=(CURRENT_CAR_COLOR+1)%CAR_COLORS.length; spawnCar(4); }
- if (e.code==='Digit0') { if(flipG) return; CURRENT_CAR_COLOR=(CURRENT_CAR_COLOR+1)%CAR_COLORS.length; spawnCar(5); }
+ if (e.code==='Digit4') { if(flipG) return; CURRENT_CAR_COLOR=(CURRENT_CAR_COLOR+1)%CAR_COLORS.length; spawnCar(0); }
+ if (e.code==='Digit5') { if(flipG) return; CURRENT_CAR_COLOR=(CURRENT_CAR_COLOR+1)%CAR_COLORS.length; spawnCar(1); }
+ if (e.code==='Digit6') { if(flipG) return; CURRENT_CAR_COLOR=(CURRENT_CAR_COLOR+1)%CAR_COLORS.length; spawnCar(2); }
+ if (e.code==='Digit7') { if(flipG) return; CURRENT_CAR_COLOR=(CURRENT_CAR_COLOR+1)%CAR_COLORS.length; spawnCar(3); }
+ if (e.code==='Digit8') { if(flipG) return; CURRENT_CAR_COLOR=(CURRENT_CAR_COLOR+1)%CAR_COLORS.length; spawnCar(4); }
+ if (e.code==='Digit9') { if(flipG) return; CURRENT_CAR_COLOR=(CURRENT_CAR_COLOR+1)%CAR_COLORS.length; spawnCar(5); }
+ if (e.code==='Digit0') { if(flipG) return; CURRENT_CAR_COLOR=(CURRENT_CAR_COLOR+1)%CAR_COLORS.length; spawnCar(6); }
  
  if (e.code==='KeyT') changeCarColor();//texture
  if (e.code==='KeyH') hornBtnPlay();//horn
@@ -6021,7 +6051,7 @@ addEventListener('keydown',e=>{
  if (e.code === 'Period') togglePhysics();   // fisica PRO/EASY
  
  
- if (e.code==='KeyC' || e.code === 'Digit3') { cam.zoom=1; cam.el=0; cam.yaw=0; if(camMode)setCamMode(camMode); camInside=false; }// C = camera di default
+ if (e.code==='KeyC' || e.code === 'Digit3') { cam.zoom=1; cam.el=0; cam.yaw=0; if(camMode)setCamMode(camMode); }// C = camera di default
  if (e.code === 'KeyQ') cam.rotDir = -1;
  if (e.code === 'KeyE') cam.rotDir = 1;
  if (e.code === 'KeyZ') cam.zoomDir = -1;
@@ -7395,6 +7425,7 @@ $('restartBtn').addEventListener('pointerdown',e=>{
 });
 
 
+let globalBlinkerTime = 0;//timer delle freccette!
 
 function updateWorld(dt){
  fpsSmooth+=((dt>0?1/dt:fpsSmooth)-fpsSmooth)*.1;//fps
@@ -7494,20 +7525,48 @@ function updateWorld(dt){
   
   const isBraking = headlightsOn || (ctl.brake > 0 || touch.brake || keys.brake);//stop accende luci
   const isRetromarcia = car.u < 0;//retromarcia accende luci
-  stopLight1.intensity = isBraking ? 0.8 : 0;
-  stopLight2.intensity = isBraking ? 0.8 : 0;
-  backLight1.intensity = isRetromarcia ? 0.8 : 0;
-  backLight2.intensity = isRetromarcia ? 0.8 : 0;
+  const isBlinkersOn = ctl.hb > 0 || car.absT > 0;
+  
+  if (isBlinkersOn) globalBlinkerTime += dt;
+  else globalBlinkerTime = 0; // Reset quando sono spente
+  // Usiamo l'operatore modulo (%) per alternare acceso/spento ogni mezzo secondo
+  const blinkState = isBlinkersOn && (Math.floor(globalBlinkerTime / 0.5) % 2 === 0);
+  
+  stopLight1.intensity = isBraking ? 0.5 : 0;
+  stopLight2.intensity = isBraking ? 0.5 : 0;
+  backLight1.intensity = isRetromarcia ? 0.5 : 0;
+  backLight2.intensity = isRetromarcia ? 0.5 : 0;
+  
   
   const bm = model.userData.brakeMat;
   const rm = model.userData.revMat;
-  if (bm) bm.color.setHex(isBraking ? 0xff0000 : 0xcc2d13);
-  if (rm) rm.color.setHex(isRetromarcia ? 0xffffff : 0x666666);
+  const hm = model.userData.headlightMat;
+  const blinkerm = model.userData.blinkerMat;
+  
+  if (bm) {
+	bm.emissive.setHex(isBraking ? 0xff0000 : 0xcc2d13);
+	bm.emissiveIntensity = (isBraking ? 1.0 : 0.0);
+  }
+  if (rm) {
+	rm.emissive.setHex(isRetromarcia ? 0xffffff : 0x666666);
+	rm.emissiveIntensity = (isRetromarcia ? 1.0 : 0.0);
+  }
+  if (hm) {
+  	hm.emissive.setHex(headlightsOn ? 0xffffff : 0x666666);
+	hm.emissiveIntensity = (headlightsOn ? 1.0 : 0.0);
+  }
+  if (blinkerm) {
+    blinkerm.emissive.setHex(blinkState ? 0xff7700 : 0xaa4400);
+	blinkerm.emissiveIntensity = (blinkState ? 1.0 : 0.0);
+  }
+  
+  
   
   // I fari anteriori si accendono solo se headlightsOn è true
   //frontlight le mantengo altrimenti i fari sembrano spenti!
-  frontLight1.intensity = headlightsOn ? 1 : 0;
-  frontLight2.intensity = headlightsOn ? 1 : 0;
+  frontLight1.intensity = headlightsOn ? 0.5 : 0;
+  frontLight2.intensity = headlightsOn ? 0.5 : 0;
+  
   
  // frenata: muso giù, accelerazione: muso su
  const yF=(wheelDat[0].y+wheelDat[1].y)*0.5;

@@ -27,35 +27,35 @@
 const EVO_DELTA = {
 			"L":3.95,
 			"M":[
-				{"n":"Material_014","c":"#cccccc","r":0.571,"m":0},//targa
-				{"n":"Material_041","c":"#f3f3f3","r":0.258,"m":0,"k":"paint"},//vernice paraurti retro + nero dei fari
-				{"n":"car paint_002","c":"#f3f3f3","r":0.2,"m":0,"k":"paint"},//vernice carrozzeria
-				{"n":"Material_033","c":"#0e0e0e","r":0.39,"m":0},//bordi vetri neri
-				{"n":"Material_016","c":"#cc2d13","r":0.063,"m":0,"k":"brakeGlass"},//freni parte superiore e inferiore + freccette anteriori
-				{"n":"glass_001","c":"#10161c","r":0.05,"m":0,"k":"glass","o":0.55},
-				{"n":"Material_065","c":"#eedddd","r":0.203,"m":0,"k":"revGlass"},//luci retromarcia
-				{"n":"Material_064","c":"#cccccc","r":0.91,"m":0},//retromarcia?
-				{"n":"Material_055","c":"#440000","r":0.314,"m":0},//tubo radiatore + scarico parte fina
-				{"n":"Material_053","c":"#666666","r":0.124,"m":0},//cannoni+serrature porte
-				{"n":"Material_067","c":"#ffffff","r":0.084,"m":0},//mascherina griglia anteriore
-				{"n":"Material_062","c":"#cc0b09","r":0.111,"m":0},//???
-				{"n":"Material_061","c":"#030303","r":0.249,"m":0},
-				{"n":"Material_052","c":"#010101","r":0.146,"m":0},//maniglie delle porte e portellone
-				{"n":"Material_051","c":"#dd2222","r":0.087,"m":0},//logo hf
+				{"n":"Material_014","c":"#cccccc",  "r":0.60,"m":0.0},//targa
+				{"n":"Material_041","c":"#f3f3f3",  "r":0.30,"m":0.1,"k":"paint"},//vernice paraurti retro + nero dei fari
+				{"n":"car paint_002","c":"#f3f3f3", "r":0.30,"m":0.2,"k":"paint"},//vernice carrozzeria
+				{"n":"Material_033","c":"#0e0e0e",  "r":0.40,"m":0.0},//bordi vetri neri
+				{"n":"Material_016","c":"#cc2d13",  "r":0.50,"m":0.0,"k":"brakeGlass"},//luci freni parte superiore e inferiore + freccette anteriori
+				{"n":"glass_001","c":"#10161c",     "r":0.05,"m":0.0,"k":"glass","o":0.55},
+				{"n":"Material_065","c":"#eedddd",  "r":0.50,"m":0.0,"k":"revGlass"},//luci retromarcia
+				{"n":"Material_064","c":"#cccccc",  "r":0.90,"m":0.0},//retromarcia?
+				{"n":"Material_055","c":"#440000",  "r":0.30,"m":0.0},//tubo radiatore + scarico parte fina
+				{"n":"Material_053","c":"#666666",  "r":0.15,"m":0.0},//cannoni+serrature porte
+				{"n":"Material_067","c":"#ffffff",  "r":0.10,"m":0.0},//mascherina griglia anteriore
+				{"n":"Material_062","c":"#cc0b09",  "r":0.11,"m":0.0},//???
+				{"n":"Material_061","c":"#030303",  "r":0.25,"m":0.0},
+				{"n":"Material_052","c":"#010101",  "r":0.15,"m":0.0},//maniglie delle porte e portellone
+				{"n":"Material_051","c":"#dd2222",  "r":0.10,"m":0.0},//logo hf
 				{"n":"580b57fcd9996e24bc43c489_001","c":"#112266","r":0,"m":0},//logo lancia
-				{"n":"Material_056","c":"#cccccc","r":0.089,"m":0},//viti fari
-				{"n":"Material_060","c":"#cccccc","r":0.4,"m":0},//fari
-				{"n":"Material_077","c":"#cc2d13","r":0.063,"m":0,"k":"blinkerGlass"},//freccetta parte centrale
-				{"n":"Material_072","c":"#787878","r":0.416,"m":0},
-				{"n":"Material_071","c":"#030303","r":0.5,"m":0},
-				{"n":"Material_073","c":"#00ff00","r":0.5,"m":0},//???
-				{"n":"Material_078","c":"#030303","r":0.4,"m":0},//bordo nero fendinebbia
-				{"n":"Material_076","c":"#cccccc","r":0.072,"m":0},//fendinebbia
-				{"n":"Material_070","c":"#cccccc","r":0.844,"m":0},//interno fendinebbia chiaro
-				{"n":"Material_086","c":"#060606","r":0.396,"m":0},
-				{"n":"Material_085","c":"#000000","r":0.342,"m":0},//griglia interna
-				{"n":"tyre_rubber","c":"#2c2c2c","r":0.9,"m":0},
-				{"n":"rim_alloy","c":"#ffffff","r":0.935,"m":0.04}//cerchioni
+				{"n":"Material_056","c":"#cccccc",  "r":0.10,"m":0.0},//viti fari
+				{"n":"Material_060","c":"#cccccc",  "r":0.40,"m":0.0,"k":"headlightGlass"},//fari
+				{"n":"Material_077","c":"#cc2d13",  "r":0.10,"m":0.0,"k":"blinkerGlass"},//freccetta parte centrale
+				{"n":"Material_072","c":"#787878",  "r":0.40,"m":0.0},
+				{"n":"Material_071","c":"#030303",  "r":0.50,"m":0.0},
+				{"n":"Material_073","c":"#00ff00",  "r":0.50,"m":0.0},//???
+				{"n":"Material_078","c":"#030303",  "r":0.40,"m":0.0},//bordo nero fendinebbia
+				{"n":"Material_076","c":"#cccccc",  "r":0.10,"m":0.0,"k":"headlightGlass"},//fendinebbia
+				{"n":"Material_070","c":"#cccccc",  "r":0.85,"m":0.0,"k":"headlightGlass"},//interno fendinebbia chiaro
+				{"n":"Material_086","c":"#060606",  "r":0.40,"m":0.0},
+				{"n":"Material_085","c":"#000000",  "r":0.35,"m":0.0},//griglia interna
+				{"n":"tyre_rubber","c":"#2c2c2c",   "r":0.90,"m":0.0},
+				{"n":"rim_alloy","c":"#ffffff",     "r":0.20,"m":0.1}//cerchioni
 				],
 			"T":[
 				[0,0,32,276,-0.173197,0.454882,-1.854504,0.167175,0.860405,1.95855],
@@ -506,6 +506,9 @@ function buildCarEvo(opts) {
   
   const blinkerMat = mats[D.M.findIndex(m => m.k === 'blinkerGlass')];
   car.userData.blinkerMat = blinkerMat;
+  
+  const headlightGlassMat = mats[D.M.findIndex(m => m.k === 'headlightGlass')];
+  car.userData.headlightMat = headlightGlassMat;
   
   return car;
 }
