@@ -39,7 +39,10 @@
         border-radius: 16px;
         padding: 8px 12px;
         text-align: center;
-        font-size: 13px
+        font-size: 13px;
+		display: flex;
+        flex-direction: column;
+        align-items: center;
       }
 
       .p b {
@@ -54,10 +57,11 @@
 
       #help {
         position: fixed;
-        top: 150px;
-        left: 12px;
+        top: 0px;
         font-size: 12px;
-        text-shadow: 0 1px 3px #000
+        text-shadow: 0 1px 3px #000;
+		left: 50%;
+	    transform: translateX(-50%);
       }
 
       canvas {
@@ -93,9 +97,14 @@
 
       .g {
         position: fixed;
-        bottom: 22px;
+        bottom: 4px;
+		left:0;
+		right:0;
         display: flex;
-        gap: 12px
+		flex-direction: row;
+        align-items: center;
+        justify-content: space-evenly;
+        gap: 8px
       }
 
       .g button {
@@ -128,7 +137,8 @@
         #hud {
           top: 6px;
           bottom: auto;
-          gap: 6px
+          gap: 6px;
+		  align-items: flex-start;
         }
 
         .p {
@@ -159,15 +169,17 @@
         <div id="tw"></div>
       </div>
       <div class="p">
-        <div id="gt"><button data-d="-1">−</button><span id="tt">--:--</span><button data-d="1">+</button><button id="tr" title="Orologio di sistema">⟲</button></div><b id="kn">0.0</b>nodi<br><span id="sp"></span>
+        <div id="gt"><button data-d="-1">−</button><span id="tt">--:--</span><button data-d="1">+</button><button id="tr" title="Orologio di sistema">⟲</button></div><div><span id="kn">0.0</span>nodi</div><span id="sp"></span>
       </div>
       <div class="p"><canvas id="cc" width="280" height="280"></canvas>
         <div id="hd"></div>
       </div>
     </div>
     <div id="tc">
-      <div class="g" style="left:12px"><button data-k="KeyA">◀</button><button data-k="KeyD">▶</button></div>
-      <div class="g" style="right:12px"><button data-k="KeyW">▲</button><button data-k="KeyS">▼</button><button id="bs">⛵</button></div>
+      <div class="g">
+		<button data-k="KeyA">◀</button><button data-k="KeyD">▶</button>
+		<button data-k="KeyW">▲</button><button data-k="KeyS">▼</button><button id="bs">⛵</button>
+	  </div>
     </div>
     <script src="./three.min.js"></script>
     <script>
