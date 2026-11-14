@@ -2743,15 +2743,17 @@ const wheelMeshes=[];
 
 
 const CAR_SPECS={
-  bianchina:       {power: 40000, fmax:4000, mass: 650, drag:.85, tops:[30,45,60,75,90,115],  maxSpeed: 120,  maxRpm: 6000, startSkidSpeed: 0,  CAM_COCKPIT_X: 0.40, CAM_COCKPIT_Y: 1.30},
-  centoventisette: {power: 70000, fmax:5500, mass: 840, drag:.85, tops:[40,70,90,120,140,160],  maxSpeed: 160,  maxRpm: 7000, startSkidSpeed: 0,  CAM_COCKPIT_X: 0.40, CAM_COCKPIT_Y: 1.45},
-  pandina:         {power: 45000, fmax:4200, mass: 880, drag:.95, tops:[35,55,80,100,120,140],  maxSpeed: 160,  maxRpm: 6500, startSkidSpeed: 0,  CAM_COCKPIT_X: 0.45, CAM_COCKPIT_Y: 1.50},
-  centododici:     {power: 80000, fmax:6500, mass: 780, drag:.85, tops:[45,70,95,125,150,170],  maxSpeed: 160,  maxRpm: 7000, startSkidSpeed: 0,  CAM_COCKPIT_X: 0.40, CAM_COCKPIT_Y: 1.30},
-  tipozza:         {power:100000, fmax:7500, mass:1050, drag:.85, tops:[45,75,105,135,165,195], maxSpeed: 180,  maxRpm: 7000, startSkidSpeed: 0,  CAM_COCKPIT_X: 0.45, CAM_COCKPIT_Y: 1.30},
-  deltona:         {power:150000, fmax:9000, mass:1300, drag:.80, tops:[55,85,115,145,180,215], maxSpeed: 200,  maxRpm: 9000, startSkidSpeed: 16, CAM_COCKPIT_X: 0.50, CAM_COCKPIT_Y: 1.25},
-  evo:             {power:150000, fmax:9000, mass:1300, drag:.80, tops:[55,85,115,145,180,215], maxSpeed: 200,  maxRpm: 9000, startSkidSpeed: 16, CAM_COCKPIT_X: 0.50, CAM_COCKPIT_Y: 1.30}
+  //  wheelbase/track = passo e carreggiata (m, mozzo-mozzo); exhaust/stop/rev = {x,y,z} del lato destro (z+ = muso)
+  bianchina:       {power: 40000, fmax:4000, mass: 650, drag:.85, tops:[30,45,60,75,90,115],  maxSpeed: 120,  maxRpm: 6000, startSkidSpeed: 0,    CAM_COCKPIT_X: 0.40, CAM_COCKPIT_Y: 1.30, wheelbase:2.10, track:1.31, exhaust:{x:.45,y:.24,z:-1.65}, stop:{x:.45,y:.58,z:-1.57}, rev:{x:.30,y:.58,z:-1.57}},
+  centoventisette: {power: 70000, fmax:5500, mass: 840, drag:.85, tops:[40,70,90,120,140,160],  maxSpeed: 160,  maxRpm: 7000, startSkidSpeed: 0,  CAM_COCKPIT_Y: 1.45, CAM_COCKPIT_Y: 1.45, wheelbase:2.66, track:1.58, exhaust:{x:.60,y:.30,z:-2.14}, stop:{x:.70,y:.72,z:-2.08}, rev:{x:.57,y:.72,z:-2.08}},
+  pandina:         {power: 45000, fmax:4200, mass: 880, drag:.95, tops:[35,55,80,100,120,140],  maxSpeed: 160,  maxRpm: 6500, startSkidSpeed: 0,  CAM_COCKPIT_Y: 1.50, CAM_COCKPIT_Y: 1.50, wheelbase:2.60, track:1.46, exhaust:{x:.54,y:.43,z:-2.07}, stop:{x:.74,y:1.07,z:-1.92}, rev:{x:.74,y:.89,z:-1.92}},
+  centododici:     {power: 80000, fmax:6500, mass: 780, drag:.85, tops:[45,70,95,125,150,170],  maxSpeed: 160,  maxRpm: 7000, startSkidSpeed: 0,  CAM_COCKPIT_Y: 1.30, CAM_COCKPIT_Y: 1.30, wheelbase:2.60, track:1.55, exhaust:{x:.55,y:.28,z:-1.95}, stop:{x:.70,y:.78,z:-1.87}, rev:{x:.50,y:.78,z:-1.87}},
+  tipozza:         {power:100000, fmax:7500, mass:1050, drag:.85, tops:[45,75,105,135,165,195], maxSpeed: 180,  maxRpm: 7000, startSkidSpeed: 0,  CAM_COCKPIT_Y: 1.30, CAM_COCKPIT_Y: 1.30, wheelbase:2.60, track:1.60, exhaust:{x:.60,y:.27,z:-1.97}, stop:{x:.78,y:.78,z:-1.82}, rev:{x:.80,y:.66,z:-1.84}},
+  deltona:         {power:150000, fmax:9000, mass:1300, drag:.80, tops:[55,85,115,145,180,215], maxSpeed: 200,  maxRpm: 9000, startSkidSpeed: 16, CAM_COCKPIT_Y: 1.25, CAM_COCKPIT_Y: 1.25, wheelbase:2.50, track:1.52, exhaust:{x:.62,y:.29,z:-1.86}, stop:{x:.73,y:.76,z:-1.78}, rev:{x:.63,y:.63,z:-1.81}},
+  evo:             {power:150000, fmax:9000, mass:1300, drag:.80, tops:[55,85,115,145,180,215], maxSpeed: 200,  maxRpm: 9000, startSkidSpeed: 16, CAM_COCKPIT_Y: 1.30, CAM_COCKPIT_Y: 1.30, wheelbase:2.60, track:1.60, exhaust:{x:.60,y:.40,z:-2.10}, stop:{x:.70,y:.90,z:-2.10}, rev:{x:.35,y:.90,z:-2.10}}   // evo: valori originali, da misurare su buildCarEvo
 };
 
+let layoutReady = false;   // le costanti WO/luci sono dichiarate piu' in basso: il primo spawnCar() parte prima
 let CURRENT_CAR_ID = 5;
 let CURRENT_CAR_SPEC = CAR_SPECS.evo;
 let tachRpm=makeTachRpm();
@@ -3029,6 +3031,7 @@ function getSharedCarKit(g, opacity, paintColor) {
 	const revM       = E(0x666666,0xffffff);
 	const headlightM = E(0xcccccc,0xffffff);
 	const blinkerM   = E(0xaa4400,0xff7700);
+	const blinkerMG  = E(0x666666,0xff7700);
 	
 	
 	const glass = new THREE.MeshLambertMaterial({ color: 0x223333, transparent: true, opacity: opacity, side: THREE.DoubleSide });
@@ -3041,7 +3044,7 @@ function getSharedCarKit(g, opacity, paintColor) {
 		paint, //materiali MS
 		glass, //materiale speciale
 		black, plastic, steel, chrome, grey, dark, floorM, //materiali M
-		white, panna, orange, red, yellow, blueLancia, blueFiat, redTrim, brakeM, revM, headlightM, blinkerM //materiali B+Emissive
+		white, panna, orange, red, yellow, blueLancia, blueFiat, redTrim, brakeM, revM, headlightM, blinkerM, blinkerMG //materiali B+Emissive
 	};
 }
 
@@ -3832,7 +3835,7 @@ function buildCarTipozza(o) {
 		paint, //materiali MS
 		glass, //materiale speciale
 		black, plastic, steel, chrome, grey, dark, floorM, //materiali M
-		white, panna, orange, red, yellow, blueLancia, blueFiat, redTrim, brakeM, revM, headlightM, blinkerM //materiali B+Emissive
+		white, panna, orange, red, yellow, blueLancia, blueFiat, redTrim, brakeM, revM, headlightM, blinkerM, blinkerMG //materiali B+Emissive
 	} = getSharedCarKit(g, o.glassOpacity, o.paint);
 	const sidePoly = sidePolyFor(sx), archPts = archPtsFor(SILL, WY, AR);
 	
@@ -3929,7 +3932,7 @@ function buildCarTipozza(o) {
         
 		box(0.020, 0.04, 0.22, plastic,  s * 0.862, 0.82, -0.08);    // maniglia anteriore
         box(0.020, 0.04, 0.22, plastic,  s * 0.862, 0.85, -1.00);    // maniglia posteriore
-        box(0.020, 0.03, 0.06, blinkerM,   s * 0.855, 0.65, 1.00);       // freccia laterale
+        box(0.020, 0.03, 0.06, blinkerMG,   s * 0.855, 0.65, 1.00);       // freccia laterale
         box(0.020, 0.03, 0.04, blueFiat, s * 0.855, 0.65, 0.94);       // targhetta DGT
         
 		// specchio in tinta
@@ -3970,7 +3973,7 @@ function buildCarTipozza(o) {
         box(0.10, 0.10, 0.012, headlightM, s * 0.685, 0.285, 2.004);     // fendinebbia
         // fari rettangolari avvolgenti
         box(0.34, 0.175, 0.01, headlightM,  s * 0.64,  0.64, 1.92);//faro
-        box(0.04, 0.175, 0.11, grey, s * 0.835, 0.64, 1.88);//freccia
+        box(0.04, 0.175, 0.11, blinkerMG /*grey*/, s * 0.835, 0.64, 1.88);//freccia
         // feritoie nere nella mascherina in tinta
         box(0.34, 0.08, 0.01, black, s * 0.245, 0.63, 1.925);
     }
@@ -3985,7 +3988,7 @@ function buildCarTipozza(o) {
         //box(0.24, 0.28, 0.16, plastic, s * 0.72,  0.75, -1.77);     // alloggiamento
         box(0.09, 0.26, 0.04, brakeM,  s * 0.685, 0.75, -1.84);     // stop lato verticale   (x 0.61–0.70)
 		box(0.14, 0.08, 0.04, brakeM,  s * 0.80,  0.84, -1.84);     // stop lato superiore   (y 0.80–0.88)//
-		box(0.14, 0.08, 0.04, grey,    s * 0.80,  0.76, -1.84);     // freccia               (y 0.72–0.80)//
+		box(0.14, 0.08, 0.04, blinkerMG /*grey*/,    s * 0.80,  0.76, -1.84);     // freccia               (y 0.72–0.80)//
 		box(0.14, 0.10, 0.04, revM,    s * 0.80,  0.67, -1.84);     // retro                 (y 0.62–0.70)//
 		box(0.05, 0.26, 0.10, brakeM,  s * 0.85,  0.75, -1.775);    // alloggiamento laterale
     }
@@ -4117,7 +4120,7 @@ function buildCarTipozza(o) {
     g.userData.brakeMat = brakeM;
     g.userData.revMat   = revM;
 	g.userData.headlightMat = headlightM;
-	g.userData.blinkerMat = blinkerM;
+	g.userData.blinkerMat = blinkerMG;
 
     return g;   // nessuno scale: dimensioni reali, passo 2.60 m
 }
@@ -5650,6 +5653,9 @@ function spawnCar(forceModel=-1){
   //sporco e' bello
   collectDirtMats();
   applyDirt();
+  
+  //modifica dimensioni auto
+  if (layoutReady) applyCarLayout(CURRENT_CAR_SPEC);
 }
 
 //sedili, cruscotto, volante, etc...
@@ -5844,12 +5850,35 @@ const frontLight2 = carG.children.find(c => c.name==='frontLight2');
 
 
 const S0={},SHD={},wheelDat=[0,1,2,3].map(()=>({x:0,y:0,z:0,d:0,surf:0}));
-const SEMI_CARREGGIATA = 0.80;//distanza tra i mozzi dello stesso asse diviso 2, nella delta circa 150cm
-const SEMI_PASSO = 1.25;//distanza tra i mozzi anteriori e posteriori diviso 2, nella delta circa 250cm
-const WO=[[SEMI_CARREGGIATA, SEMI_PASSO], [-SEMI_CARREGGIATA, SEMI_PASSO], [SEMI_CARREGGIATA, -SEMI_PASSO], [-SEMI_CARREGGIATA, -SEMI_PASSO]];
+//const SEMI_CARREGGIATA = 0.80;//distanza tra i mozzi dello stesso asse diviso 2, nella delta circa 150cm
+//const SEMI_PASSO = 1.25;//distanza tra i mozzi anteriori e posteriori diviso 2, nella delta circa 250cm
+//const WO=[[SEMI_CARREGGIATA, SEMI_PASSO], [-SEMI_CARREGGIATA, SEMI_PASSO], [SEMI_CARREGGIATA, -SEMI_PASSO], [-SEMI_CARREGGIATA, -SEMI_PASSO]];
 ////const MU=[1.4,.95,.58];
 //const ST=[1,.65,.55];
 //const RR=[.015,.045,.07];
+
+const WO=[[0,0],[0,0],[0,0],[0,0]];   // riempito da applyCarLayout (ruote: FL, FR, RL, RR; x+ = sinistra)
+
+// ruote, scarichi e luci posteriori dalla specifica dell'auto corrente (valori del lato destro, specchiati a sinistra)
+function applyCarLayout(sp){
+  const hx=sp.track/2, hz=sp.wheelbase/2;
+  WO[0][0]= hx; WO[0][1]= hz;   WO[1][0]=-hx; WO[1][1]= hz;
+  WO[2][0]= hx; WO[2][1]=-hz;   WO[3][0]=-hx; WO[3][1]=-hz;
+  const mirror=(arr,p)=>{ arr[0].x=-p.x; arr[1].x=p.x; for(const o of arr){ o.y=p.y; o.z=p.z; } };
+  mirror(exhaustOffsets,     sp.exhaust);
+  mirror(stopLightOffsets,   {x:sp.stop.x, y:sp.stop.y, z:sp.stop.z-0.05});   // la luce puntiforme sta 5 cm dietro la lente
+  mirror(backLightOffsets,   {x:sp.rev.x,  y:sp.rev.y,  z:sp.rev.z-0.05});
+  stopLight1.position.set(stopLightOffsets[0].x, stopLightOffsets[0].y, stopLightOffsets[0].z);
+  stopLight2.position.set(stopLightOffsets[1].x, stopLightOffsets[1].y, stopLightOffsets[1].z);
+  backLight1.position.set(backLightOffsets[0].x, backLightOffsets[0].y, backLightOffsets[0].z);
+  backLight2.position.set(backLightOffsets[1].x, backLightOffsets[1].y, backLightOffsets[1].z);
+}
+layoutReady = true;
+applyCarLayout(CURRENT_CAR_SPEC);
+
+
+
+
 
 //ADERENZA!
 //          tarG   tarB   tarNO  tarSI  grav1  grav2  rocks  offroad
