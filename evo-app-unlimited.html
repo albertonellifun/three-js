@@ -150,7 +150,7 @@
         color: #fff;
         font-weight: 600;
       }
-
+	  
 	  #showCamBoxBtn {
 	    right:max(4px,env(safe-area-inset-right));
 	    top:max(4px,env(safe-area-inset-top));
@@ -172,6 +172,14 @@
 	    right:max(4px,env(safe-area-inset-right) + 50px);
 	    top:calc(max(4px,env(safe-area-inset-top)) + 20px); /* sotto #fps */
 	    font-size:10px;
+	  }
+
+	  #carBtn {
+	    position: fixed;
+	    right: max(4px, env(safe-area-inset-right));
+	    bottom: calc(max(4px, env(safe-area-inset-bottom)) + 208px);  /* sopra i pedali (gas 150px + 8px) */
+		width: 80px;
+		height: 40px;
 	  }
 
       #resetBtn {
@@ -511,6 +519,7 @@
     </div>
     
 	<button class="btn" id="showCamBoxBtn" title="Configura">⚙️</button>
+	<button class="btn"             id="carBtn"     title="Cambia auto">🚗</button>
 	<button id="resetBtn" title="Rimetti in strada">🧑‍🔧 RESET 🔧</button>
 	
     <div id="pad"><span>◀ STERZO ▶</span>
@@ -5758,6 +5767,17 @@ function buildInterior(parent){
   return steerWheel;
 }
 
+
+function changeCar(){
+  if(flipG) return;   // con un GLB caricato non ha senso
+  const n = Object.keys(CAR_SPECS).length;
+  spawnCar((CURRENT_CAR_ID + 1) % n);
+}
+$('carBtn').addEventListener('pointerdown', e => {
+  e.preventDefault();
+  e.stopPropagation();
+  changeCar();
+});
 
 
 function changeCarColor(){
