@@ -2740,17 +2740,16 @@ const car={x:0,z:0,th:0,u:0,v:0,r:0,steer:0,idx:3,yS:0,
 const carG=new THREE.Group();
 const wheelPivots=[];
 const wheelMeshes=[];
-
-
+  
 const CAR_SPECS={
   //  wheelbase/track = passo e carreggiata (m, mozzo-mozzo); exhaust/stop/rev = {x,y,z} del lato destro (z+ = muso)
   bianchina:       {power: 40000, fmax:4000, mass: 650, drag:.85, tops:[30,45,60,75,90,115],  maxSpeed: 120,  maxRpm: 6000, startSkidSpeed: 0,    CAM_COCKPIT_X: 0.40, CAM_COCKPIT_Y: 1.30, wheelbase:2.10, track:1.31, exhaust:{x:.45,y:.24,z:-1.65}, stop:{x:.45,y:.58,z:-1.57}, rev:{x:.30,y:.58,z:-1.57}},
-  centoventisette: {power: 70000, fmax:5500, mass: 840, drag:.85, tops:[40,70,90,120,140,160],  maxSpeed: 160,  maxRpm: 7000, startSkidSpeed: 0,  CAM_COCKPIT_Y: 1.45, CAM_COCKPIT_Y: 1.45, wheelbase:2.66, track:1.58, exhaust:{x:.60,y:.30,z:-2.14}, stop:{x:.70,y:.72,z:-2.08}, rev:{x:.57,y:.72,z:-2.08}},
-  pandina:         {power: 45000, fmax:4200, mass: 880, drag:.95, tops:[35,55,80,100,120,140],  maxSpeed: 160,  maxRpm: 6500, startSkidSpeed: 0,  CAM_COCKPIT_Y: 1.50, CAM_COCKPIT_Y: 1.50, wheelbase:2.60, track:1.46, exhaust:{x:.54,y:.43,z:-2.07}, stop:{x:.74,y:1.07,z:-1.92}, rev:{x:.74,y:.89,z:-1.92}},
-  centododici:     {power: 80000, fmax:6500, mass: 780, drag:.85, tops:[45,70,95,125,150,170],  maxSpeed: 160,  maxRpm: 7000, startSkidSpeed: 0,  CAM_COCKPIT_Y: 1.30, CAM_COCKPIT_Y: 1.30, wheelbase:2.60, track:1.55, exhaust:{x:.55,y:.28,z:-1.95}, stop:{x:.70,y:.78,z:-1.87}, rev:{x:.50,y:.78,z:-1.87}},
-  tipozza:         {power:100000, fmax:7500, mass:1050, drag:.85, tops:[45,75,105,135,165,195], maxSpeed: 180,  maxRpm: 7000, startSkidSpeed: 0,  CAM_COCKPIT_Y: 1.30, CAM_COCKPIT_Y: 1.30, wheelbase:2.60, track:1.60, exhaust:{x:.60,y:.27,z:-1.97}, stop:{x:.78,y:.78,z:-1.82}, rev:{x:.80,y:.66,z:-1.84}},
-  deltona:         {power:150000, fmax:9000, mass:1300, drag:.80, tops:[55,85,115,145,180,215], maxSpeed: 200,  maxRpm: 9000, startSkidSpeed: 16, CAM_COCKPIT_Y: 1.25, CAM_COCKPIT_Y: 1.25, wheelbase:2.50, track:1.52, exhaust:{x:.62,y:.29,z:-1.86}, stop:{x:.73,y:.76,z:-1.78}, rev:{x:.63,y:.63,z:-1.81}},
-  evo:             {power:150000, fmax:9000, mass:1300, drag:.80, tops:[55,85,115,145,180,215], maxSpeed: 200,  maxRpm: 9000, startSkidSpeed: 16, CAM_COCKPIT_Y: 1.30, CAM_COCKPIT_Y: 1.30, wheelbase:2.60, track:1.60, exhaust:{x:.60,y:.40,z:-2.10}, stop:{x:.70,y:.90,z:-2.10}, rev:{x:.35,y:.90,z:-2.10}}   // evo: valori originali, da misurare su buildCarEvo
+  centoventisette: {power: 70000, fmax:5500, mass: 840, drag:.85, tops:[40,70,90,120,140,160],  maxSpeed: 160,  maxRpm: 7000, startSkidSpeed: 0,  CAM_COCKPIT_X: 0.40, CAM_COCKPIT_Y: 1.45, wheelbase:2.66, track:1.58, exhaust:{x:.60,y:.30,z:-2.14}, stop:{x:.70,y:.72,z:-2.08}, rev:{x:.57,y:.72,z:-2.08}},
+  pandina:         {power: 45000, fmax:4200, mass: 880, drag:.95, tops:[35,55,80,100,120,140],  maxSpeed: 160,  maxRpm: 6500, startSkidSpeed: 0,  CAM_COCKPIT_X: 0.45, CAM_COCKPIT_Y: 1.50, wheelbase:2.60, track:1.46, exhaust:{x:.54,y:.43,z:-2.07}, stop:{x:.74,y:1.07,z:-1.92}, rev:{x:.74,y:.89,z:-1.92}},
+  centododici:     {power: 80000, fmax:6500, mass: 780, drag:.85, tops:[45,70,95,125,150,170],  maxSpeed: 160,  maxRpm: 7000, startSkidSpeed: 0,  CAM_COCKPIT_X: 0.40, CAM_COCKPIT_Y: 1.30, wheelbase:2.60, track:1.55, exhaust:{x:.55,y:.28,z:-1.95}, stop:{x:.70,y:.78,z:-1.87}, rev:{x:.50,y:.78,z:-1.87}},
+  tipozza:         {power:100000, fmax:7500, mass:1050, drag:.85, tops:[45,75,105,135,165,195], maxSpeed: 180,  maxRpm: 7000, startSkidSpeed: 0,  CAM_COCKPIT_X: 0.45, CAM_COCKPIT_Y: 1.30, wheelbase:2.60, track:1.60, exhaust:{x:.60,y:.27,z:-1.97}, stop:{x:.78,y:.78,z:-1.82}, rev:{x:.80,y:.66,z:-1.84}},
+  deltona:         {power:150000, fmax:9000, mass:1300, drag:.80, tops:[55,85,115,145,180,215], maxSpeed: 200,  maxRpm: 9000, startSkidSpeed: 16, CAM_COCKPIT_X: 0.50, CAM_COCKPIT_Y: 1.25, wheelbase:2.50, track:1.52, exhaust:{x:.62,y:.29,z:-1.86}, stop:{x:.73,y:.76,z:-1.78}, rev:{x:.63,y:.63,z:-1.81}},
+  evo:             {power:150000, fmax:9000, mass:1300, drag:.80, tops:[55,85,115,145,180,215], maxSpeed: 200,  maxRpm: 9000, startSkidSpeed: 16, CAM_COCKPIT_X: 0.50, CAM_COCKPIT_Y: 1.30, wheelbase:2.60, track:1.60, exhaust:{x:.60,y:.40,z:-2.10}, stop:{x:.70,y:.90,z:-2.10}, rev:{x:.35,y:.90,z:-2.10}}   // evo: valori originali, da misurare su buildCarEvo
 };
 
 let layoutReady = false;   // le costanti WO/luci sono dichiarate piu' in basso: il primo spawnCar() parte prima
