@@ -46,10 +46,10 @@
         padding: 24px 20px;
         border-radius: 22px;
         text-align: center;
-        background: rgba(8, 30, 55, .55);
-        backdrop-filter: blur(6px);
+        background: rgba(8, 30, 55, .77);
+        backdrop-filter: blur(2px);
         border: 1px solid rgba(255, 255, 255, .3);
-        box-shadow: 0 10px 40px rgba(0, 0, 0, .35)
+        box-shadow: 0 10px 40px rgba(0, 0, 0, .35);
       }
 
       #m_card h1 {
@@ -153,8 +153,8 @@
       }
 
       .p {
-        background: rgba(8, 30, 55, .55);
-        backdrop-filter: blur(6px);
+        background: rgba(8, 30, 55, .77);
+        backdrop-filter: blur(2px);
         border: 1px solid rgba(255, 255, 255, .3);
         border-radius: 16px;
         padding: 8px 12px;
@@ -229,7 +229,7 @@
         height: 68px;
         border-radius: 50%;
         border: 1px solid rgba(255, 255, 255, .5);
-        background: rgba(8, 30, 55, .55);
+        background: rgba(8, 30, 55, .77);
         color: #fff;
         font-size: 26px;
         touch-action: none;
@@ -244,15 +244,15 @@
         left: 12px;
         padding: 5px;
         border-radius: 14px;
-        background: rgba(8, 30, 55, .55);
+        background: rgba(8, 30, 55, .77);
         border: 1px solid rgba(255, 255, 255, .3);
-        backdrop-filter: blur(6px);
+        backdrop-filter: blur(2px);
         text-align: center;
         font-size: 11px;
         pointer-events: auto;
         cursor: zoom-in;
         z-index: 5;
-        touch-action: manipulation
+        touch-action: manipulation;
       }
 
       #mw.z {
@@ -279,17 +279,19 @@
         flex-direction: column;
         align-items: flex-end;
         gap: 4px;
-        xxxpointer-events: none
       }
 
       #tools button,
       #fps {
-        pointer-events: auto font: 600 12px/1 ui-monospace, Menlo, monospace;
+        pointer-events: auto;
+		font: 600 12px/1 ui-monospace, Menlo, monospace;
         padding: 6px 9px;
         border-radius: 10px;
-        background: rgba(8, 30, 55, .55);
+        background: rgba(8, 30, 55, .77);
         border: 1px solid rgba(255, 255, 255, .3);
-        backdrop-filter: blur(6px);
+        backdrop-filter: blur(2px);
+		white-space: pre; 
+		text-align: right;
       }
 
       #mu {
@@ -2233,6 +2235,24 @@ transformed=normalize(position)*(${r}+hw+.06);}`);
         renderer.toneMappingExposure = .95;
         renderer.setPixelRatio(Math.min(devicePixelRatio, MOB ? 1.5 : 2));
         renderer.setSize(innerWidth, innerHeight);
+
+//ottimizzazioni		
+console.log(
+`[Regata] parametri
+raggio pianeta (R) = ${R} m
+risoluzione mesh (N) = ${N}
+dettaglio acqua (D) = ${WATERDETAIL}
+altezza montagne (mountK) = ×${MHK}
+nebbia (FOG) = ${FOG}
+ombre (SHADOWS) = ${SHADOWS ? 'on' : 'off'}
+raggio ombre (SH) = ${SH} m
+mobile (MOB) = ${MOB}
+livrea = ${cupLiveries[liveryIdx || 0].name}
+pixel ratio = ${renderer.getPixelRatio?.() ?? 'n/d'}
+URL = ${location.search || '(nessun parametro)'}`);
+		
+		
+		
         document.body.prepend(renderer.domElement);
         const cam = new T.PerspectiveCamera(60, innerWidth / innerHeight, .5, 8000);
         cam.position.copy(P).multiplyScalar(R + 30);
@@ -3006,8 +3026,9 @@ transformed=normalize(position)*(${r}+hw+.06);}`);
           touch: 0
         };
         const fpsEl = document.getElementById('fps');
-        let fN = 0,
-          fT = performance.now();
+        let fN = 0;
+        let fT = performance.now();
+		let hudT = 0;//ottimizzazione
         let nkP = -1; //colore strumentazione
         const nfx = document.getElementById('nfx'),
           NC = [1, .38, 0], // colore dei "bianchi" di notte (R,G,B 0..1)
@@ -3022,7 +3043,15 @@ transformed=normalize(position)*(${r}+hw+.06);}`);
           fN++;
           const pn = performance.now();
           if (pn - fT > 500) {
-            fpsEl.textContent = Math.round(fN * 1000 / (pn - fT)) + ' FPS';
+            //fpsEl.textContent = Math.round(fN * 1000 / (pn - fT)) + ' FPS';
+			//ottimizzazione
+const i = renderer.info;
+fpsEl.textContent =
+`${Math.round(fN * 1000 / (pn - fT))} FPS
+${(i.render.triangles / 1000).toFixed(0)}k tri
+${i.render.calls} calls
+${i.memory.geometries} geom
+${i.programs ? i.programs.length : '?'} shader`;
             fN = 0;
             fT = pn
           }
@@ -3203,6 +3232,7 @@ transformed=normalize(position)*(${r}+hw+.06);}`);
             sea = R + waveH(cam.position, time),
             uw = sstep(sea + .25, sea - .25, cL),
             dep = Math.max(0, sea - cL);
+		  oceanMat.side = cL > R + 3 ? T.FrontSide : T.DoubleSide;//ottimizzazione
           U.uw.value = uw;
           U.uwc.value.copy(UWC).multiplyScalar((.05 + .95 * dayK) * (.3 + .7 * Math.exp(-dep / 40)));
           scene.fog.color.copy(HOR).lerp(U.uwc.value, uw);
@@ -3210,9 +3240,14 @@ transformed=normalize(position)*(${r}+hw+.06);}`);
           clouds.visible = uw < .99;
           faroUpdate(time, dayK); //isola
           renderer.render(scene, cam);
-          drawHud();
-          drawMap();
-          SS.time = time;
+		  //ottimizzazione
+		  if ((hudT += dt) >= .03) {
+			hudT = 0; 
+			drawHud(); 
+			drawMap(); 
+		  }
+          
+		  SS.time = time;
           SS.windKn = windKn;
           SS.speed = speed;
           SS.roll = roll;
@@ -3257,7 +3292,7 @@ transformed=normalize(position)*(${r}+hw+.06);}`);
         });
         // selettore altezza montagne
         const h0 = +new URLSearchParams(location.search).get('mh');
-        if (h0) hg.value = h0;
+		if (h0) hg.value = h0;
         const showH = () => {
           const k = +hg.value,
             n = k < .5 ? 'Dolci' : k < .9 ? 'Basse' : k < 1.3 ? 'Normali' : k < 1.8 ? 'Alte' : 'Altissime';
@@ -3267,7 +3302,7 @@ transformed=normalize(position)*(${r}+hw+.06);}`);
         showH();
         // selettore dimensione pianeta (R)
         const r0 = +new URLSearchParams(location.search).get('r');
-        if (r0) rg.value = r0;
+		if (r0) rg.value = r0;
         const showR = () => {
           const R = +rg.value,
             n = R < 500 ? 'Piccolo' : R < 800 ? 'Medio' : R < 1000 ? 'Grande' : 'Enorme';
