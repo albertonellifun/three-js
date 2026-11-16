@@ -395,7 +395,7 @@
     </svg>
 
     <div id="ui">
-      <div id="help">A/D o ◀▶ timone · W/S o ▲▼ cazza/lasca · SPAZIO spinnaker · mouse: orbita, rotella: zoom · T: +3 ore · M: audio</div>
+      <div id="help">◀▶ timone · ▲▼ cazza/lasca · SPAZIO spinnaker · mouse/rotella: camera · T: +3 ore · M: audio</div>
       <div id="tools">
         <button id="tpBtn" title="Teletrasporto casuale">🌀</button>
         <button id="cpBtn" title="Livree Coppa America">🎨</button>
@@ -703,7 +703,10 @@
           }
           if (ok) isl = d;
         }
-        if (!isl) console.warn('Faro: nessun sito valido, isola non creata');
+        if (!isl) {
+			console.warn('Faro: nessun sito valido, isola non creata');
+			document.getElementById('help').textContent += ` · Faro non creato`;
+		}
         const MOB = matchMedia("(pointer:coarse)").matches || innerWidth < 700;
         const N = +new URLSearchParams(location.search).get('n') || (MOB ? 64 : 128);
         const WATERDETAIL = +new URLSearchParams(location.search).get('d') || (MOB ? 1.5 : 3);
@@ -2594,6 +2597,12 @@ transformed=normalize(position)*(${r}+hw+.06);}`);
           let wind, whistle, swell, rush, flap, surf;
           //let lfo, la;
           let scrape, grit, rumble, hiss, sPan, vPan;
+          let hornG, hPan, hornNext = 0; //sirena nella nebbia
+          //regolazione volumi vento/onde/rumore di fondo
+          const WIND_V = 0.3; // vento + fischio
+          const WAVE_V = 0.6; // risacca, onde sotto la barca, sciabordio
+          const SWELL_V = 0.5; // rumore grave di fondo
+          const FLAP_V = 0.4; // volume generale del flap: 0 = muto, 1 = come ora
           const tv = V3(0, 0, 0);
           const set = (p, v, tc = .12) => p.setTargetAtTime(v, ctx.currentTime, tc);
           const panner = () => {
@@ -2689,7 +2698,7 @@ transformed=normalize(position)*(${r}+hw+.06);}`);
           }
 
           function slap(v) {
-            burst(B.brown, 'lowpass', 350 + v * 700, .1 + .3 * v, .22)
+            burst(B.brown, 'lowpass', 350 + v * 700, .1 + .3 * v * WAVE_V, .22)
           }
 
           function thud(v) {
@@ -2727,6 +2736,65 @@ transformed=normalize(position)*(${r}+hw+.06);}`);
             o.stop(t + 1.6);
             burst(B.brown, 'lowpass', 220, .55 * v, 1.4, dest);
             burst(B.pink, 'bandpass', 1300, .12 * v, .8, dest)
+          }
+
+          function horn() {
+            const t = ctx.currentTime,
+              D = 2.8,
+              f0 = 78; // Via di mezzo ideale (~Re#2)
+            // Filtro passa-basso caldo: abbastanza chiuso da non ronzare, aperto il giusto per far uscire il corpo
+            const lp = ctx.createBiquadFilter();
+            lp.type = 'lowpass';
+            lp.Q.value = 1.4;
+            lp.frequency.setValueAtTime(220, t);
+            lp.frequency.exponentialRampToValueAtTime(540, t + 0.28);
+            lp.frequency.setValueAtTime(480, t + D - 0.5);
+            lp.frequency.exponentialRampToValueAtTime(160, t + D + 0.55);
+            // Risonanza del padiglione centrata attorno alla 3a-4a armonica (~280 Hz)
+            const hornBody = ctx.createBiquadFilter();
+            hornBody.type = 'peaking';
+            hornBody.frequency.value = 280;
+            hornBody.Q.value = 2.0;
+            hornBody.gain.value = 6;
+            // Leggera saturazione prima del filtro per dare "grana" da aria compressa
+            const shaper = ctx.createWaveShaper();
+            const curve = new Float32Array(256);
+            for (let i = 0; i < 256; i++) {
+              const x = (i * 2) / 256 - 1;
+              curve[i] = Math.tanh(x * 1.4);
+            }
+            shaper.curve = curve;
+            const g = ctx.createGain();
+            g.gain.setValueAtTime(0.0001, t);
+            g.gain.linearRampToValueAtTime(1, t + 0.22);
+            g.gain.setValueAtTime(1, t + D - 0.35);
+            g.gain.exponentialRampToValueAtTime(0.0001, t + D + 0.75);
+            shaper.connect(hornBody);
+            hornBody.connect(lp);
+            lp.connect(g);
+            g.connect(hornG);
+            const voices = [
+              ['sawtooth', 1.0, -4, 0.45], // Tromba principale (78 Hz)
+              ['sawtooth', 1.0, +4, 0.40], // Seconda tromba unisono leggermente scordata (battimento lento)
+              ['triangle', 1.5, 0, 0.20] // Quinta superiore morbida (dà il tipico timbro "cavo" del faro senza incupire)
+            ];
+            voices.forEach(([type, mult, cents, vol]) => {
+              const o = ctx.createOscillator(),
+                og = ctx.createGain();
+              o.type = type;
+              o.detune.value = cents;
+              // Salita di pressione iniziale
+              o.frequency.setValueAtTime(f0 * mult * 0.93, t);
+              o.frequency.exponentialRampToValueAtTime(f0 * mult, t + 0.24);
+              // Calo di pressione finale ("grugnito" del diafono)
+              o.frequency.setValueAtTime(f0 * mult, t + D - 0.5);
+              o.frequency.exponentialRampToValueAtTime(f0 * mult * 0.78, t + D + 0.45);
+              og.gain.value = vol;
+              o.connect(og);
+              og.connect(shaper);
+              o.start(t);
+              o.stop(t + D + 0.8);
+            });
           }
 
           function scan(s) {
@@ -2776,6 +2844,11 @@ transformed=normalize(position)*(${r}+hw+.06);}`);
               };
               sPan = panner();
               vPan = panner();
+              //sirena nella nebbia
+              hPan = panner();
+              hornG = ctx.createGain();
+              hornG.gain.value = 0;
+              hornG.connect(hPan || out);
               wind = layer(B.pink, 'bandpass', 500, .5);
               whistle = layer(B.white, 'bandpass', 1100, 18);
               swell = layer(B.brown, 'lowpass', 260, .7);
@@ -2823,24 +2896,19 @@ transformed=normalize(position)*(${r}+hw+.06);}`);
               const app = s.windKn * .7 + s.speed * .6,
                 gust = 1 + .22 * Math.sin(s.time * .7) + .12 * Math.sin(s.time * 1.9 + 1),
                 sp = clamp(s.speed / 10, 0, 1);
-              set(wind.g, (.03 + Math.pow(app / 20, 1.5) * .5) * gust);
+              set(wind.g, (.03 + Math.pow(app / 20, 1.5) * .5) * gust * WIND_V); //volume
               set(wind.f, 280 + app * 28 * gust);
-              set(whistle.g, Math.max(0, app - 11) * .006 * (1 - s.flap));
+              set(whistle.g, Math.max(0, app - 11) * .006 * (1 - s.flap) * WIND_V); //volume
               set(whistle.f, 900 + app * 40);
-              set(swell.g, .16 + .1 * Math.sin(s.time * .8) + s.windKn * .004);
+              set(swell.g, .16 + .1 * Math.sin(s.time * .8) + s.windKn * .004 * SWELL_V); //volume
               set(swell.f, 180 + s.windKn * 10);
-              set(rush.g, Math.pow(sp, 1.3) * .3 * (1 + Math.abs(s.roll)));
+              set(rush.g, Math.pow(sp, 1.3) * .3 * (1 + Math.abs(s.roll)) * WIND_V); //volume
               set(rush.f, 500 + sp * 900);
-              //const fa = s.flap * .22;
-              //set(flap.g, fa * .5);
-              //set(la.gain, fa * .5);
-              //set(lfo.frequency, 6.5 + 2.5 * Math.sin(s.time * 1.3));
-              const FLV = .35; // volume generale del flap: 0 = muto, 1 = come ora
-              const fa = s.flap * .22 * FLV;
+              const fa = s.flap * .22 * FLAP_V;
               flapJ += (Math.random() - flapJ) * .25;
               set(flap.g, fa * (.1 + .35 * flapJ * flapJ), .05);
               set(flap.f, 1100 + 900 * flapJ);
-              if (Math.random() < d * fa * 25 / FLV) // stessa frequenza di schiocchi, volume ridotto
+              if (Math.random() < d * fa * 25 / FLAP_V) // stessa frequenza di schiocchi, volume ridotto
                 burst(B.white, 'bandpass', 900 + Math.random() * 2200, fa * (.2 + .8 * Math.random()), .03 + Math.random() * .09);
               if ((scanT += d) > .25) {
                 scanT = 0;
@@ -2848,7 +2916,7 @@ transformed=normalize(position)*(${r}+hw+.06);}`);
               }
               ph = (ph + d / 8.5) % 1;
               const env = ph < .28 ? Math.pow(ph / .28, 2) : Math.exp(-(ph - .28) * 4.5);
-              set(surf.g, shore * (.04 + .5 * env) * .8, .08);
+              set(surf.g, shore * (.04 + .5 * env) * .8 * WAVE_V, .08); //volume
               set(surf.f, 700 + 2600 * env);
               if (sPan) set(sPan.pan, sp0, .3);
               let vd = 1e9,
@@ -2871,6 +2939,18 @@ transformed=normalize(position)*(${r}+hw+.06);}`);
               if (vPan) set(vPan.pan, vp0, .3);
               if (Math.random() < d * vk * vk * 8) burst(B.white, 'bandpass', 1500 + Math.random() * 2500, .04 + .1 * vk, .04 + Math.random() * .08, vPan);
               if (Math.random() < d * vk * .15) boom(vk);
+              //sirena nella nebbia
+              if (faroOn) {
+                const fd = Math.acos(clamp(s.P.dot(isl), -1, 1)) * R; // distanza dal faro in metri
+                const hk = Math.pow(sstep(450, 30, fd), 1.3);
+                set(hornG.gain, hk * .9, .1);
+                tv.copy(isl).addScaledVector(s.P, -s.P.dot(isl));
+                if (tv.lengthSq() > 1e-6 && hPan) set(hPan.pan, clamp(tv.normalize().dot(s.Rt), -1, 1) * .85, .3);
+                if (hk > .01 && s.time >= hornNext) {
+                  hornNext = s.time + 18;
+                  horn();
+                }
+              }
               set(scrape.g, s.touch * .55, .05);
               set(scrape.f, 220 + s.touch * 200);
               set(grit.g, s.touch * (.03 + .1 * Math.random()), .04);
