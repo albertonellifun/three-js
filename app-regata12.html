@@ -238,19 +238,6 @@
       }
 
       /* regole base: PRIMA della media query, così gli override mobile funzionano */
-      #fps {
-        position: fixed;
-        top: 10px;
-        right: 12px;
-        font: 600 12px/1 ui-monospace, Menlo, monospace;
-        padding: 6px 9px;
-        border-radius: 10px;
-        background: rgba(8, 30, 55, .55);
-        border: 1px solid rgba(255, 255, 255, .3);
-        backdrop-filter: blur(6px);
-        pointer-events: none
-      }
-
       #mw {
         position: fixed;
         top: 10px;
@@ -283,24 +270,26 @@
         border-radius: 9px
       }
 
-      #mu,
-      #cpBtn,
-      #tpBtn {
+      #tools {
         position: fixed;
-        top: 42px;
-        width: 34px;
-        height: 30px;
-        border-radius: 10px;
-        border: 1px solid rgba(255, 255, 255, .3);
-        background: rgba(8, 30, 55, .55);
-        color: #fff;
-        font-size: 15px;
-        cursor: pointer;
-        touch-action: manipulation;
+        top: 10px;
+        right: 12px;
+        z-index: 5;
         display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 4px;
+        pointer-events: none
+      }
+
+      #tools button, #fps {
+        pointer-events: auto
+		font: 600 12px/1 ui-monospace, Menlo, monospace;
+        padding: 6px 9px;
+        border-radius: 10px;
+        background: rgba(8, 30, 55, .55);
+        border: 1px solid rgba(255, 255, 255, .3);
+        backdrop-filter: blur(6px);
       }
 
       #mu {
@@ -356,29 +345,18 @@
           height: 65px
         }
 
-        #fps {
+        #tools {
           top: 136px;
           right: 8px
         }
-
-        #mu,
-        #cpBtn,
-        #tpBtn {
-          top: 168px;
-        }
-
-        #mu {
-          right: 8px;
-        }
-
-        #cpBtn {
-          right: 46px;
-        }
-
-        #tpBtn {
-          right: 84px;
-        }
       }
+	  
+	  @media (pointer:coarse), (min-width: 470px) {
+	    #tools {
+          top: 10px;
+          right: 8px
+        }
+	  }
 
       @media (orientation:portrait) and (pointer:coarse),
       (orientation:portrait) and (max-width:700px) {
@@ -387,17 +365,42 @@
           bottom: 78px;
           left: 8px
         }
+		
+		#tools {
+          top: auto;
+		  bottom: 78px;
+          right: 8px
+        }
+      }
+
+      body.nui #hud,
+      body.nui #mw,
+      body.nui #fps,
+      body.nui #mu,
+      body.nui #cpBtn,
+      body.nui #tpBtn,
+      body.nui #help,
+      body.nui .g {
+        filter: url(#nightFx);
       }
     </style>
   </head>
 
   <body>
+    <svg width="0" height="0" style="position:absolute">
+      <filter id="nightFx" color-interpolation-filters="sRGB">
+        <feColorMatrix id="nfx" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0" />
+      </filter>
+    </svg>
+
     <div id="ui">
       <div id="help">A/D o ◀▶ timone · W/S o ▲▼ cazza/lasca · SPAZIO spinnaker · mouse: orbita, rotella: zoom · T: +3 ore · M: audio</div>
-      <div id="fps">-- FPS</div>
-      <button id="tpBtn" title="Teletrasporto casuale">🌀</button>
-      <button id="cpBtn" title="Livree Coppa America">🎨</button>
-      <button id="mu" title="Audio (M)">🔊</button>
+      <div id="tools">
+        <button id="tpBtn" title="Teletrasporto casuale">🌀</button>
+        <button id="cpBtn" title="Livree Coppa America">🎨</button>
+        <button id="mu" title="Audio (M)">🔊</button>
+        <div id="fps">-- FPS</div>
+      </div>
       <div id="mw"><canvas id="mp" width="256" height="128"></canvas>
         <div id="mc"></div>
       </div>
@@ -416,6 +419,7 @@
             <span id="kn">0.0</span> nodi
           </div>
           <span id="sp"></span>
+          <span id="tm"></span>
         </div>
         <div class="p"><canvas id="cc" width="280" height="280"></canvas>
           <div id="hd"></div>
@@ -493,7 +497,7 @@
           spColors: ['#ffdd00', '#000000', '#000000', '#000000', '#000000', '#000000', '#ffdd00']
         },
         {
-          name: "Emirates Team New Zealand",
+          name: "Emirates New Zealand",
           country: "NZL",
           hullTop: 0x111111,
           hullStripe: 0xffffff,
@@ -1061,8 +1065,8 @@
         const TRN = MOB ? 26 : 42,
           TSP = MOB ? 5.5 : 3.6,
           TRA = 14,
-          TAGE0 = 6,
-          TAGE1 = 16;
+          TAGE0 = 4, //6 scia decade piu in fretta
+          TAGE1 = 12; //16 scia decade piu in fretta
         const TRP = new Float32Array(TRN * 4),
           TRF = new Float32Array(TRN),
           trail = [];
@@ -1243,7 +1247,7 @@ if(wn>1&&dot(d3,d3)<wr2){
     float vms=bSp*.41;kw=clamp(9.81/max(vms*vms,4.),.35,2.);
   }
 }
-float ab=al+6.5,as=al-6.5,ww=1.1+max(as,0.)*.07;
+float ab=al+6.5,as=al-6.5,ww=1.1+max(as,0.)*.14;//era *.07, scia si allarga di piu quando decade
 float calm=smoothstep(ww*1.8,ww*.4,la)*smoothstep(-2.,3.,as)*exp(-max(as,0.)/90.)*spw;
 Pt*=1.-.6*calm;
 float arm=1.4+max(ab,0.)*.354;
@@ -1266,9 +1270,12 @@ vec3 col=mix(sc*diffL*.3+scatter,vec3(.02,.06,.12)*day+rs*.9+rs*spec,refl);
 float n=nz(vW*.8),shore=max(smoothstep(1.6,0.,vD),smoothstep(.45,.9,sin(vD*1.5-t*1.1+n*3.))*smoothstep(8.,.5,vD)*.6)*(.55+.6*n)*step(-1.,vD);
 float crest=smoothstep(1.1,1.9,vH+n*.5)*.5;
 float n1=nz(vW*1.25+vec3(0.,t*.25,0.)),n2=nz(vW*3.3-9.);
-float core=smoothstep(ww,ww*.2,la)*smoothstep(-1.5,1.5,as)*exp(-max(as,0.)/(18.+45.*sp));
+//float core=smoothstep(ww,ww*.2,la)*smoothstep(-1.5,1.5,as)*exp(-max(as,0.)/(18.+45.*sp));//scia decade piu in fretta
+float core=smoothstep(ww,ww*.2,la)*smoothstep(-1.5,1.5,as)*exp(-max(as,0.)/(10.+28.*sp));
 core*=smoothstep(.25,.75,n1*.55+n2*.45+.45*exp(-max(as,0.)/7.));
-float armF=smoothstep(.9+ab*.02,0.,abs(la-arm))*smoothstep(0.,4.,ab)*exp(-ab/(14.+30.*sp));
+//float armF=smoothstep(.9+ab*.02,0.,abs(la-arm))*smoothstep(0.,4.,ab)*exp(-ab/(14.+30.*sp));//scia decade piu in fretta
+//float armF=smoothstep(.9+ab*.02,0.,abs(la-arm))*smoothstep(0.,4.,ab)*exp(-ab/(8.+18.*sp));
+float armF=smoothstep(.9+ab*.05,0.,abs(la-arm))*smoothstep(0.,4.,ab)*exp(-ab/(8.+18.*sp));//scia si allarga di piu quande decade
 armF*=smoothstep(.35,.8,n2*.7+.3*(.5+.5*cos(phw)));
 
 float tH=clamp((7.-alB)/14.,0.,1.);
@@ -2473,10 +2480,12 @@ transformed=normalize(position)*(${r}+hw+.06);}`);
           cc.stroke();
           cc.drawImage(glass, 0, 0, 140, 140);
           const currentLiveryName = (currentLiveryIndex >= 0 && currentLiveryIndex < cupLiveries.length) ? cupLiveries[currentLiveryIndex].name : "";
-          document.getElementById('tw').textContent = `Team: ${currentLiveryName} · Vento ${windKn.toFixed(0)} nodi`;
-          document.getElementById('hd').textContent = `Prua ${String(deg(hd)).padStart(3, '0')}°`;
+          const currentLiveryCountry = (currentLiveryIndex >= 0 && currentLiveryIndex < cupLiveries.length) ? cupLiveries[currentLiveryIndex].country : "";
+          document.getElementById('tw').textContent = `Vento: ${windKn.toFixed(0)} nodi`;
+          document.getElementById('hd').textContent = `Prua: ${String(deg(hd)).padStart(3, '0')}°`;
           document.getElementById('kn').textContent = (speed * .8).toFixed(1);
           document.getElementById('sp').textContent = 'Spinnaker: ' + (spinE > .99 ? (fillS > .5 ? 'gonfio ✔' : 'issato (flotta)') : spinE > 0 ? (spinOn ? 'in issata…' : 'in ammainata…') : 'ammainato');
+          document.getElementById('tm').textContent = `Team: ${currentLiveryName} · ${currentLiveryCountry}`;
           document.getElementById('tt').textContent = String(Math.floor(hhG)).padStart(2, '0') + ':' + String(Math.floor(hhG % 1 * 60)).padStart(2, '0');
           document.getElementById('tr').style.opacity = timeOff % 24 ? 1 : .4
         }
@@ -2919,6 +2928,14 @@ transformed=normalize(position)*(${r}+hw+.06);}`);
         const fpsEl = document.getElementById('fps');
         let fN = 0,
           fT = performance.now();
+        let nkP = -1; //colore strumentazione
+        const nfx = document.getElementById('nfx'),
+          NC = [1, .38, 0], // colore dei "bianchi" di notte (R,G,B 0..1)
+          LW = [.3, .59, .11]; // pesi di luminanza
+        const setNight = k => {
+          const row = i => LW.map((w, j) => ((i === j ? 1 - k : 0) + k * NC[i] * w).toFixed(3)).join(' ') + ' 0 0';
+          nfx.setAttribute('values', row(0) + ' ' + row(1) + ' ' + row(2) + ' 0 0 0 1 0');
+        };
 
         function frame() {
           requestAnimationFrame(frame);
@@ -3030,6 +3047,13 @@ transformed=normalize(position)*(${r}+hw+.06);}`);
           U.sI.value = moon ? .2 : sstep(-.1, .05, sE);
           U.day.value = dayK;
           U.nt.value = 1 - dayK;
+          //colora strumentazione
+          const nk = Math.round((1 - sstep(.05, .5, dayK)) * 20) / 20; // 0 giorno → 1 notte, a passi di .05
+          if (nk !== nkP) {
+            nkP = nk;
+            setNight(nk);
+            document.body.classList.toggle('nui', nk > 0);
+          }
           sunL.target.position.copy(boat.position);
           sunL.position.copy(boat.position).addScaledVector(U.sun.value, 350);
           sunL.target.updateMatrixWorld();
