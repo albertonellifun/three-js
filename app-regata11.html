@@ -1302,8 +1302,8 @@ c*=1.+(1.-smoothstep(0.,45.,vUv.x))*.6;c=mix(vec3(.1,.02,0.),c,edge);gl_FragColo
         side: T.DoubleSide
       }, o));
       let hullGeo = null;
-	  let deckGeo = null;
-	  const cabinMat = std(0x2a2d33);
+      let deckGeo = null;
+      const cabinMat = std(0x2a2d33);
       (function() {
         const NS = 40,
           NJ = 14,
@@ -1312,14 +1312,14 @@ c*=1.+(1.-smoothstep(0.,45.,vUv.x))*.6;c=mix(vec3(.1,.02,0.),c,edge);gl_FragColo
           id = [],
           dk = [],
           dc = [];
-		const SK = .84; // <1 = poppa troncata; più basso = specchio più largo
+        const SK = .84; // <1 = poppa troncata; più basso = specchio più largo
         for (let i = 0; i <= NS; i++) {
-		const t = i / NS,
-			u = t * SK, // il profilo viene "tagliato" prima di richiudersi
-			z = -7 + 14 * t,
-			w = Math.max(.15, 2.1 * Math.pow(Math.sin(Math.PI * Math.pow(u, .75)), .65)),
-			d = .2 + 1.6 * Math.sin(Math.PI * Math.pow(u, .8)),
-			dy = .85 + .55 * Math.pow(1 - t, 3);
+          const t = i / NS,
+            u = t * SK, // il profilo viene "tagliato" prima di richiudersi
+            z = -7 + 14 * t,
+            w = Math.max(.15, 2.1 * Math.pow(Math.sin(Math.PI * Math.pow(u, .75)), .65)),
+            d = .2 + 1.6 * Math.sin(Math.PI * Math.pow(u, .8)),
+            dy = .85 + .55 * Math.pow(1 - t, 3);
           for (let j = 0; j <= NJ; j++) {
             const f = -Math.PI / 2 + Math.PI * j / NJ,
               x = w * Math.sin(f),
@@ -1338,22 +1338,21 @@ c*=1.+(1.-smoothstep(0.,45.,vUv.x))*.6;c=mix(vec3(.1,.02,0.),c,edge);gl_FragColo
               b = a + NJ + 1;
             id.push(a, b, a + 1, a + 1, b, b + 1)
           }
-		// specchio di poppa: ventaglio sull'ultimo anello (vertici duplicati → spigolo netto)
-{
-  const b = pos.length / 3, e = NS * (NJ + 1), ct = lin(0xf6f6f2);
-  for (let j = 0; j <= NJ; j++) {
-    const k = (e + j) * 3;
-    pos.push(pos[k], pos[k + 1], pos[k + 2]);
-    col.push(col[k], col[k + 1], col[k + 2]);
-  }
-  pos.push(0, .85, 7);
-  col.push(ct.r, ct.g, ct.b);
-  const c0 = b + NJ + 1;
-  for (let j = 0; j < NJ; j++) id.push(c0, b + j, b + j + 1);
-}
-		  
-		  
-		  
+        // specchio di poppa: ventaglio sull'ultimo anello (vertici duplicati → spigolo netto)
+        {
+          const b = pos.length / 3,
+            e = NS * (NJ + 1),
+            ct = lin(0xf6f6f2);
+          for (let j = 0; j <= NJ; j++) {
+            const k = (e + j) * 3;
+            pos.push(pos[k], pos[k + 1], pos[k + 2]);
+            col.push(col[k], col[k + 1], col[k + 2]);
+          }
+          pos.push(0, .85, 7);
+          col.push(ct.r, ct.g, ct.b);
+          const c0 = b + NJ + 1;
+          for (let j = 0; j < NJ; j++) id.push(c0, b + j, b + j + 1);
+        }
         const hg = new T.BufferGeometry();
         hg.setAttribute('position', new T.Float32BufferAttribute(pos, 3));
         hg.setAttribute('color', new T.Float32BufferAttribute(col, 3));
@@ -1377,9 +1376,7 @@ c*=1.+(1.-smoothstep(0.,45.,vUv.x))*.6;c=mix(vec3(.1,.02,0.),c,edge);gl_FragColo
         dg.setAttribute('color', new T.Float32BufferAttribute(dc, 3));
         dg.setIndex(did);
         dg.computeVertexNormals();
-		
-deckGeo = dg;//salvo il ponte		
-		
+        deckGeo = dg; //salvo il ponte		
         tilt.add(new T.Mesh(dg, new T.MeshStandardMaterial({
           vertexColors: true,
           roughness: .7,
@@ -1406,9 +1403,7 @@ deckGeo = dg;//salvo il ponte
         rg.add(new T.Mesh(foil(1.1, .7, 1.9, .3, .10, -.3, 0), mFin));
         window.rdr = rg;
         add(new T.BoxGeometry(2, .25, 3.6), std(0x2a2d33), 0, .95, 3.6);
-		
-add(new T.BoxGeometry(2, .25, 3.6), cabinMat, 0, .95, 3.6);//aggiungo la cabina
-		
+        add(new T.BoxGeometry(2, .25, 3.6), cabinMat, 0, .95, 3.6); //aggiungo la cabina
         add(new T.CylinderGeometry(.07, .15, 21.5, 10), std(0x1b1b1f, {
           metalness: .6
         }), 0, 11.6, -1);
@@ -1753,12 +1748,11 @@ gl_FragColor=vec4(col,a);
           col.setXYZ(i, c.r, c.g, c.b);
         }
         col.needsUpdate = true;
-		
-		const cDeck = lin(l.deckColor), dcol = deckGeo.attributes.color;
-		for (let i = 0; i < dcol.count; i++) dcol.setXYZ(i, cDeck.r, cDeck.g, cDeck.b);
-		dcol.needsUpdate = true;
-		cabinMat.color.copy(lin(l.cabinColor));
-		
+        const cDeck = lin(l.deckColor),
+          dcol = deckGeo.attributes.color;
+        for (let i = 0; i < dcol.count; i++) dcol.setXYZ(i, cDeck.r, cDeck.g, cDeck.b);
+        dcol.needsUpdate = true;
+        cabinMat.color.copy(lin(l.cabinColor));
         sailMat.color.set(l.sailColor);
         sailMat.emissive.set(l.sailColor).multiplyScalar(0.3);
         updateSpTex(l.spColors);
