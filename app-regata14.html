@@ -40,7 +40,8 @@
       }
 
       #m_card {
-        width: min(460px, 100%);
+        xxxwidth: min(460px, 100%);
+        width: min(640px, 100%);
         margin: auto;
         box-sizing: border-box;
         padding: 24px 20px;
@@ -69,7 +70,8 @@
 
       #m_liv {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+		xxxgrid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
         gap: 8px
       }
 
@@ -1400,15 +1402,25 @@ float dist=length(cam-vW);
 vec3 RR=normalize(reflect(-sun,N));float spec=pow(max(dot(V,RR),0.),100.)*2.;
 vec3 diffL=sc*max(dot(sun,N),0.)*.5;
 float theta=max(dot(V,N),0.),refl=.3+.7*pow(1.-theta,5.);
-/* acqua tropicale: gradiente laguna turchese -> azzurro -> blu profondo in funzione della profondita' */
-vec3 cLag=vec3(.02,.80,.68),cMid=vec3(0.,.40,.62),cDeep=vec3(0.,.06,.20);
+
+//acqua tropicale: gradiente laguna turchese -> azzurro -> blu profondo in funzione della profondita'
+////////vec3 cLag=vec3(.02,.80,.68),cMid=vec3(0.,.40,.62),cDeep=vec3(0.,.06,.20);
+vec3 cLag=vec3(.02,.80,.68), cMid=vec3(.02,.30,.80), cDeep=vec3(0.,.08,.25);// Palette più azzurra / blu oceano brillante
+
 vec3 wc3=mix(mix(cLag,cMid,smoothstep(1.5,15.,vD)),cDeep,smoothstep(14.,50.,vD));
 vec3 scatter=(.04+.96*day)*(.35+.65*max(0.,dot(N,V)))*wc3;
 vec3 rs=skyc(reflect(-V,N),up);
 vec3 col=mix(sc*diffL*.3+scatter,vec3(.02,.06,.12)*day+rs*.9+rs*spec,refl);
-float n=nz(vW*.8),shore=max(smoothstep(1.6,0.,vD),smoothstep(.45,.9,sin(vD*1.5-t*1.1+n*3.))*smoothstep(8.,.5,vD)*.6)*(.55+.6*n)*step(-1.,vD);
-float crest=smoothstep(1.1,1.9,vH+n*.5)*.5;
-float n1=nz(vW*1.25+vec3(0.,t*.25,0.)),n2=nz(vW*3.3-9.);
+
+//creste 
+float n=nz(vW*.8); 
+float shore=max(smoothstep(1.6,0.,vD),smoothstep(.45,.9,sin(vD*1.5-t*1.1+n*3.))*smoothstep(8.,.5,vD)*.6)*(.55+.6*n)*step(-1.,vD);
+										   
+float n1=nz(vW*1.25+vec3(0.,t*.25,0.));
+float n2=nz(vW*3.3-9.);
+float crest=smoothstep(1.1,1.9,vH+n*.5)*.15;//no creste -> moltiplica per zero, 0.5=default, 0.15=appena accennate
+
+//scia
 //float core=smoothstep(ww,ww*.2,la)*smoothstep(-1.5,1.5,as)*exp(-max(as,0.)/(18.+45.*sp));//scia decade piu in fretta
 float core=smoothstep(ww,ww*.2,la)*smoothstep(-1.5,1.5,as)*exp(-max(as,0.)/(10.+28.*sp));
 core*=smoothstep(.25,.75,n1*.55+n2*.45+.45*exp(-max(as,0.)/7.));
@@ -1428,8 +1440,10 @@ col+=vec3(0.,.5,.4)*sss*.55*(1.-refl);
 float foam=clamp(max(max(shore,crest),wkF),0.,1.);
 col=mix(col,vec3(.03,.32,.36)*(.1+.9*day),calm*.3*(1.-foam));
 col=mix(col,vec3(.97,1.,1.)*(.12+.88*day),foam);
+
 /* trasparenza in funzione di profondita' e angolo: il fondale (sabbia + caustiche) resta visibile nelle acque basse */
-float aB=1.-exp(-max(vD,0.)*.10/max(theta,.3));
+float attenuazione=0.20;//piu piccolo == piu visibile in profondita, ma attenzione all'orizzonte si vedono le montagne!
+float aB=1.-exp(-max(vD,0.)*attenuazione/max(theta,.3));
 float al2=max(max(mix(.12,1.,aB),refl),foam);
 float f=1.-exp(-fog*fog*dist*dist);col=mix(col,hor,f);
 float bf=gl_FrontFacing?0.:1.;
@@ -1889,10 +1903,12 @@ c*=1.+(1.-smoothstep(0.,45.,vUv.x))*.6;c=mix(vec3(.1,.02,0.),c,edge);gl_FragColo
             navL.push(sp)
           })
         })();
+        //materiale vela principale (randa) e secondaria
         const sailMat = std(0xfafafa, {
           emissive: 0x555555,
           roughness: .8
         });
+        //materiale spinnaker
         const spCanvas = document.createElement('canvas');
         spCanvas.width = 256;
         spCanvas.height = 128;
@@ -1924,7 +1940,6 @@ c*=1.+(1.-smoothstep(0.,45.,vUv.x))*.6;c=mix(vec3(.1,.02,0.),c,edge);gl_FragColo
         });
         /* uccelli in cielo by gpt */
         /* ---------- Gabbiani 3D dettagliati e animati ---------- */
-        /* ---------- Gabbiani 3D dettagliati e orientati correttamente ---------- */
         let updateBirds = () => {};
         (function createBirds() {
           const NFLOCK = Math.round(clamp(10 * (R / 600) * (R / 600), 4, 28) * (MOB ? .6 : 1)); // stormi, scalano con la superficie
@@ -3620,6 +3635,7 @@ ${inf.programs ? inf.programs.length : '?'} shader`;
             lf = sstep(.75, .4, a),
             pw = a > .55 ? clamp(1.1 - Math.abs(trim - sopt) * 1.5, .3, 1) : .25;
           boom.rotation.y = leeS * ang;
+          //ATTENZIONE: 19.4m e' l'altezza della vela massima
           main.upd(V3(0, 2.4, -1), V3(leeS * Math.sin(ang) * 6.6, 2.4, -1 + Math.cos(ang) * 6.6), V3(0, 19.4, -1), (.6 + 1.1 * pw) * ab, V3(sg, 0, 0), Math.max(lf, 1 - ab));
           const ja = ang * .8,
             tkJ = V3(0, 1.5, -7.3),
