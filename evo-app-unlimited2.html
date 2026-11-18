@@ -1969,13 +1969,18 @@ function makeSign(type) {
 }
 
 /* ===== CARTELLI DI COMUNE ===== */
-const TOWN_EVERY  = 5000;   // m tra un cartello e l'altro
-const TOWN_OFFSET = 123;    // sfasamento: evita i cartelli di pericolo (ogni 500 m)
+const TOWN_EVERY  = 2000; // m tra un cartello e l'altro
+const TOWN_OFFSET = 123;  // sfasamento: evita i cartelli di pericolo (ogni 500 m)
 const TOWNS = [
   { name: 'ACCUMOLI', fill:'#f5f5f5', stroke:'#111111' },
   { name: 'ARQUATA DEL TRONTO', fill:'#f5f5f5', stroke:'#111111' },
+  { name: 'ACQUASANTA TERME', fill:'#f5f5f5', stroke:'#111111' },
+  { name: 'FAVALANCIATA', sub:'(frazione di ACQUASANTA TERME)', fill:'#774433', stroke:'#ffffff' },  
+  { name: 'PESCARA DEL TRONTO', fill:'#f5f5f5', stroke:'#111111' },
   { name: 'LEONESSA', fill:'#f5f5f5', stroke:'#111111' },
   { name: 'POSTA', fill:'#f5f5f5', stroke:'#111111' },
+  { name: 'FAVISCHIO', top:'BENVENUTI A', sub: '810m s.l.m.', fill:'#774433', stroke:'#ffffff' },  
+  { name: 'TERME DI COTILIA', sub:'Terme di Vespasiano', fill:'#774433', stroke:'#ffffff' },  
   { name: 'ROCCAPORENA', sub: '(Comune di CASCIA)', fill:'#774433', stroke:'#ffffff' },  
   { name: 'TERZONE', fill:'#f5f5f5', stroke:'#111111' },
   { name: 'CITTADUCALE', fill:'#f5f5f5', stroke:'#111111' },
@@ -1987,7 +1992,7 @@ const TOWNS = [
   { name: 'SOMMATI', sub: '(Comune di AMATRICE)', fill:'#f5f5f5', stroke:'#111111' },
   { name: 'CAMPOTOSTO', sub:'1.420m s.l.m.', fill:'#f5f5f5', stroke:'#111111' },
   { name: 'CASTELLUCCIO', sub: 'Frazione di NORCIA - 1.452m s.l.m.', fill:'#774433', stroke:'#ffffff' },  
-  { name: 'MONTELEONE DI SPOLETO', fill:'#f5f5f5', stroke:'#111111' },*/
+  { name: 'MONTELEONE DI SPOLETO', fill:'#f5f5f5', stroke:'#111111' },
   { name: 'ANTRODOCO', sub:'TERRA DEL MARRONE ANTRODOCANO', fill:'#f5f5f5', stroke:'#111111' },
   { name: 'CITTAREALE', top:'BENVENUTI NEL COMUNE DI', fill:'#f5f5f5', stroke:'#111111' },
   { name: 'CASCIA', top:'BENVENUTI A', sub:'CITTA\' DI S.RITA', fill:'#774433', stroke:'#ffffff' },  
