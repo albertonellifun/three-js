@@ -302,18 +302,6 @@
         line-height: 1.25
       }
 
-      #mu {
-        right: 12px;
-      }
-
-      #cpBtn {
-        right: 50px;
-      }
-
-      #tpBtn {
-        right: 88px;
-      }
-
       @media(pointer:coarse), (max-width:700px) {
         #tc {
           display: block
@@ -357,7 +345,8 @@
 
         #tools {
           top: 136px;
-          right: 8px
+          right: 8px;
+		  xxxflex-direction: column-reverse;
         }
       }
 
@@ -365,7 +354,8 @@
       (min-width: 470px) {
         #tools {
           top: 10px;
-          right: 8px
+          right: 8px;
+		  flex-direction: column-reverse;
         }
       }
 
@@ -380,7 +370,8 @@
         #tools {
           top: auto;
           bottom: 78px;
-          right: 8px
+          right: 8px;
+		  flex-direction: column;
         }
       }
 
@@ -390,6 +381,7 @@
       body.nui #mu,
       body.nui #cpBtn,
       body.nui #tpBtn,
+	  body.nui #sailNumBtn,
       body.nui #help,
       body.nui .g {
         filter: url(#nightFx);
@@ -409,6 +401,7 @@
       <div id="tools">
         <button id="tpBtn" title="Teletrasporto casuale">🌀</button>
         <button id="cpBtn" title="Livree Coppa America">🎨</button>
+		<button id="sailNumBtn" title="Numeri sulla vela">🔢</button>
         <button id="mu" title="Audio (M)">🔊</button>
         <div id="fps">-- FPS</div>
       </div>
@@ -869,6 +862,62 @@ float cau(vec2 uv,float t){
 }
 #include <tonemapping_fragment>`);
         };
+		
+		/* ---------- dettaglio rugoso del terreno (triplanare, albedo + bump) ---------- */
+		function mkDetailTex() {
+		  const S = 256, h = new Float32Array(S * S), sm = x => x * x * (3 - 2 * x);
+		  for (const [Pn, A] of [[4, 1], [8, .6], [16, .38], [32, .22], [64, .12]]) {
+			const o = Pn * 17;
+			for (let y = 0; y < S; y++)
+			  for (let x = 0; x < S; x++) {
+				const u = x / S * Pn, v = y / S * Pn, i = Math.floor(u), j = Math.floor(v), fx = sm(u - i), fy = sm(v - j),
+				  q = (a, b) => hs((i + a) % Pn + o, (j + b) % Pn, 11); // tileable
+				h[y * S + x] += A * ((q(0, 0) * (1 - fx) + q(1, 0) * fx) * (1 - fy) + (q(0, 1) * (1 - fx) + q(1, 1) * fx) * fy);
+			  }
+		  }
+		  let mn = 1e9, mx = -1e9;
+		  for (const v of h) { mn = Math.min(mn, v); mx = Math.max(mx, v); }
+		  const c = document.createElement('canvas');
+		  c.width = c.height = S;
+		  const cx = c.getContext('2d'), im = cx.createImageData(S, S);
+		  for (let k = 0; k < S * S; k++) {
+			im.data[k * 4] = im.data[k * 4 + 1] = im.data[k * 4 + 2] = (h[k] - mn) / (mx - mn) * 255;
+			im.data[k * 4 + 3] = 255;
+		  }
+		  cx.putImageData(im, 0, 0);
+		  const t = new T.CanvasTexture(c);
+		  t.wrapS = t.wrapT = T.RepeatWrapping;
+		  t.anisotropy = 8;
+		  return t;
+		}
+		const detTex = mkDetailTex(),
+		  DT_ALB = 0.25, // contrasto del colore (0 = off)
+		  DT_BUMP = 0.25; // rilievo della normale in metri (0 = off)
+		const prevOBC = terrMat.onBeforeCompile;
+		terrMat.onBeforeCompile = s => {
+		  prevOBC.call(terrMat, s); // caustiche (solo RICH)
+		  s.uniforms.dtx = { value: detTex };
+		  s.vertexShader = 'varying vec3 vDp,vNw;\n' +
+			s.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvDp=position;vNw=normal;');
+		  s.fragmentShader = `uniform sampler2D dtx;varying vec3 vDp,vNw;
+		float dtS(vec3 p,vec3 w){return texture2D(dtx,p.zy).r*w.x+texture2D(dtx,p.xz).r*w.y+texture2D(dtx,p.xy).r*w.z;}
+		vec3 dtN(vec3 sp,vec3 n,float hh,float amp){
+		  vec3 sx=dFdx(sp),sy=dFdy(sp),r1=cross(sy,n),r2=cross(n,sx);
+		  float det=dot(sx,r1);
+		  return normalize(abs(det)*n-sign(det)*(dFdx(hh)*amp*r1+dFdy(hh)*amp*r2));
+		}
+		` + s.fragmentShader
+			.replace('#include <color_fragment>', `#include <color_fragment>
+		vec3 dW=pow(abs(normalize(vNw)),vec3(4.));dW/=dW.x+dW.y+dW.z;
+		//${RICH ? 'float dH=dtS(vDp*.11,dW)*.62+dtS(vDp*.47,dW)*.38;' : 'float dH=dtS(vDp*.16,dW);'}
+		  ${RICH ? 'float dH=dtS(vDp*.05,dW)*.62+dtS(vDp*.24,dW)*.38;' : 'float dH=dtS(vDp*.08,dW);'}
+		diffuseColor.rgb*=1.+${DT_ALB.toFixed(3)}*2.*(dH-.5);`)
+			.replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+		normal=dtN(-vViewPosition,normal,dH,${DT_BUMP.toFixed(3)}*(1.-smoothstep(100.,450.,length(vViewPosition))));`);
+		};
+		
+		
+		
         const terrain = new T.Mesh(tg, terrMat);
         terrain.receiveShadow = true;
         scene.add(terrain);
@@ -2416,7 +2465,7 @@ gl_FragColor=vec4(col,a);
             g = (hullTop >> 8) & 255,
             b = hullTop & 255,
             lum = (.299 * r + .587 * g + .114 * b) / 255,
-            F = s => `900 ${s}px "Arial Black",Arial,sans-serif`;
+            F = s => `900 ${s}px "Arial Narrow","Arial Black",Arial,sans-serif`;
           x.clearRect(0, 0, 256, 80);
           x.fillStyle = lum > .55 ? '#111' : '#fff'; // contrasto col colore dello scafo
           x.textAlign = 'center';
@@ -2427,6 +2476,44 @@ gl_FragColor=vec4(col,a);
           x.fillText(country, 128, 42);
           sternTex.needsUpdate = true;
         }
+		
+		//scritta vela
+		let sailNo = 1 + (rnd() * 99 | 0);
+		const NCW = 512, NCH = 1024, SW = 6.6, SHT = 17; // randa: base 6.6 m, altezza 17 m (y 2.4 → 19.4)
+		const numCv = [0, 1].map(() => { const c = document.createElement('canvas'); c.width = NCW; c.height = NCH; return c; });
+		const numTex = numCv.map(c => { const t = new T.CanvasTexture(c); t.encoding = T.sRGBEncoding; t.anisotropy = 8; return t; });
+		const numMat = numTex.map((t, i) => new T.MeshBasicMaterial({
+		  map: t, transparent: true, depthWrite: false, side: i ? T.BackSide : T.FrontSide,
+		  polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2
+		}));
+
+		function updateSailNum(country, sailHex) {
+		  sailNo = 1 + (rnd() * 99 | 0);
+		  const txt = country + ' ' + sailNo,
+			lum = (.299 * ((sailHex >> 16) & 255) + .587 * ((sailHex >> 8) & 255) + .114 * (sailHex & 255)) / 255,
+			t0 = .09, u0 = .5, K = 100, W0 = SW * (1 - t0); // t0 = quota del testo (frazione dell'altezza vela)
+		  numCv.forEach((c, i) => {
+			const x = c.getContext('2d');
+			x.setTransform(1, 0, 0, 1, 0, 0);
+			x.clearRect(0, 0, NCW, NCH);
+			// coordinate in cm sulla vela, y verso il basso; compensa il restringimento/inclinazione dell'UV triangolare
+			x.setTransform(NCW / W0 / K, 0, -NCW * u0 / ((1 - t0) * SHT) / K, NCH / SHT / K, NCW * u0, NCH * (1 - t0));
+			if (i) x.scale(-1, 1); // lato opposto: testo specchiato, così si legge giusto
+			let fs = 130;
+			const F = s => `900 ${s}px "Arial Narrow","Arial Black",Arial,sans-serif`;
+			x.font = F(fs);
+			const w = x.measureText(txt).width;
+			if (w > 460) { fs = Math.floor(fs * 460 / w); x.font = F(fs); }
+			x.fillStyle = lum > .5 ? '#111' : '#fff'; // contrasto col colore della vela
+			x.textAlign = 'center';
+			x.textBaseline = 'alphabetic';
+			x.fillText(txt, 0, fs * .36);
+		  });
+		  numTex.forEach(t => t.needsUpdate = true);
+		}
+		
+		
+		
         /* ---------- Livree Coppa America ---------- */
         let currentLiveryIndex = -1;
 
@@ -2449,7 +2536,8 @@ gl_FragColor=vec4(col,a);
           for (let i = 0; i < dcol.count; i++) dcol.setXYZ(i, cDeck.r, cDeck.g, cDeck.b);
           dcol.needsUpdate = true;
           cabinMat.color.copy(lin(l.cabinColor));
-          updateSternText(l.country, l.hullTop); //scritta poppa
+          updateSternText(l.country, l.hullTop);//scritta poppa
+		  updateSailNum(l.country, l.sailColor);//scritta vela
           sailMat.color.set(l.sailColor);
           sailMat.emissive.set(l.sailColor).multiplyScalar(0.3);
           updateSpTex(l.spColors);
@@ -2500,6 +2588,31 @@ gl_FragColor=vec4(col,a);
           jib = Sail(8, 14, sailMat),
           spin = Sail(22, 26, spMat);
         spin.bal = true;
+		//scritta vela
+		//numMat.forEach(m => { const o = new T.Mesh(main.geometry, m); o.frustumCulled = false; o.renderOrder = 2; tilt.add(o); });
+		//scritta vela
+		const sailNumberMeshes = [];
+		numMat.forEach(m => { 
+		  const o = new T.Mesh(main.geometry, m); 
+		  o.frustumCulled = false; 
+		  o.renderOrder = 2; 
+		  tilt.add(o); 
+		  sailNumberMeshes.push(o);
+		});
+
+		// Gestione pulsante abilitazione/disabilitazione numeri sulla vela
+		let sailNumbersEnabled = true;
+		const sailNumBtn = document.getElementById('sailNumBtn');
+		if (sailNumBtn) {
+		  sailNumBtn.addEventListener('click', () => {
+			sailNumbersEnabled = !sailNumbersEnabled;
+			sailNumberMeshes.forEach(mesh => mesh.visible = sailNumbersEnabled);
+			sailNumBtn.style.opacity = sailNumbersEnabled ? '1' : '0.4';
+		  });
+		}
+		
+		
+		
         const sails = new Set([main, jib, spin, pole, pole2]); //aggiunto pole2 per lo spinnaker
         tilt.traverse(o => {
           if (o.isMesh && o.material.isMeshStandardMaterial) {
@@ -3620,7 +3733,7 @@ ${inf.programs ? inf.programs.length : '?'} shader`;
           const skn = speed * .8; // stessa conversione dell'HUD
           const awf = windKn * Math.cos(a) + skn; // componente apparente lungo la barca
           const awl = windKn * Math.sin(a); // componente laterale
-          const heelK = Math.hypot(awf, awl) * awl / 225; //modificare il 225 se sbanda troppo/poco
+          const heelK = Math.hypot(awf, awl) * awl / 350; //modificare il 225 se sbanda troppo/poco
           const heelT = -leeT * clamp(.62 * heelK * eff, 0, .68);
           roll += (heelT - roll) * Math.min(1, dt * 1.5);
           tilt.rotation.set(pitch, 0, roll + Math.sin(time * 1.1) * .015);
@@ -3701,7 +3814,8 @@ ${inf.programs ? inf.programs.length : '?'} shader`;
           hemi.color.copy(cHN).lerp(cHD, dayK);
           hemi.groundColor.copy(cGN).lerp(cGD, dayK);
           sailMat.emissiveIntensity = .2 + .8 * dayK;
-          sternMat.color.setScalar(.25 + .75 * dayK); //scritta sulla poppa
+          sternMat.color.setScalar(.25 + .75 * dayK);//scritta sulla poppa
+		  numMat.forEach(m => m.color.setScalar(.25 + .75 * dayK));//scritta sulla vela
           spMat.emissiveIntensity = .1 + .3 * dayK;
           discMat.color.setRGB(1, .3 + .12 * Math.sin(time * 2.2), .05);
           const navO = .12 + .88 * (1 - dayK);
