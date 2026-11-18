@@ -582,8 +582,9 @@ console.log(USE_DESKTOP, USE_MOBILE, '--> ' + IS_MOBILE);
 
 
 
-const PINE_TRUNK_GEO = 4;//tronco è un cilindro quadrato
-const PINE_LEAVES_GEO = 8;//le foglie sono coni esagonali :)
+const TREE_TRUNK_GEO = 4;//tronco è un cilindro quadrato
+const TREE_LEAVES_GEO = 8;//le foglie sono coni esagonali :)
+
 let headlightsOn = false;//luci accese anche di giorno, e prudenza... sempre!
 let shadowsOn=true;
 let camInside = false;
@@ -1574,15 +1575,36 @@ function mergeGeos(list){
 }
 
 const pineGeo=mergeGeos([
- colorize(new THREE.CylinderGeometry(.22,.3,1.6,PINE_TRUNK_GEO).translate(0,.8,0),.30,.20,.12),
- colorize(new THREE.ConeGeometry(2.1,4.2,PINE_LEAVES_GEO).translate(0,3.2,0),.10,.28,.13),
- colorize(new THREE.ConeGeometry(1.5,3.4,PINE_LEAVES_GEO).translate(0,5.4,0),.12,.32,.15),
- colorize(new THREE.ConeGeometry(1.0,2.6,PINE_LEAVES_GEO).translate(0,7.0,0),.14,.35,.17)]);
+ colorize(new THREE.CylinderGeometry(.22,.3,1.6,TREE_TRUNK_GEO).translate(0,.8,0),.30,.20,.12),
+ colorize(new THREE.ConeGeometry(2.1,4.2,TREE_LEAVES_GEO).translate(0,3.2,0),.10,.28,.13),
+ colorize(new THREE.ConeGeometry(1.5,3.4,TREE_LEAVES_GEO).translate(0,5.4,0),.12,.32,.15),
+ colorize(new THREE.ConeGeometry(1.0,2.6,TREE_LEAVES_GEO).translate(0,7.0,0),.14,.35,.17)]);
 const pineMat=new THREE.MeshLambertMaterial({vertexColors:true});
+
+const oakGeo = mergeGeos([
+    colorize(new THREE.CylinderGeometry(0.22, 0.32, 2.4, TREE_TRUNK_GEO).translate(0, 1.2, 0), 0.35, 0.25, 0.15),
+    colorize(new THREE.DodecahedronGeometry(1.5, 0).scale(1, 1.5, 1).translate(0, 3.6, 0), 0.14, 0.42, 0.18)
+]);
+const oakMat=new THREE.MeshLambertMaterial({vertexColors:true});
+
+const mountainPineGeo = mergeGeos([
+    colorize(new THREE.CylinderGeometry(.25, .32, 1.2, TREE_TRUNK_GEO).translate(0, .6, 0), .28, .20, .12),
+    colorize(new THREE.ConeGeometry(2.1, 2.2, TREE_LEAVES_GEO).translate(0, 1.8, 0), .08, .25, .14),
+    colorize(new THREE.ConeGeometry(1.5, 2.0, TREE_LEAVES_GEO).translate(0, 2.8, 0), .10, .28, .16),
+    colorize(new THREE.ConeGeometry(0.9, 1.6, TREE_LEAVES_GEO).translate(0, 3.8, 0), .12, .32, .18)
+]);
+const mountainPineMat=new THREE.MeshLambertMaterial({vertexColors:true});
+
+const cypressGeo = mergeGeos([
+    colorize(new THREE.CylinderGeometry(.15, .25, 2.0, TREE_TRUNK_GEO).translate(0, 1.0, 0), .30, .22, .15),
+    colorize(new THREE.SphereGeometry(1.2, TREE_LEAVES_GEO * 0.5, TREE_LEAVES_GEO * 0.5).scale(0.7, 2.2, 0.7).translate(0, 3.5, 0), .07, .22, .12),
+    colorize(new THREE.SphereGeometry(0.9, TREE_LEAVES_GEO * 0.5, TREE_LEAVES_GEO * 0.5).scale(0.6, 1.8, 0.6).translate(0, 6.0, 0), .09, .26, .14)
+]);
+
+const cypressMat = new THREE.MeshLambertMaterial({ vertexColors: true });
+
+
 const rockGeo=new THREE.IcosahedronGeometry(1,0),rockMat=new THREE.MeshLambertMaterial({color:0xffffff});
-
-
-
 
 
 
@@ -1969,7 +1991,7 @@ function makeSign(type) {
 }
 
 /* ===== CARTELLI DI COMUNE ===== */
-const TOWN_EVERY  = 2000; // m tra un cartello e l'altro
+const TOWN_EVERY  = 3000; // m tra un cartello e l'altro
 const TOWN_OFFSET = 123;  // sfasamento: evita i cartelli di pericolo (ogni 500 m)
 const TOWNS = [
   { name: 'ACCUMOLI', fill:'#f5f5f5', stroke:'#111111' },
@@ -2254,7 +2276,8 @@ function buildChunk(c){
 	const lz = -Math.sin(p.h);
 	const x = p.x - lx * (p.w + 2.2);
 	const z = p.z - lz * (p.w + 2.2);
-	const sg = makeTownSign(towns[(tn - 1) % towns.length]);
+	const townIndex = (tn - 1) % towns.length;
+	const sg = makeTownSign(towns[townIndex]);
 	sg.position.set(x, p.y - .3, z);
 	sg.rotation.y = p.h + Math.PI;
 	scene.add(sg);
@@ -2645,6 +2668,11 @@ function overlapsPuddle(x,z,puddles){
  return false;
 }
 
+
+const QUOTA_TREES = 58;//alberi fino a 58m
+const QUOTA_TUFTS = 56;//ciuffi d'erba marroni fino a 56m
+const QUOTA_PUDDLES = 46;//pozze sotto a 46m
+
 function buildDetail(tile){
  tile.detail=true;
  const rng=mulberry((tile.tx*73856093)^(tile.tz*19349663));
@@ -2652,6 +2680,9 @@ function buildDetail(tile){
  const puddleRng=mulberry(((tile.tx*73856093)^(tile.tz*19349663)^0x27d4eb2d)>>>0);
  const PR=(a,b)=>a+puddleRng()*(b-a);
  const trees=[];
+ const mountainPineTrees=[];
+ const oakTrees=[];
+ const cypressTrees=[];
  const rocks=[];
  
  //densità alberi (100 tentativi)
@@ -2659,9 +2690,14 @@ function buildDetail(tile){
   const x=tile.x0+R(0,TILE);
   const z=tile.z0+R(0,TILE);
 	terrain(x,z,TQ);
-	if(TQ.ad<9||TQ.y>58)continue;
+	if(TQ.ad<9||TQ.y>QUOTA_TREES)continue;
 	const dens=clamp((vnoise(x*.008+100,z*.008)-.3)*3,0,1);
-  if(R(0,1)<.1+dens*.9)trees.push([x,TQ.y-.2,z,R(.8,1.7)]);
+	if(R(0,1)<.1+dens*.9){
+	  if(TQ.y<20) oakTrees.push([x,TQ.y-.2,z,R(.8,1.7)]);
+	  else if(TQ.y<30) cypressTrees.push([x,TQ.y-.2,z,R(.8,1.7)]);
+	  else if(TQ.y>50) mountainPineTrees.push([x,TQ.y-.2,z,R(.8,1.7)]);
+	  else trees.push([x,TQ.y-.2,z,R(.8,1.7)]);
+	}
  }
  
  //densita rocce (45 tentativi)
@@ -2670,9 +2706,10 @@ function buildDetail(tile){
   const z=tile.z0+R(0,TILE);
 	terrain(x,z,TQ);
 	if(TQ.ad<6.5)continue;
-  if(R(0,1)<.35)rocks.push([x,TQ.y,z,R(.6,1.9)]);
+    if(R(0,1)<.35)rocks.push([x,TQ.y,z,R(.4,1.7)]);
  }
 
+ //pozze
  const puddles=[];
  for(let k=0;k<PUDDLES_NUMBER;k++){
   const x=tile.x0+PR(0,TILE);
@@ -2680,7 +2717,7 @@ function buildDetail(tile){
   terrain(x,z,TQ);
   //larghezza strada
   const onAsphalt=TQ.surf<4&&Math.abs(TQ.d)<TQ.hw-.6;
-  const onGreen=Math.abs(TQ.d)>TQ.hw+1.5&&TQ.y<56;
+  const onGreen=Math.abs(TQ.d)>TQ.hw+1.5&&TQ.y<QUOTA_PUDDLES;
   
   if((!onAsphalt&&!onGreen)||PR(0,1)>(onAsphalt?.22:.09))continue;
   const rx=1+PR(1,2);
@@ -2702,7 +2739,7 @@ function buildDetail(tile){
 	tile.objs.push(im);
   };
   
- 
+ //pini
  inst(pineGeo,pineMat,trees,(t,i,im)=>{
   dummy.position.set(t[0],t[1],t[2]);
   dummy.rotation.set(0,R(0,6.28),0);
@@ -2711,9 +2748,46 @@ function buildDetail(tile){
   im.setMatrixAt(i,dummy.matrix);
   const b=R(.7,1.2);
   im.setColorAt(i,tmpCol.setRGB(b,b*R(.95,1.1),b));
-    tile.obs.push({type:'tree',x:t[0],y:t[1],z:t[2],r:.35*t[3]+.1,col: [0.10, 0.28, 0.13],im,i});
+  tile.obs.push({type:'tree',x:t[0],y:t[1],z:t[2],r:.35*t[3]+.1,col: [0.10, 0.28, 0.13],im,i});
  });
  
+ // 2. Instanzia i pini montani (se presenti in questo tile)
+ inst(mountainPineGeo,mountainPineMat,mountainPineTrees,(t,i,im)=>{
+  dummy.position.set(t[0],t[1],t[2]);
+  dummy.rotation.set(0,R(0,6.28),0);
+  dummy.scale.set(t[3]*R(.85,1.15),t[3],t[3]*R(.85,1.15));
+  dummy.updateMatrix();
+  im.setMatrixAt(i,dummy.matrix);
+  const b=R(.7,1.2);
+  im.setColorAt(i,tmpCol.setRGB(b,b*R(.95,1.1),b));
+  tile.obs.push({type:'tree',x:t[0],y:t[1],z:t[2],r:.35*t[3]+.1,col:[0.08,0.25,0.14],im,i});
+ });
+ 
+ // 3. Instanzia le querce (se presenti in questo tile)
+ inst(oakGeo,oakMat,oakTrees,(t,i,im)=>{
+  dummy.position.set(t[0],t[1],t[2]);
+  dummy.rotation.set(0,R(0,6.28),0);
+  dummy.scale.set(t[3]*R(.85,1.15),t[3],t[3]*R(.85,1.15));
+  dummy.updateMatrix();
+  im.setMatrixAt(i,dummy.matrix);
+  const b=R(.7,1.2);
+  im.setColorAt(i,tmpCol.setRGB(b,b*R(.95,1.1),b));
+  tile.obs.push({type:'tree',x:t[0],y:t[1],z:t[2],r:.35*t[3]+.1,col:[0.06,0.27,0.16],im,i});
+ });
+ 
+ // 4. Instanzia i cipressi (se presenti in questo tile)
+ inst(cypressGeo,cypressMat,cypressTrees,(t,i,im)=>{
+  dummy.position.set(t[0],t[1],t[2]);
+  dummy.rotation.set(0,R(0,6.28),0);
+  dummy.scale.set(t[3]*R(.85,1.15),t[3],t[3]*R(.85,1.15));
+  dummy.updateMatrix();
+  im.setMatrixAt(i,dummy.matrix);
+  const b=R(.7,1.2);
+  im.setColorAt(i,tmpCol.setRGB(b,b*R(.95,1.1),b));
+  tile.obs.push({type:'tree',x:t[0],y:t[1],z:t[2],r:.35*t[3]+.1,col:[0.12,0.27,0.18],im,i});
+ });
+ 
+ //rocce
  inst(rockGeo,rockMat,rocks,(t,i,im)=>{
   const sx=t[3]*R(.6,1.0);
   const sz=t[3]*R(.6,1.0);
@@ -2727,6 +2801,7 @@ function buildDetail(tile){
     tile.obs.push({type:'rock',x:t[0],y:t[1]+.3,z:t[2],r:Math.max(sx,sz)*.85,col:[g,g*.97,g*.92],im,i});
  });
  
+ //pozze
    if(puddles.length){
       for(const puddle of puddles){
        const rotation=PR(0,Math.PI*2);
@@ -2741,6 +2816,7 @@ function buildDetail(tile){
       }
    }
    
+ //ciuffi
  const tufts=[];
  const TUFTS_NUMBER = IS_MOBILE ? 40 : 70;
  for(let k=0;k<TUFTS_NUMBER;k++){
@@ -2748,7 +2824,7 @@ function buildDetail(tile){
   const z=tile.z0+R(0,TILE);
 	if(overlapsPuddle(x,z,puddles))continue;
 	terrain(x,z,TQ);
-	if(TQ.ad<5.5||TQ.y>56)continue;
+	if(TQ.ad<5.5||TQ.y>QUOTA_TUFTS)continue;
 	const dens=clamp((vnoise(x*.02+300,z*.02)-.25)*3,0,1);
   if(R(0,1)<.18+dens*.7)tufts.push([x,TQ.y-.1,z,R(.6,1.3)]);
  }
