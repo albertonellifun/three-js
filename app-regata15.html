@@ -3414,7 +3414,8 @@ transformed=normalize(position)*(${r}+hw+.06);}`);
         };
         /* ---------- boe ancorate ---------- */
         let buoyUpdate = () => {};
-        const buoyP = []; // direzioni unitarie (servono anche alla minimappa)
+        const buoyP = []; // direzioni unitarie di riposo (servono anche alla minimappa)
+        const buoyCur = []; // direzioni unitarie attuali (spostate dall'urto)
         (function() {
           const NB = MOB ? 14 : 24,
             SEP = Math.cos(80 / R),
@@ -3429,6 +3430,7 @@ transformed=normalize(position)*(${r}+hw+.06);}`);
             if (plat && d.dot(plat) > Math.cos(120 / R)) continue; // non vicino alla piattaforma
             if (buoyP.some(b => b.dot(d) > SEP)) continue; // distanza minima 80 m
             buoyP.push(d);
+            buoyCur.push(d.clone());
           }
           const n = buoyP.length;
           if (!n) return;
@@ -3457,7 +3459,7 @@ transformed=normalize(position)*(${r}+hw+.06);}`);
             RED = lin(0xd01f30),
             WHT = lin(0xf4f2ec),
             red = buoyP.map(() => rnd() < .5);
-          red.forEach((r, i) => mesh.setColorAt(i, r ? RED : WHT)); // il colore di istanza moltiplica quello dei vertici: corpo bianco o rosso
+          red.forEach((r, i) => mesh.setColorAt(i, r ? RED : WHT));
           mesh.instanceColor.needsUpdate = true;
           mesh.frustumCulled = false;
           mesh.castShadow = true;
@@ -3492,6 +3494,35 @@ transformed=normalize(position)*(${r}+hw+.06);}`);
             }), n);
           chain.frustumCulled = anch.frustumCulled = false;
           scene.add(chain, anch);
+          // schiuma sull'acqua attorno alla boa (si intensifica e si allarga all'urto)
+          const ft = document.createElement('canvas');
+          ft.width = ft.height = 128;
+          {
+            const x = ft.getContext('2d'),
+              g = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+            g.addColorStop(0, 'rgba(255,255,255,0)');
+            g.addColorStop(.28, 'rgba(255,255,255,0)');
+            g.addColorStop(.44, 'rgba(255,255,255,.95)');
+            g.addColorStop(.72, 'rgba(255,255,255,.35)');
+            g.addColorStop(1, 'rgba(255,255,255,0)');
+            x.fillStyle = g;
+            x.fillRect(0, 0, 128, 128);
+          }
+          const foamMat = new T.MeshBasicMaterial({
+            map: new T.CanvasTexture(ft),
+            transparent: true,
+            depthWrite: false,
+            polygonOffset: true,
+            polygonOffsetFactor: -2,
+            polygonOffsetUnits: -2
+          });
+          const foamMesh = new T.InstancedMesh(new T.PlaneGeometry(5.2, 5.2).rotateX(-Math.PI / 2), foamMat, n);
+          foamMesh.frustumCulled = false;
+          foamMesh.renderOrder = 1;
+          const fCol = new T.Color();
+          for (let i = 0; i < n; i++) foamMesh.setColorAt(i, fCol.setScalar(.25));
+          foamMesh.instanceColor.needsUpdate = true;
+          scene.add(foamMesh);
           // luci: rossa sulle boe rosse, bianca-calda sulle bianche
           const gc = document.createElement('canvas');
           gc.width = gc.height = 64;
@@ -3522,22 +3553,102 @@ transformed=normalize(position)*(${r}+hw+.06);}`);
           lamps.frustumCulled = false;
           lamps.renderOrder = 4;
           scene.add(lamps);
+          // stato elastico locale + impulso di schiuma per ciascuna boa
+          const ox = new Float32Array(n),
+            oz = new Float32Array(n);
+          const vx = new Float32Array(n),
+            vz = new Float32Array(n);
+          const hitCd = new Float32Array(n),
+            splash = new Float32Array(n);
           const q = new T.Quaternion(),
             qt = new T.Quaternion(),
-            E = new T.Euler(),
-            p = V3(),
+            qf = new T.Quaternion(),
+            E = new T.Euler();
+          const p = V3(),
             s = V3(1, 1, 1),
+            sf = V3(1, 1, 1),
             m = new T.Matrix4();
+          const bPos = V3(),
+            rel = V3(),
+            e1 = V3(),
+            e2 = V3();
           buoyP.forEach((d, i) => anch.setMatrixAt(i, m.compose(p.copy(d).multiplyScalar(seab[i] - .6), qb[i], s)));
           anch.instanceMatrix.needsUpdate = true;
-          buoyUpdate = (t, dayK) => {
+          buoyUpdate = (t, dt, dayK) => {
             const night = 1 - dayK;
-            buoyP.forEach((d, i) => {
-              p.copy(d).multiplyScalar(R);
-              const h = waveH(p, t) * .9; // stesso bobbing della barca
-              q.setFromUnitVectors(Y, d).multiply(qt.setFromEuler(E.set(Math.sin(t * 1.3 + i) * .12, 0, Math.cos(t * 1.1 + i * 2) * .12)));
-              mesh.setMatrixAt(i, m.compose(p.copy(d).multiplyScalar(R + h), q, s));
-              p.addScaledVector(d, 4.9);
+            const dayLum = .2 + .8 * dayK;
+            const boatW = boat.position;
+            const hitR = 4.8; // raggio d'urto scafo + boa (m)//3.8
+            const maxDisp = 3.6; // spostamento massimo consentito (m)//2.6
+            for (let i = 0; i < n; i++) {
+              const d = buoyP[i];
+              if (hitCd[i] > 0) hitCd[i] = Math.max(0, hitCd[i] - dt);
+              if (splash[i] > 0) splash[i] = Math.max(0, splash[i] - dt * .45); // decade in ~2.2 s
+              // base ortonormale locale attorno alla direzione di riposo della boa
+              const ref = Math.abs(d.y) < .9 ? Y : V3(1, 0, 0);
+              e1.crossVectors(ref, d).normalize();
+              e2.crossVectors(d, e1).normalize();
+              // posizione attuale della boa sull'acqua per rilevare il contatto con la barca
+              p.copy(d).multiplyScalar(R).addScaledVector(e1, ox[i]).addScaledVector(e2, oz[i]).normalize();
+              const h = waveH(p.clone().multiplyScalar(R), t) * .9;
+              // punto più vicino lungo l'asse prua-poppa della barca (scafo ~14 m => semi-lunghezza ~5.8 m)
+              const halfLen = 5.8;
+              const boatAxisX = -Math.sin(hd);
+              const boatAxisZ = -Math.cos(hd);
+              const dxW = bPos.x - boatW.x;
+              const dzW = bPos.z - boatW.z;
+              const along = clamp(dxW * boatAxisX + dzW * boatAxisZ, -halfLen, halfLen);
+              const cx = boatW.x + boatAxisX * along;
+              const cz = boatW.z + boatAxisZ * along;
+              rel.set(bPos.x - cx, bPos.y - boatW.y, bPos.z - cz);
+              const dist = rel.length();
+              const hullHitR = 3.1; // raggio attorno allo scafo (larghezza ~2.1 m + raggio boa ~1.6 m con margine)
+              if (dist < hullHitR && dist > 1e-4) {
+                const pen = (hullHitR - dist) / hullHitR;
+                const nx = rel.x / dist;
+                const nz = rel.z / dist;
+                // spinta immediata fuori dallo scafo così non ci entra dentro
+                const depen = hullHitR - dist;
+                ox[i] = clamp(ox[i] + nx * depen, -maxDisp, maxDisp);
+                oz[i] = clamp(oz[i] + nz * depen, -maxDisp, maxDisp);
+                const push = (2.2 + Math.abs(speed) * 1.35) * pen;
+                vx[i] += rel.dot(e1) / dist * push * 16 * dt;
+                vz[i] += rel.dot(e2) / dist * push * 16 * dt;
+                // attiva l'onda di schiuma proporzionale alla velocità della barca
+                splash[i] = Math.min(1, Math.max(splash[i], clamp((Math.abs(speed) + 1.5) / 8, .35, 1) * (.45 + .55 * pen)));
+                if (hitCd[i] <= 0 && Math.abs(speed) > 1.2) {
+                  hitCd[i] = 0.55;
+                  Snd.hit(Math.abs(speed) * 0.45);
+                  speed *= 0.96;
+                }
+              }
+              // molla di richiamo + smorzamento (rinculo contenuto)
+              const kSpring = 18.0,
+                damp = 6.5;
+              const ax = -kSpring * ox[i] - damp * vx[i];
+              const az = -kSpring * oz[i] - damp * vz[i];
+              vx[i] += ax * dt;
+              vz[i] += az * dt;
+              ox[i] = clamp(ox[i] + vx[i] * dt, -maxDisp, maxDisp);
+              oz[i] = clamp(oz[i] + vz[i] * dt, -maxDisp, maxDisp);
+              // direzione spostata sulla sfera
+              buoyCur[i].copy(d).addScaledVector(e1, ox[i] / R).addScaledVector(e2, oz[i] / R).normalize();
+              const curD = buoyCur[i];
+              // inclinazione: bobbing naturale + piegamento proporzionale allo spostamento
+              const tiltX = Math.sin(t * 1.3 + i) * .12 + (oz[i] / maxDisp) * .28;
+              const tiltZ = Math.cos(t * 1.1 + i * 2) * .12 - (ox[i] / maxDisp) * .28;
+              qf.setFromUnitVectors(Y, curD);
+              q.copy(qf).multiply(qt.setFromEuler(E.set(tiltX, 0, tiltZ)));
+              p.copy(curD).multiplyScalar(R + h);
+              mesh.setMatrixAt(i, m.compose(p, q, s));
+              // anello di schiuma: piccolo respiro base + espansione e luminosità sull'urto
+              const spK = splash[i];
+              const rScale = .85 + .08 * Math.sin(t * 1.7 + i * 1.6) + spK * 1.15;
+              sf.set(rScale, 1, rScale);
+              p.copy(curD).multiplyScalar(R + h + .14);
+              foamMesh.setMatrixAt(i, m.compose(p, qf, sf));
+              foamMesh.setColorAt(i, fCol.setScalar((.18 + .82 * spK) * dayLum));
+              p.copy(curD).multiplyScalar(R + h + 4.9);
               lp[i * 3] = p.x;
               lp[i * 3 + 1] = p.y;
               lp[i * 3 + 2] = p.z;
@@ -3546,11 +3657,23 @@ transformed=normalize(position)*(${r}+hw+.06);}`);
               lc[i * 3] = k * c[0];
               lc[i * 3 + 1] = k * c[1];
               lc[i * 3 + 2] = k * c[2];
-              const step = (R + h - KEEL - seab[i]) / cnt[i]; // la catena segue il cono inferiore, il fondo resta fermo
-              for (let j = 0; j < cnt[i]; j++)
-                chain.setMatrixAt(off[i] + j, m.compose(p.copy(d).multiplyScalar(seab[i] + (j + .5) * step), j & 1 ? qa[i] : qb[i], s));
-            });
-            mesh.instanceMatrix.needsUpdate = chain.instanceMatrix.needsUpdate = true;
+              // catena ancorata al fondale (buoyP[i]) fino alla boa spostata
+              // punta inferiore della boa in coordinate mondo (segue anche l'inclinazione q)
+              const tipOff = V3(0, -KEEL, 0).applyQuaternion(q);
+              const topPt = curD.clone().multiplyScalar(R + h).add(tipOff);
+              const anchorPt = d.clone().multiplyScalar(seab[i]);
+              // orientamento della catena lungo la linea che va dal corpo morto alla punta della boa
+              const chainDir = topPt.clone().sub(anchorPt).normalize();
+              const qChainA = new T.Quaternion().setFromUnitVectors(Y, chainDir);
+              const qChainB = qChainA.clone().multiply(qY);
+              for (let j = 0; j < cnt[i]; j++) {
+                const frac = (j + .5) / cnt[i];
+                p.lerpVectors(anchorPt, topPt, frac);
+                chain.setMatrixAt(off[i] + j, m.compose(p, j & 1 ? qChainB : qChainA, s));
+              }
+            }
+            mesh.instanceMatrix.needsUpdate = chain.instanceMatrix.needsUpdate = foamMesh.instanceMatrix.needsUpdate = true;
+            foamMesh.instanceColor.needsUpdate = true;
             lg.attributes.position.needsUpdate = lg.attributes.color.needsUpdate = true;
           };
         })();
@@ -4026,7 +4149,7 @@ URL = ${location.search || '(nessun parametro)'}`);
           mp.fillStyle = '#bb44ff';
           mp.strokeStyle = '#fff';
           mp.lineWidth = .6;
-          for (const b of buoyP) {
+          for (const b of buoyCur) {
             mp.beginPath();
             mp.arc((Math.atan2(-b.z, b.x) / Math.PI + 1) / 2 * MW, (.5 - Math.asin(b.y) / Math.PI) * MH, 1.8, 0, TAU);
             mp.fill();
@@ -4859,7 +4982,7 @@ ${inf.programs ? inf.programs.length : '?'} shader`;
           platUpdate(time, dayK); //isola petrolio
           turbUpdate(time, dt, wf, windKn, dayK); //turbine eoliche piene di pale!
           updateBirds(time); //uccelli gpt
-          buoyUpdate(time, dayK); //aggiorna pure le boe
+          buoyUpdate(time, dt, dayK); //aggiorna pure le boe
           renderer.render(scene, cam);
           if ((hudT += dt) >= .03) { // HUD e minimappa a ~30 Hz
             hudT = 0;
