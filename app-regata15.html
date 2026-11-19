@@ -706,14 +706,18 @@
           }
           if (ok) isl = d;
         }
-        /* ---------- sito piattaforma petrolifera ---------- */
+        if (!isl) {
+          console.warn('Faro: nessun sito valido, isola non creata');
+          document.getElementById('help').textContent += ` · Faro non creato`;
+        }
+        /* ---------- isola petrolio / sito piattaforma petrolifera ---------- */
         let plat = null;
         const PCOS = Math.cos(15 / R); // raggio di collisione barca (m)
         {
           const SEPP = Math.cos(Math.min(.9, Math.max(.25, 160 / R)));
           for (let i = 0; i < 60000 && !plat; i++) {
-            const d = rdir(),
-              h = hAt(d.x, d.y, d.z);
+            const d = rdir();
+            const h = hAt(d.x, d.y, d.z);
             if (h > -24 || h < -44) continue; // fondale 24-44 m
             if (vols.some(v => v.dot(d) > SEPP) || (isl && isl.dot(d) > SEPP)) continue;
             let ok = true;
@@ -729,23 +733,16 @@
             document.getElementById('help').textContent += ` · Piattaforma non creata`;
           }
         }
-        if (!isl) {
-          console.warn('Faro: nessun sito valido, isola non creata');
-          document.getElementById('help').textContent += ` · Faro non creato`;
-        }
         const MOB = matchMedia("(pointer:coarse)").matches || innerWidth < 700;
-        /* qualità: ?q=rich / ?q=lite forzano la modalità, altrimenti rich = desktop */
-        const qp = new URLSearchParams(location.search).get('q'),
-          RICH = qp ? qp === 'rich' : !MOB;
         const N = +new URLSearchParams(location.search).get('n') || (MOB ? 64 : 128);
         const WATERDETAIL = +new URLSearchParams(location.search).get('d') || (MOB ? 2 : 3);
         /* ?a= : ampiezza (pendenza) dei ripple, indipendente dalla frequenza (?d=). Default = d, come prima */
         const WAMP = +new URLSearchParams(location.search).get('a') || WATERDETAIL;
         const SHADOWS = new URLSearchParams(location.search).get('s') !== '0';
         const SH = MOB ? 64 : 128;
-        const idx = new Map(),
-          dir = [],
-          ind = [];
+        const idx = new Map();
+        const dir = [];
+        const ind = [];
 
         function vid(x, y, z) {
           const k = ((x + N) * (2 * N + 1) + (y + N)) * (2 * N + 1) + (z + N);
@@ -845,12 +842,12 @@
         tg.setAttribute('color', new T.BufferAttribute(tc, 3));
         tg.setIndex(ind);
         tg.computeVertexNormals();
-        /* terreno: in modalità RICH il fondale riceve le caustiche (proiezione triplanare, animate, solo sott'acqua e col sole alto) */
+        /* terreno: in modalità non mobile il fondale riceve le caustiche (proiezione triplanare, animate, solo sott'acqua e col sole alto) */
         const terrMat = new T.MeshStandardMaterial({
           vertexColors: true,
           roughness: .95
         });
-        if (RICH) terrMat.onBeforeCompile = s => {
+        if (!MOB) terrMat.onBeforeCompile = s => {
           s.uniforms.cT = U.t;
           s.uniforms.cSun = U.sun;
           s.uniforms.cDay = U.day;
@@ -935,7 +932,7 @@ float cau(vec2 uv,float t){
           DT_BUMP = 0.25; // rilievo della normale in metri (0 = off)
         const prevOBC = terrMat.onBeforeCompile;
         terrMat.onBeforeCompile = s => {
-          prevOBC.call(terrMat, s); // caustiche (solo RICH)
+          prevOBC.call(terrMat, s); // caustiche (solo non mobile)
           s.uniforms.dtx = {
             value: detTex
           };
@@ -951,8 +948,8 @@ float cau(vec2 uv,float t){
 		` + s.fragmentShader
             .replace('#include <color_fragment>', `#include <color_fragment>
 		vec3 dW=pow(abs(normalize(vNw)),vec3(4.));dW/=dW.x+dW.y+dW.z;
-		//${RICH ? 'float dH=dtS(vDp*.11,dW)*.62+dtS(vDp*.47,dW)*.38;' : 'float dH=dtS(vDp*.16,dW);'}
-		  ${RICH ? 'float dH=dtS(vDp*.05,dW)*.62+dtS(vDp*.24,dW)*.38;' : 'float dH=dtS(vDp*.08,dW);'}
+		//${!MOB ? 'float dH=dtS(vDp*.11,dW)*.62+dtS(vDp*.47,dW)*.38;' : 'float dH=dtS(vDp*.16,dW);'}
+		  ${!MOB ? 'float dH=dtS(vDp*.05,dW)*.62+dtS(vDp*.24,dW)*.38;' : 'float dH=dtS(vDp*.08,dW);'}
 		diffuseColor.rgb*=1.+${DT_ALB.toFixed(3)}*2.*(dH-.5);`)
             .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
 		normal=dtN(-vViewPosition,normal,dH,${DT_BUMP.toFixed(3)}*(1.-smoothstep(100.,450.,length(vViewPosition))));`);
@@ -1788,7 +1785,7 @@ c*=1.+(1.-smoothstep(0.,45.,vUv.x))*.6;c=mix(vec3(.1,.02,0.),c,edge);gl_FragColo
           lake.frustumCulled = false;
           scene.add(lake);
           for (let k = 0, nf = MOB ? 3 : 4; k < nf; k++) scene.add(lavaFlow(v, k * 6.283 / nf + rnd() * .9, 105));
-          const pl = new T.PointLight(0xff6a20, 6, 160);
+          const pl = new T.PointLight(0xff6a20, 6, 160); //faro int=6, dist=160
           pl.position.copy(pos.clone().add(v.clone().multiplyScalar(6)));
           scene.add(pl);
           [pts(110, 0), pts(60, 1)].forEach(p => {
@@ -2047,9 +2044,9 @@ c*=1.+(1.-smoothstep(0.,45.,vUv.x))*.6;c=mix(vec3(.1,.02,0.),c,edge);gl_FragColo
         let updateBirds = () => {};
         (function createBirds() {
           const NFLOCK = Math.round(clamp(10 * (R / 600) * (R / 600), 4, 28) * (MOB ? .6 : 1)); // stormi, scalano con la superficie
-          const MINB = 4,
-            MAXB = 5; // gabbiani per stormo
-          const HIDE = 900; // oltre questa distanza dalla camera lo stormo non viene disegnato
+          const MINB = 3;
+          const MAXB = 6; // gabbiani per stormo
+          const HIDE = 500; // oltre questa distanza dalla camera lo stormo non viene disegnato (OCHO: ogni gabbiano e' una mesh separata = pesa)
           const HEAR = 150; // distanza massima a cui si sente un verso
           // Costruisce la geometria dettagliata del gabbiano orientata con il dorso in alto (+Y) e becco in avanti (-Z o +Z)
           function buildSeagullGeo() {
@@ -2214,22 +2211,22 @@ c*=1.+(1.-smoothstep(0.,45.,vUv.x))*.6;c=mix(vec3(.1,.02,0.),c,edge);gl_FragColo
           transformed.x += sign(position.x) * abs(dy) * 0.14 * span;`);
           };
           // 6 varianti di geometria con fase di battito diversa, condivise da tutti i gabbiani
-          const NV = 6,
-            variants = [];
+          const NV = 6;
+          const variants = [];
           for (let i = 0; i < NV; i++) {
             const g = baseGeo.clone();
             g.setAttribute('aPhase', new T.BufferAttribute(new Float32Array(g.attributes.position.count).fill(i * 2.1 + rnd()), 1));
             g.boundingSphere = new T.Sphere(V3(0, 0, 0), 2.5); // frustum culling per gabbiano (il battito è nello shader)
             variants.push(g);
           }
-          const flocks = [],
-            centers = [];
+          const flocks = [];
+          const centers = [];
           for (let f = 0; f < NFLOCK; f++) {
-            let d = null,
-              h = 0;
+            let d = null;
+            let h = 0;
             for (let i = 0; i < 400; i++) {
-              const c = rdir(),
-                ch = hAt(c.x, c.y, c.z);
+              const c = rdir();
+              const ch = hAt(c.x, c.y, c.z);
               if (lastVol < 130) continue; // lontano dai vulcani (fumo/lava)
               if (ch > 30) continue; // non sopra le montagne
               if (i < 250 && centers.some(o => o.dot(c) > Math.cos(100 / R))) continue; // distanza minima tra stormi
@@ -2246,10 +2243,10 @@ c*=1.+(1.-smoothstep(0.,45.,vUv.x))*.6;c=mix(vec3(.1,.02,0.),c,edge);gl_FragColo
             grp.position.copy(d).multiplyScalar(R + Math.max(h, 0) + 16 + rnd() * 14);
             grp.quaternion.setFromUnitVectors(Y, d); // Y locale = su del pianeta
             scene.add(grp);
-            const n = MINB + (rnd() * (MAXB - MINB + 1) | 0),
-              dirK = rnd() < .5 ? 1 : -1, // tutto lo stormo gira nello stesso verso
-              baseR = 9 + rnd() * 10,
-              birds = [];
+            const n = MINB + (rnd() * (MAXB - MINB + 1) | 0);
+            const dirK = rnd() < .5 ? 1 : -1; // tutto lo stormo gira nello stesso verso
+            const baseR = 9 + rnd() * 10;
+            const birds = [];
             for (let i = 0; i < n; i++) {
               const mesh = new T.Mesh(variants[(rnd() * NV) | 0], mat);
               mesh.scale.setScalar(.95 + rnd() * .35);
@@ -2271,6 +2268,12 @@ c*=1.+(1.-smoothstep(0.,45.,vUv.x))*.6;c=mix(vec3(.1,.02,0.),c,edge);gl_FragColo
               birds
             });
           }
+          /*
+		  console.log('stormi='+NFLOCK+' centers=',centers);
+		  const latit = Math.asin(clamp(centers[0].y, -1, 1)) * 57.2958;
+          const longit = Math.atan2(-centers[0].z, centers[0].x) * 57.2958;
+		  console.log('longit='+latit+' longit='+longit);
+		  */
           const _bp = V3();
           let nextCry = 4 + rnd() * 6;
           updateBirds = (t) => {
@@ -2496,10 +2499,10 @@ gl_FragColor=vec4(col,a);
           v.copy(FB).addScaledVector(isl, al).addScaledVector(_fd, FRAD)
         };
         /* ---------- piattaforma petrolifera ---------- */
-        const PB = V3(),
-          PRAD = 13; // PB = base a livello del mare; PRAD = ingombro camera
-        let platOn = false,
-          platUpdate = () => {};
+        const PB = V3();
+        const PRAD = 13; // PB = base a livello del mare; PRAD = ingombro camera
+        let platOn = false;
+        let platUpdate = () => {};
         if (plat)(function() {
           const grp = new T.Group();
           PB.copy(plat).multiplyScalar(R);
@@ -2841,9 +2844,9 @@ gl_FragColor=vec4(col,a);
             grp.add(o);
             return o
           };
-          const WARM = new T.Color(1, .88, .6),
-            GRN = new T.Color(.3, 1, .5),
-            RED = new T.Color(1, .12, .1);
+          const WARM = new T.Color(1, .88, .6);
+          const GRN = new T.Color(.3, 1, .5);
+          const RED = new T.Color(1, .12, .1);
           const floods = lamps([
             [-8.4, DT + 4.4, -8.4, WARM],
             [8.4, DT + 4.4, -8.4, WARM],
@@ -2876,8 +2879,8 @@ gl_FragColor=vec4(col,a);
             par.add(s);
             return s
           };
-          const craneLamp = spr(0xff2222, 3.5, craneG, 8.5, 13.7, 0),
-            flameGlow = spr(0xff8030, 26, grp, FP.x, FP.y + 4, FP.z);
+          const craneLamp = spr(0xff2222, 3.5, craneG, 8.5, 13.7, 0);
+          const flameGlow = spr(0xff8030, 26, grp, FP.x, FP.y + 4, FP.z);
           /* --- fiamma del flare (shader, billboard sul solo asse Y) --- */
           const flame = new T.Mesh(new T.PlaneGeometry(4.6, 11).translate(0, 5.5, 0), new T.ShaderMaterial({
             transparent: true,
@@ -2910,7 +2913,7 @@ void main(){
           grp.add(flame);
           let fLight = null;
           if (!MOB) {
-            fLight = new T.PointLight(0xff7a22, 4, 150, 2);
+            fLight = new T.PointLight(0xff7a22, 4, 150, 2); //fiamma int=4, dist=100, decay=2
             fLight.position.copy(FP).add(V3(0, 4, 0));
             grp.add(fLight);
           }
@@ -3253,6 +3256,304 @@ transformed=normalize(position)*(${r}+hw+.06);}`);
         const startSpot = findOceanSpot(-30, true);
         P.copy(startSpot.p);
         Tn.copy(startSpot.t);
+        /* ---------- pala eolica offshore ---------- */
+        const WHUB = 120; //altezza mozzo 120m
+        const WBL = 62; //lunghezza pala 62m
+        const WB = V3();
+        let turbD = null,
+          turbUpdate = () => {};
+        (function() {
+          const SEP = Math.cos(Math.min(.9, Math.max(.25, 160 / R)));
+          for (let i = 0; i < 60000 && !turbD; i++) {
+            const d = rdir(),
+              h = hAt(d.x, d.y, d.z);
+            if (h > -22 || h < -40) continue; // fondale 22-40 m (monopalo)
+            if (vols.some(v => v.dot(d) > SEP) || (isl && isl.dot(d) > SEP) || (plat && plat.dot(d) > SEP)) continue;
+            const ang = Math.acos(clamp(d.dot(startSpot.p), -1, 1)) * R;
+            if (ang < 150 || (i < 30000 && ang > 380)) continue; // visibile dallo spawn, non addosso
+            let ok = true;
+            for (let k = 0; k < 12 && ok; k++) { // mare aperto attorno
+              const p = d.clone().addScaledVector(rdir(), (20 + rnd() * 90) / R).normalize();
+              ok = hAt(p.x, p.y, p.z) < -8;
+            }
+            if (ok) turbD = d;
+          }
+          if (!turbD) {
+            console.warn('Pala eolica: nessun sito valido');
+            return;
+          }
+          const yb = meshH(turbD.x, turbD.y, turbD.z) - 2; // il monopalo entra nel fondale
+          WB.copy(turbD).multiplyScalar(R);
+          const grp = new T.Group();
+          grp.position.copy(WB);
+          grp.quaternion.setFromUnitVectors(Y, turbD);
+          scene.add(grp);
+          const piece = (g, hex, m) => { // geometria non indicizzata a colore pieno
+            g = g.index ? g.toNonIndexed() : g;
+            if (m) g.applyMatrix4(m);
+            const c = lin(hex),
+              n = g.attributes.position.count,
+              a = new Float32Array(n * 3);
+            for (let i = 0; i < n; i++) a.set([c.r, c.g, c.b], i * 3);
+            g.setAttribute('color', new T.BufferAttribute(a, 3));
+            return g;
+          };
+          const cy = (rb, rt, y0, y1) => new T.CylinderGeometry(rt, rb, y1 - y0, 24).translate(0, (y0 + y1) / 2, 0);
+          const mat = new T.MeshStandardMaterial({
+            vertexColors: true,
+            roughness: .45,
+            metalness: .15
+          });
+          // fondazione + transition piece + piattaforma + torre rastremata
+          grp.add(new T.Mesh(merge([
+            piece(cy(4.6, 4.6, yb, 2), 0x4a4f57),
+            piece(cy(4.8, 4.8, 2, 14), 0xe8b800),
+            piece(cy(7.5, 7.5, 13.8, 14.3), 0x3a3d44),
+            piece(cy(4.4, 2.6, 14.3, WHUB - 1), 0xf2f2ee)
+          ]), mat));
+          // pala: rastremata, svergolata, punta rossa
+          const bladeG = (() => {
+            const g = new T.BoxGeometry(1, WBL, 1, 1, 20, 1).translate(0, WBL / 2, 0),
+              p = g.attributes.position;
+            for (let i = 0; i < p.count; i++) {
+              const t = p.getY(i) / WBL,
+                ch = 4.4 * (1 - .8 * Math.pow(t, .7)) + .3,
+                th = .9 * (1 - .8 * t) + .15,
+                a = .5 * (1 - t),
+                c = Math.cos(a),
+                s = Math.sin(a),
+                x = p.getX(i) * ch,
+                z = p.getZ(i) * th;
+              p.setX(i, x * c - z * s);
+              p.setZ(i, x * s + z * c);
+            }
+            g.translate(0, 1.8, 0);
+            g.computeVertexNormals();
+            const ng = g.toNonIndexed(),
+              q = ng.attributes.position,
+              col = new Float32Array(q.count * 3),
+              Wc = lin(0xf2f2ee),
+              Rd = lin(0xd01f30);
+            for (let i = 0; i < q.count; i++) {
+              const c = (q.getY(i) - 1.8) / WBL > .86 ? Rd : Wc;
+              col.set([c.r, c.g, c.b], i * 3);
+            }
+            ng.setAttribute('color', new T.BufferAttribute(col, 3));
+            return ng;
+          })();
+          const yaw = new T.Group();
+          yaw.position.y = WHUB;
+          grp.add(yaw); // ruota col vento
+          yaw.add(new T.Mesh(piece(new T.BoxGeometry(4.8, 5, 14), 0xf2f2ee, new T.Matrix4().makeTranslation(0, 0, -3)), mat));
+          const rot = new T.Group();
+          rot.position.set(0, 0, 5);
+          yaw.add(rot); // ruota col vento
+          const parts = [0, 1, 2].map(k => bladeG.clone().applyMatrix4(new T.Matrix4().makeRotationZ(k * 2.0944)));
+          parts.push(piece(new T.SphereGeometry(2.5, 16, 12), 0xf2f2ee, new T.Matrix4().makeScale(1, 1, 1.4)));
+          rot.add(new T.Mesh(merge(parts), mat));
+          grp.traverse(o => {
+            if (o.isMesh) o.castShadow = true;
+          });
+          // luce rossa lampeggiante sulla navicella (di notte si vede da lontano)
+          const gc = document.createElement('canvas');
+          gc.width = gc.height = 64;
+          {
+            const x = gc.getContext('2d'),
+              g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+            g.addColorStop(0, 'rgba(255,255,255,1)');
+            g.addColorStop(.25, 'rgba(255,255,255,.6)');
+            g.addColorStop(1, 'rgba(255,255,255,0)');
+            x.fillStyle = g;
+            x.fillRect(0, 0, 64, 64);
+          }
+          const lamp = new T.Sprite(new T.SpriteMaterial({
+            map: new T.CanvasTexture(gc),
+            color: 0xff2222,
+            blending: T.AdditiveBlending,
+            transparent: true,
+            depthWrite: false,
+            fog: false
+          }));
+          lamp.position.set(0, 3.4, -8);
+          lamp.scale.set(8, 8, 1);
+          lamp.renderOrder = 4;
+          yaw.add(lamp);
+          const _n = V3(),
+            _e = V3(),
+            _w = V3(),
+            qi = grp.quaternion.clone().invert();
+          let yawA = null,
+            om = 0;
+          turbUpdate = (t, dt, wf, kn, dayK) => {
+            _n.set(0, 1, 0).addScaledVector(turbD, -turbD.y); // stesso nord/est usati per la barca
+            if (_n.lengthSq() < 1e-4) _n.set(1, 0, 0);
+            _n.normalize();
+            _e.crossVectors(_n, turbD);
+            _w.copy(_n).multiplyScalar(Math.cos(wf)).addScaledVector(_e, Math.sin(wf)).applyQuaternion(qi); // da dove soffia, in locale
+            const tg = Math.atan2(_w.x, _w.z);
+            if (yawA === null) yawA = tg;
+            yawA += wrap(tg - yawA) * Math.min(1, dt * .5); // orientamento lento, come le vere turbine
+            yaw.rotation.y = yawA;
+            om += (kn * .055 - om) * Math.min(1, dt * .6); // inerzia del rotore
+            rot.rotation.z -= om * dt; // orario visto dal lato sopravento
+            lamp.material.opacity = (Math.sin(t * 4) > .4 ? 1 : .05) * (.2 + .8 * (1 - dayK));
+          };
+        })();
+        // camera: la torre è un cilindro-ostacolo
+        const avoidTurb = v => {
+          if (!turbD) return;
+          _fd.copy(v).sub(WB);
+          const al = _fd.dot(turbD);
+          if (al < -4 || al > WHUB + 6) return;
+          _fd.addScaledVector(turbD, -al);
+          const l = _fd.length();
+          if (l >= 7) return;
+          if (l < 1e-3) _fd.copy(tang(turbD)[0]);
+          else _fd.divideScalar(l);
+          v.copy(WB).addScaledVector(turbD, al).addScaledVector(_fd, 7);
+        };
+        /* ---------- boe ancorate ---------- */
+        let buoyUpdate = () => {};
+        const buoyP = []; // direzioni unitarie (servono anche alla minimappa)
+        (function() {
+          const NB = MOB ? 14 : 24,
+            SEP = Math.cos(80 / R),
+            SPAWN = Math.cos(70 / R),
+            KEEL = 2.5, // quanto scende il cono inferiore sotto la linea d'acqua
+            PITCH = .55; // passo delle maglie (m)
+          for (let i = 0; i < 20000 && buoyP.length < NB; i++) {
+            const d = rdir(),
+              h = hAt(d.x, d.y, d.z);
+            if (h > -20 || h < -40 || lastVol < 160) continue; // 20-40 m di fondale (= lunghezza catena), lontano dai vulcani
+            if (d.dot(startSpot.p) > SPAWN) continue; // non sullo spawn
+            if (plat && d.dot(plat) > Math.cos(120 / R)) continue; // non vicino alla piattaforma
+            if (buoyP.some(b => b.dot(d) > SEP)) continue; // distanza minima 80 m
+            buoyP.push(d);
+          }
+          const n = buoyP.length;
+          if (!n) return;
+          const flat = (g, hex, m) => { // geometria non indicizzata a colore pieno
+            g = g.index ? g.toNonIndexed() : g;
+            if (m) g.applyMatrix4(m);
+            const c = lin(hex),
+              k = g.attributes.position.count,
+              a = new Float32Array(k * 3);
+            for (let i = 0; i < k; i++) a.set([c.r, c.g, c.b], i * 3);
+            g.setAttribute('color', new T.BufferAttribute(a, 3));
+            return g;
+          };
+          // doppio cono: base comune appena sopra la linea d'acqua, punta in giù e punta in su
+          const body = merge([
+            flat(new T.ConeGeometry(1.6, 2.6, 16).translate(0, 1.4, 0), 0xffffff),
+            flat(new T.ConeGeometry(1.6, 2.6, 16).rotateX(Math.PI).translate(0, -1.2, 0), 0xffffff),
+            flat(new T.CylinderGeometry(.07, .07, 2, 6).translate(0, 3.7, 0), 0x2a2d33), // albero
+            flat(new T.SphereGeometry(.24, 8, 6).translate(0, 4.85, 0), 0x2a2d33) // lanterna
+          ]);
+          const mesh = new T.InstancedMesh(body, new T.MeshStandardMaterial({
+              vertexColors: true,
+              roughness: .4,
+              metalness: .05
+            }), n),
+            RED = lin(0xd01f30),
+            WHT = lin(0xf4f2ec),
+            red = buoyP.map(() => rnd() < .5);
+          red.forEach((r, i) => mesh.setColorAt(i, r ? RED : WHT)); // il colore di istanza moltiplica quello dei vertici: corpo bianco o rosso
+          mesh.instanceColor.needsUpdate = true;
+          mesh.frustumCulled = false;
+          mesh.castShadow = true;
+          mesh.receiveShadow = true;
+          scene.add(mesh);
+          // catena + corpo morto sul fondale
+          const seab = [],
+            cnt = [],
+            off = [],
+            qb = [],
+            qa = [],
+            qY = new T.Quaternion().setFromAxisAngle(Y, Math.PI / 2);
+          let tot = 0;
+          buoyP.forEach((d, i) => {
+            seab[i] = R + meshH(d.x, d.y, d.z) + .8; // base della catena: cima del corpo morto
+            cnt[i] = Math.ceil((R + 2 - KEEL - seab[i]) / PITCH); // numero fisso di maglie (il passo si adatta alle onde)
+            off[i] = tot;
+            tot += cnt[i];
+            qb[i] = new T.Quaternion().setFromUnitVectors(Y, d);
+            qa[i] = qb[i].clone().multiply(qY); // maglie alternate ruotate di 90°
+          });
+          const chain = new T.InstancedMesh(new T.TorusGeometry(.2, .05, 4, 8).scale(1, 1.6, 1),
+            new T.MeshStandardMaterial({
+              color: lin(0x3a3d44),
+              roughness: .5,
+              metalness: .6
+            }), tot);
+          const anch = new T.InstancedMesh(new T.BoxGeometry(2.4, 1.2, 2.4),
+            new T.MeshStandardMaterial({
+              color: lin(0x6a6e73),
+              roughness: .95
+            }), n);
+          chain.frustumCulled = anch.frustumCulled = false;
+          scene.add(chain, anch);
+          // luci: rossa sulle boe rosse, bianca-calda sulle bianche
+          const gc = document.createElement('canvas');
+          gc.width = gc.height = 64;
+          {
+            const x = gc.getContext('2d'),
+              g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+            g.addColorStop(0, 'rgba(255,255,255,1)');
+            g.addColorStop(.25, 'rgba(255,255,255,.6)');
+            g.addColorStop(1, 'rgba(255,255,255,0)');
+            x.fillStyle = g;
+            x.fillRect(0, 0, 64, 64);
+          }
+          const lp = new Float32Array(n * 3),
+            lc = new Float32Array(n * 3),
+            lg = new T.BufferGeometry(),
+            LCOL = red.map(r => r ? [1, .12, .1] : [1, .95, .75]);
+          lg.setAttribute('position', new T.BufferAttribute(lp, 3));
+          lg.setAttribute('color', new T.BufferAttribute(lc, 3));
+          const lamps = new T.Points(lg, new T.PointsMaterial({
+            size: 4,
+            map: new T.CanvasTexture(gc),
+            vertexColors: true,
+            transparent: true,
+            depthWrite: false,
+            blending: T.AdditiveBlending,
+            fog: false
+          }));
+          lamps.frustumCulled = false;
+          lamps.renderOrder = 4;
+          scene.add(lamps);
+          const q = new T.Quaternion(),
+            qt = new T.Quaternion(),
+            E = new T.Euler(),
+            p = V3(),
+            s = V3(1, 1, 1),
+            m = new T.Matrix4();
+          buoyP.forEach((d, i) => anch.setMatrixAt(i, m.compose(p.copy(d).multiplyScalar(seab[i] - .6), qb[i], s)));
+          anch.instanceMatrix.needsUpdate = true;
+          buoyUpdate = (t, dayK) => {
+            const night = 1 - dayK;
+            buoyP.forEach((d, i) => {
+              p.copy(d).multiplyScalar(R);
+              const h = waveH(p, t) * .9; // stesso bobbing della barca
+              q.setFromUnitVectors(Y, d).multiply(qt.setFromEuler(E.set(Math.sin(t * 1.3 + i) * .12, 0, Math.cos(t * 1.1 + i * 2) * .12)));
+              mesh.setMatrixAt(i, m.compose(p.copy(d).multiplyScalar(R + h), q, s));
+              p.addScaledVector(d, 4.9);
+              lp[i * 3] = p.x;
+              lp[i * 3 + 1] = p.y;
+              lp[i * 3 + 2] = p.z;
+              const k = (Math.sin(t * 2.2 + i * 1.7) > .2 ? 1 : 0) * (.1 + .9 * night),
+                c = LCOL[i];
+              lc[i * 3] = k * c[0];
+              lc[i * 3 + 1] = k * c[1];
+              lc[i * 3 + 2] = k * c[2];
+              const step = (R + h - KEEL - seab[i]) / cnt[i]; // la catena segue il cono inferiore, il fondo resta fermo
+              for (let j = 0; j < cnt[i]; j++)
+                chain.setMatrixAt(off[i] + j, m.compose(p.copy(d).multiplyScalar(seab[i] + (j + .5) * step), j & 1 ? qa[i] : qb[i], s));
+            });
+            mesh.instanceMatrix.needsUpdate = chain.instanceMatrix.needsUpdate = true;
+            lg.attributes.position.needsUpdate = lg.attributes.color.needsUpdate = true;
+          };
+        })();
         let speed = 0,
           rudder = 0,
           trim = .4,
@@ -3378,7 +3679,6 @@ nebbia (FOG) = ${FOG}
 ombre (SHADOWS) = ${SHADOWS ? 'on' : 'off'}
 raggio ombre (SH) = ${SH} m
 mobile (MOB) = ${MOB}
-qualità = ${RICH ? 'rich' : 'lite'}
 livrea = ${cupLiveries[liveryIdx || 0].name}
 pixel ratio = ${renderer.getPixelRatio()}
 URL = ${location.search || '(nessun parametro)'}`);
@@ -3694,7 +3994,7 @@ URL = ${location.search || '(nessun parametro)'}`);
           mp.stroke();
           //isola faro
           if (isl) {
-            mp.fillStyle = '#ff3b30';
+            mp.fillStyle = '#ff3333';
             mp.strokeStyle = '#fff';
             mp.lineWidth = 1;
             mp.beginPath();
@@ -3704,11 +4004,31 @@ URL = ${location.search || '(nessun parametro)'}`);
           }
           //isola petrolio
           if (plat) {
-            mp.fillStyle = '#ff9500';
+            mp.fillStyle = '#ffcc00';
             mp.strokeStyle = '#fff';
             mp.lineWidth = 1;
             mp.beginPath();
             mp.arc((Math.atan2(-plat.z, plat.x) / Math.PI + 1) / 2 * MW, (.5 - Math.asin(plat.y) / Math.PI) * MH, 2.6, 0, TAU);
+            mp.fill();
+            mp.stroke();
+          }
+          //turbina eolica
+          if (turbD) {
+            mp.fillStyle = '#33cc55';
+            mp.strokeStyle = '#fff';
+            mp.lineWidth = 1;
+            mp.beginPath();
+            mp.arc((Math.atan2(-turbD.z, turbD.x) / Math.PI + 1) / 2 * MW, (.5 - Math.asin(turbD.y) / Math.PI) * MH, 2.6, 0, TAU);
+            mp.fill();
+            mp.stroke();
+          }
+          //boe
+          mp.fillStyle = '#bb44ff';
+          mp.strokeStyle = '#fff';
+          mp.lineWidth = .6;
+          for (const b of buoyP) {
+            mp.beginPath();
+            mp.arc((Math.atan2(-b.z, b.x) / Math.PI + 1) / 2 * MW, (.5 - Math.asin(b.y) / Math.PI) * MH, 1.8, 0, TAU);
             mp.fill();
             mp.stroke();
           }
@@ -4252,6 +4572,19 @@ URL = ${location.search || '(nessun parametro)'}`);
           requestAnimationFrame(frame);
           fN++;
           const pn = performance.now();
+          /*
+          //debug posizione barca		  
+          if ((time | 0) !== (window._lg | 0)) { // 1 volta al secondo
+            const la = Math.asin(clamp(P.y, -1, 1)) * 57.2958;
+            const lo = Math.atan2(-P.z, P.x) * 57.2958;
+            console.log(
+              `pos=(${boat.position.x.toFixed(1)}, ${boat.position.y.toFixed(1)}, ${boat.position.z.toFixed(1)}) ` +
+              `P=(${P.x.toFixed(3)}, ${P.y.toFixed(3)}, ${P.z.toFixed(3)}) ` +
+              `lat=${la.toFixed(1)}° lon=${lo.toFixed(1)}° quota=${(boat.position.length() - R).toFixed(2)} m`);
+          }
+          window._lg = time;
+          */
+          //aggiorna fps
           if (pn - fT > 500) {
             const inf = renderer.info;
             fpsEl.textContent =
@@ -4263,8 +4596,8 @@ ${inf.programs ? inf.programs.length : '?'} shader`;
             fN = 0;
             fT = pn
           }
-          const rdt = clock.getDelta(),
-            dt = Math.min(rdt, .05);
+          const rdt = clock.getDelta();
+          const dt = Math.min(rdt, .05);
           if ((drs.warm -= rdt) < 0) { // risoluzione dinamica (finestre da 1 s)
             drs.t += rdt;
             drs.n++;
@@ -4310,8 +4643,13 @@ ${inf.programs ? inf.programs.length : '?'} shader`;
             ds = speed * dt / R,
             np = P.clone().applyAxisAngle(ax, ds);
           touch = Math.max(0, touch - dt * 2.5);
-          if (hAt(np.x, np.y, np.z) > -3 || (plat && np.dot(plat) > PCOS)) {
-            //collisione anche con l'isola della piattaforma
+          //condizione di incagliamento
+          if (hAt(np.x, np.y, np.z) > -3 ||
+            (plat && np.dot(plat) > PCOS) //collisione anche con l'isola della piattaforma
+            ////|| buoyP.some(b => np.dot(b) > Math.cos(6 / R)) //pure le boe rompono le balle, ora non piu!
+            ||
+            (turbD && np.dot(turbD) > Math.cos(12 / R)) //potevamo farci mancare le pale della turbina eolica? naaa
+          ) {
             Snd.hit(speed);
             touch = 1;
             speed *= .6;
@@ -4489,10 +4827,12 @@ ${inf.programs ? inf.programs.length : '?'} shader`;
           floorCam(want);
           avoidFaro(want); //no isola faro
           avoidPlat(want); //no isola petrolio
+          avoidTurb(want); //no turbina eolica
           floorCam(want);
           cam.position.lerp(want, 1 - Math.exp(-6 * dt));
           avoidFaro(cam.position); //no isola faro
           avoidPlat(cam.position); //no isola petrolio
+          avoidTurb(cam.position); //no turbina eolica
           floorCam(cam.position);
           cam.up.copy(cam.position).normalize();
           cam.lookAt(boat.position.clone().addScaledVector(P, 7));
@@ -4517,7 +4857,9 @@ ${inf.programs ? inf.programs.length : '?'} shader`;
           clouds.visible = uw < .99;
           faroUpdate(time, dayK); //isola faro
           platUpdate(time, dayK); //isola petrolio
+          turbUpdate(time, dt, wf, windKn, dayK); //turbine eoliche piene di pale!
           updateBirds(time); //uccelli gpt
+          buoyUpdate(time, dayK); //aggiorna pure le boe
           renderer.render(scene, cam);
           if ((hudT += dt) >= .03) { // HUD e minimappa a ~30 Hz
             hudT = 0;
