@@ -2043,7 +2043,7 @@ c*=1.+(1.-smoothstep(0.,45.,vUv.x))*.6;c=mix(vec3(.1,.02,0.),c,edge);gl_FragColo
         /* ---------- Gabbiani 3D dettagliati e animati ---------- */
         let updateBirds = () => {};
         (function createBirds() {
-          const NFLOCK = Math.round(clamp(10 * (R / 600) * (R / 600), 4, 28) * (MOB ? .6 : 1)); // stormi, scalano con la superficie
+          const NFLOCK = Math.round(clamp(10 * (R*R / 360000), 4, 28) * (MOB ? .6 : 1)); // stormi, scalano con la superficie [100..500=4, 600=10, 1000=28]
           const MINB = 3;
           const MAXB = 6; // gabbiani per stormo
           const HIDE = 500; // oltre questa distanza dalla camera lo stormo non viene disegnato (OCHO: ogni gabbiano e' una mesh separata = pesa)
@@ -3176,17 +3176,8 @@ void main(){
         spin.bal = true;
         //scritta vela
         //numMat.forEach(m => { const o = new T.Mesh(main.geometry, m); o.frustumCulled = false; o.renderOrder = 2; tilt.add(o); });
-        //scritta vela
-        const sailNumberMeshes = [];
-        numMat.forEach(m => {
-          const o = new T.Mesh(main.geometry, m);
-          o.frustumCulled = false;
-          o.renderOrder = 2;
-          tilt.add(o);
-          sailNumberMeshes.push(o);
-        });
         // Gestione pulsante abilitazione/disabilitazione numeri sulla vela
-        let sailNumbersEnabled = true;
+        let sailNumbersEnabled = false;
         const sailNumBtn = document.getElementById('sailNumBtn');
         if (sailNumBtn) {
           sailNumBtn.addEventListener('click', () => {
@@ -3195,6 +3186,17 @@ void main(){
             sailNumBtn.style.opacity = sailNumbersEnabled ? '1' : '0.4';
           });
         }
+		//scritta vela
+        const sailNumberMeshes = [];
+        numMat.forEach(m => {
+          const o = new T.Mesh(main.geometry, m);
+          o.frustumCulled = false;
+          o.renderOrder = 2;
+		  o.visible = sailNumbersEnabled;
+          tilt.add(o);
+          sailNumberMeshes.push(o);
+        });
+        
         const sails = new Set([main, jib, spin, pole, pole2]); //aggiunto pole2 per lo spinnaker
         tilt.traverse(o => {
           if (o.isMesh && o.material.isMeshStandardMaterial) {
@@ -3256,6 +3258,210 @@ transformed=normalize(position)*(${r}+hw+.06);}`);
         const startSpot = findOceanSpot(-30, true);
         P.copy(startSpot.p);
         Tn.copy(startSpot.t);
+		
+		/* ---------- pterosauro ---------- */
+		let ptUpdate = () => {};
+		(function () {
+		  const PTS = 1;                                    // scala globale (apertura alare ≈ 16 m); 0.6 se è troppo grosso
+		  const Lh = 1.1, Lu = 2.0, Lm = 1.0, Lf = 3.6;     // omero, avambraccio, metacarpo, dito alare
+		  const ANK = sg => V3(sg * .34, -.3, 1.6);         // caviglia: attacco del bordo d'uscita
+
+		  const paint = (g, hex, m) => {                    // geometria non indicizzata a colore pieno
+			g = g.index ? g.toNonIndexed() : g;
+			if (m) g.applyMatrix4(m);
+			const c = lin(hex), n = g.attributes.position.count, a = new Float32Array(n * 3);
+			for (let i = 0; i < n; i++) a.set([c.r, c.g, c.b], i * 3);
+			g.setAttribute('color', new T.BufferAttribute(a, 3));
+			return g;
+		  };
+		  const rod = (a, b, r0, r1, hex) => {              // cilindro da a a b
+			const d = V3(b.x - a.x, b.y - a.y, b.z - a.z), l = d.length();
+			return paint(new T.CylinderGeometry(r1, r0, l, 6).translate(0, l / 2, 0), hex,
+			  new T.Matrix4().compose(a, new T.Quaternion().setFromUnitVectors(Y, d.normalize()), V3(1, 1, 1)));
+		  };
+		  /* loft: sezioni ellittiche [z, y, rx, ry, colore dorso, colore ventre]; z crescente (becco → coda) */
+		  const loft = (S, seg, mouthZ) => {
+			const pos = [], col = [], id = [], dk = lin(0x2a1a10);
+			S.forEach(([z, y, rx, ry, cb, cv]) => {
+			  const a = lin(cb), b = lin(cv);
+			  for (let j = 0; j < seg; j++) {
+				const an = j / seg * 6.2832, jt = .92 + rnd() * .16,                 // jt: macchie sulla pelle
+				  c = (z < mouthZ && (j === seg / 4 || j === seg * 3 / 4)) ? dk : a.clone().lerp(b, (1 - Math.cos(an)) / 2); // linea della bocca
+				pos.push(rx * Math.sin(an), y + ry * Math.cos(an), z);
+				col.push(c.r * jt, c.g * jt, c.b * jt);
+			  }
+			});
+			for (let r = 0; r < S.length - 1; r++)
+			  for (let j = 0; j < seg; j++) {
+				const a = r * seg + j, b = r * seg + (j + 1) % seg, c = a + seg, d = b + seg;
+				id.push(a, c, d, a, d, b);
+			  }
+			const g = new T.BufferGeometry();
+			g.setAttribute('position', new T.Float32BufferAttribute(pos, 3));
+			g.setAttribute('color', new T.Float32BufferAttribute(col, 3));
+			g.setIndex(id); g.computeVertexNormals();
+			return g.toNonIndexed();
+		  };
+
+		  /* ---- corpo ---- (avanti = -Z, su = +Y) */
+		  const BD = 0x5b4a3c, BL = 0xcdbd9f, HD = 0x6a4f3a, BK = 0xc9a24a, BKL = 0xe3d3a0;
+		  const skin = [
+			loft([
+			  [-6.0, .42, .02, .025, BK, BKL], [-5.2, .46, .05, .06, BK, BKL], [-4.4, .50, .08, .10, BK, BKL],
+			  [-3.6, .56, .15, .17, HD, BKL], [-3.0, .60, .22, .26, HD, BL], [-2.6, .60, .22, .26, HD, BL],
+			  [-2.35, .55, .17, .20, BD, BL], [-1.8, .42, .19, .21, BD, BL], [-1.2, .30, .30, .30, BD, BL],
+			  [-.6, .17, .50, .50, BD, BL], [.2, .05, .52, .46, BD, BL], [.9, -.02, .38, .34, BD, BL],
+			  [1.5, -.06, .08, .08, BD, BL], [2.0, -.10, .02, .02, BD, BL]
+			], 14, -3.3),
+			loft([                                                           // cresta cranica
+			  [-3.2, .80, .03, .03, 0xc23b22, 0xf0a060], [-2.95, .98, .035, .20, 0xc23b22, 0xf0a060],
+			  [-2.5, 1.05, .035, .20, 0xc23b22, 0xf0a060], [-2.0, 1.08, .03, .14, 0xc23b22, 0xf0a060],
+			  [-1.5, 1.10, .02, .04, 0xc23b22, 0xf0a060]
+			], 8)
+		  ];
+		  [1, -1].forEach(sg => {
+			const H = V3(sg * .3, -.22, .75), K = V3(sg * .42, -.42, 1.15), A = ANK(sg);
+			skin.push(rod(H, K, .11, .07, BD), rod(K, A, .07, .04, BD), rod(A, V3(sg * .36, -.34, 1.95), .045, .015, 0x2a2018));
+			skin.push(paint(new T.SphereGeometry(.085, 10, 8).translate(sg * .20, .65, -3.0), 0xe8b020),   // occhio
+					  paint(new T.SphereGeometry(.05, 8, 6).translate(sg * .26, .65, -3.0), 0x080808));    // pupilla
+		  });
+		  const creature = new T.Group(), body = new T.Group();
+		  creature.add(body); scene.add(creature);
+		  body.add(new T.Mesh(merge(skin), new T.MeshStandardMaterial({ vertexColors: true, roughness: .7 })));
+
+		  /* ---- texture membrana: gradiente + actinofibrille + macchie ---- */
+		  const memTex = (() => {
+			const c = document.createElement('canvas'); c.width = 512; c.height = 256;
+			const x = c.getContext('2d'), g = x.createLinearGradient(0, 0, 0, 256);
+			g.addColorStop(0, '#6b4a30'); g.addColorStop(.35, '#b0814f'); g.addColorStop(1, '#d9b080');
+			x.fillStyle = g; x.fillRect(0, 0, 512, 256);
+			for (let i = 0; i < 160; i++) {
+			  const u = rnd() * 512;
+			  x.strokeStyle = `rgba(70,40,20,${.08 + rnd() * .2})`; x.lineWidth = .6 + rnd() * 1.2;
+			  x.beginPath(); x.moveTo(u, 0); x.lineTo(u + (u - 256) * .1 + (rnd() - .5) * 16, 256); x.stroke();
+			}
+			for (let i = 0; i < 60; i++) {
+			  x.fillStyle = `rgba(${rnd() < .5 ? '60,35,20' : '230,200,150'},${.04 + rnd() * .08})`;
+			  x.beginPath(); x.ellipse(rnd() * 512, rnd() * 256, 10 + rnd() * 30, 6 + rnd() * 14, rnd() * 3, 0, 6.2832); x.fill();
+			}
+			const t = new T.CanvasTexture(c); t.encoding = T.sRGBEncoding; t.anisotropy = 8; return t;
+		  })();
+		  const memMat = new T.MeshStandardMaterial({ map: memTex, side: T.DoubleSide, roughness: .85, emissive: lin(0x6a4020), emissiveIntensity: .1 });
+		  const boneMat = new T.MeshStandardMaterial({ color: lin(0x5b4a3c), roughness: .75 }),
+			clawMat = new T.MeshStandardMaterial({ color: lin(0x2a2018), roughness: .5 });
+		  const bone = (l, r0, r1) => new T.Mesh(new T.CylinderGeometry(r1, r0, l, 8).rotateZ(-Math.PI / 2).translate(l / 2, 0, 0), boneMat),
+			ball = r => new T.Mesh(new T.SphereGeometry(r, 10, 8), boneMat);
+
+		  /* ---- ali: ogni ala è costruita per il lato destro (+X) e specchiata con scale.x = -1 ---- */
+		  const NU = 18, NV = 8, NP = (NU + 1) * (NV + 1);
+		  const wings = [1, -1].map(sg => {
+			const root = new T.Group(); root.position.set(sg * .32, .22, -.5); root.scale.x = sg; body.add(root);
+			const sh = new T.Group(), el = new T.Group(), wr = new T.Group(), tip = new T.Object3D();
+			root.add(sh); sh.add(ball(.2), bone(Lh, .17, .12));
+			el.position.x = Lh; sh.add(el); el.add(ball(.13), bone(Lu, .12, .08));
+			wr.position.x = Lu; el.add(wr); wr.add(ball(.12), bone(Lm, .10, .07));
+			const fin = bone(Lf, .07, .012); fin.position.x = Lm; wr.add(fin);
+			tip.position.x = Lm + Lf; wr.add(tip);
+			for (let k = 0; k < 3; k++) {                                    // artigli del polso
+			  const c = new T.Mesh(new T.ConeGeometry(.035, .4, 5).rotateX(-Math.PI / 2).translate(0, 0, -.2), clawMat);
+			  c.position.set(.08, -.05, 0); c.rotation.y = (k - 1) * .3; wr.add(c);
+			}
+			const g = new T.BufferGeometry(), id = [], uv = new Float32Array((NP + 3) * 2);
+			for (let i = 0; i <= NU; i++) for (let j = 0; j <= NV; j++) {
+			  const k = i * (NV + 1) + j; uv[k * 2] = i / NU; uv[k * 2 + 1] = 1 - j / NV;
+			  if (i < NU && j < NV) id.push(k, k + NV + 1, k + 1, k + 1, k + NV + 1, k + NV + 2);
+			}
+			uv.set([.1, .95, 0, 1, .4, 1], NP * 2); id.push(NP, NP + 1, NP + 2);   // propatagio (collo-spalla-polso)
+			g.setAttribute('position', new T.BufferAttribute(new Float32Array((NP + 3) * 3), 3));
+			g.setAttribute('uv', new T.BufferAttribute(uv, 2)); g.setIndex(id);
+			const mem = new T.Mesh(g, memMat); mem.frustumCulled = false; body.add(mem);
+			return { sg, sh, el, wr, tip, g, A: ANK(sg) };
+		  });
+		  creature.scale.setScalar(PTS);
+		  creature.traverse(o => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
+
+		  /* ---- volo ---- */
+		  const pp = V3(), tn = V3(), cr = V3(), tg = V3(), ax = V3(), ah = V3(), mq = new T.Matrix4(),
+			pS = V3(), pE = V3(), pW = V3(), pF = V3(), pL = V3(), pT = V3(), nr = V3(), e1 = V3(), e2 = V3();
+		  pp.copy(P).applyAxisAngle(rdir().cross(P).normalize(), Math.min(700 / R, 2.5));   // parte a ~700 m dalla barca
+		  tn.copy(P).addScaledVector(pp, -P.dot(pp)).normalize();                           // rotta verso la barca
+		  let mode = 1, nextPass = 0, holdUntil = 0, alt = 60, pitch = 0, bank = 0, turn = 0, flap = .5, ph = 0;
+		  const jp = (o, out) => { out.setFromMatrixPosition(o.matrixWorld); return body.worldToLocal(out); };
+
+		  ptUpdate = (dt, t, dayK) => {
+			const dB = Math.acos(clamp(pp.dot(P), -1, 1)) * R;      // distanza dalla barca (m)
+			let rate, altT, spd = 22;
+			if (mode === 0 && t > nextPass) mode = 1;
+			if (mode === 1) {                                        // passaggio radente sulla barca
+			  tg.copy(P).addScaledVector(pp, -P.dot(pp)).normalize();
+			  rate = clamp(Math.atan2(cr.crossVectors(tn, tg).dot(pp), tn.dot(tg)) * 1.4, -.7, .7);
+			  altT = Math.min(32 + Math.max(dB - 60, 0) * .12, 90); spd = 28;
+			  if (dB < 30) { mode = 0; nextPass = t + 60 + rnd() * 60; holdUntil = t + 8; }   // sopra la barca: riprende quota
+			} else {
+			  rate = .32 * Math.sin(t * .11 + 1.3) + .22 * Math.sin(t * .047);
+			  altT = t < holdUntil ? 85 : 60 + 22 * Math.sin(t * .07);
+			}
+			ax.crossVectors(pp, tn).normalize();                     // evita montagne/vulcani guardando 90 m avanti
+			ah.copy(pp).applyAxisAngle(ax, 90 / R);
+			altT = Math.max(altT, Math.max(hAt(pp.x, pp.y, pp.z), hAt(ah.x, ah.y, ah.z), 0) + 28);
+
+			flap += (clamp(.45 + .45 * Math.sin(t * .3) + clamp((altT - alt) * .05, -.3, .9) + (mode === 1 ? .3 : 0), 0, 1) - flap) * Math.min(1, dt * .8);
+			ph += dt * (5 + 4 * flap);
+
+			turn += (rate - turn) * Math.min(1, dt * 1.5);           // + = sinistra
+			tn.applyAxisAngle(pp, turn * dt);
+			ax.crossVectors(pp, tn).normalize();
+			const ds = spd * dt / (R + alt);
+			pp.applyAxisAngle(ax, ds); tn.applyAxisAngle(ax, ds);
+			pp.normalize(); tn.addScaledVector(pp, -pp.dot(tn)).normalize();
+			const alt0 = alt; alt += (altT - alt) * Math.min(1, dt * .4);
+			pitch += (clamp(Math.atan2((alt - alt0) / Math.max(dt, 1e-3), spd), -.5, .5) - pitch) * Math.min(1, dt * 2);
+			bank += (clamp(Math.atan(turn * spd / 12), -.8, .8) - bank) * Math.min(1, dt * 2);
+
+			cr.crossVectors(tn, pp);                                 // destra
+			mq.makeBasis(cr, pp, tg.copy(tn).negate());
+			creature.quaternion.setFromRotationMatrix(mq);
+			creature.position.copy(pp).multiplyScalar(R + alt);
+			body.rotation.set(pitch + .05 * flap * Math.sin(ph - 1.8), 0, bank);
+			body.position.y = .18 * flap * Math.sin(ph - 1.6);
+
+			for (const w of wings) {                                 // gomito e polso in ritardo di fase: effetto frusta
+			  w.sh.rotation.set(0, -.3 + .1 * flap * Math.cos(ph), .16 + flap * .5 * Math.sin(ph));
+			  w.el.rotation.set(0, -.12, -.1 + flap * .4 * Math.sin(ph - .8));
+			  w.wr.rotation.set(0, -.28, -.05 + flap * .6 * Math.sin(ph - 1.6));
+			}
+			creature.updateMatrixWorld(true);
+
+			memMat.emissiveIntensity = .03 + .12 * dayK;
+			for (const w of wings) {                                 // membrana: bordo d'attacco (spalla-gomito-polso-punta) → caviglia
+			  jp(w.sh, pS); jp(w.el, pE); jp(w.wr, pW); jp(w.tip, pF);
+			  const L1 = pS.distanceTo(pE), L2 = pE.distanceTo(pW), L3 = pW.distanceTo(pF), L = L1 + L2 + L3,
+				P3 = w.g.attributes.position.array;
+			  nr.crossVectors(e1.subVectors(pF, pS), e2.subVectors(w.A, pS)).normalize();
+			  if (nr.y < 0) nr.negate();
+			  for (let i = 0; i <= NU; i++) {
+				const u = i / NU, d = u * L;
+				if (d < L1) pL.lerpVectors(pS, pE, d / L1);
+				else if (d < L1 + L2) pL.lerpVectors(pE, pW, (d - L1) / L2);
+				else pL.lerpVectors(pW, pF, (d - L1 - L2) / L3);
+				pT.lerpVectors(w.A, pF, u);
+				const k = 1 - .2 * Math.sin(Math.PI * u);            // bordo d'uscita concavo
+				for (let j = 0; j <= NV; j++) {
+				  const v = j / NV, o = (i * (NV + 1) + j) * 3,
+					b = Math.sin(Math.PI * v) * (.3 * (1 - .5 * u) + .06 * flap * Math.sin(u * 12 - t * 9));   // gonfiore + ondulazione
+				  P3[o] = pL.x + (pT.x - pL.x) * v * k + nr.x * b;
+				  P3[o + 1] = pL.y + (pT.y - pL.y) * v * k + nr.y * b;
+				  P3[o + 2] = pL.z + (pT.z - pL.z) * v * k + nr.z * b;
+				}
+			  }
+			  P3.set([w.sg * .16, .28, -1.0, pS.x, pS.y, pS.z, pW.x, pW.y, pW.z], NP * 3);
+			  w.g.attributes.position.needsUpdate = true; w.g.computeVertexNormals();
+			}
+		  };
+		})();
+		
+		
+		
         /* ---------- pala eolica offshore ---------- */
         const WHUB = 120; //altezza mozzo 120m
         const WBL = 62; //lunghezza pala 62m
@@ -4161,23 +4367,30 @@ URL = ${location.search || '(nessun parametro)'}`);
             Yy = (.5 - la / Math.PI) * MH,
             ax = Math.sin(hd) / Math.max(Math.cos(la), .15),
             ay = -Math.cos(hd);
-          mp.save();
+		  mp.save();
           mp.translate(X, Yy);
           mp.rotate(Math.atan2(ax, -ay));
-          mp.scale(1.3 / (mz ? 2 : 1), 1.3 / (mz ? 2 : 1));
-          mp.strokeStyle = 'rgba(255,214,10,' + (.35 + .3 * Math.sin(time * 5)) + ')';
-          mp.lineWidth = 1.5;
+
+          // Aumenta il fattore base (es. da 1.3 a 2.2) e regola la compensazione di mz
+          const s = (mz ? 1.25 : 1.25);
+          mp.scale(s, s);
+
+          // Cerchio pulsante più visibile
+          mp.strokeStyle = 'rgba(255,214,10,' + (.4 + .35 * Math.sin(time * 5)) + ')';
+          mp.lineWidth = 2 / s;
           mp.beginPath();
-          mp.arc(0, 0, 8 + 2 * Math.sin(time * 5), 0, TAU);
+          mp.arc(0, 0, 11 + 2.5 * Math.sin(time * 5), 0, TAU);
           mp.stroke();
+
+          // Freccia più marcata
           mp.fillStyle = '#ffd60a';
           mp.strokeStyle = '#000';
-          mp.lineWidth = 1;
+          mp.lineWidth = 1.4 / s;
           mp.beginPath();
-          mp.moveTo(0, -7);
-          mp.lineTo(4.5, 5);
-          mp.lineTo(0, 2.5);
-          mp.lineTo(-4.5, 5);
+          mp.moveTo(0, -9);
+          mp.lineTo(6, 6.5);
+          mp.lineTo(0, 3.5);
+          mp.lineTo(-6, 6.5);
           mp.closePath();
           mp.fill();
           mp.stroke();
@@ -4982,6 +5195,7 @@ ${inf.programs ? inf.programs.length : '?'} shader`;
           platUpdate(time, dayK); //isola petrolio
           turbUpdate(time, dt, wf, windKn, dayK); //turbine eoliche piene di pale!
           updateBirds(time); //uccelli gpt
+		  ptUpdate(dt, time, dayK); //pterodattilo!
           buoyUpdate(time, dt, dayK); //aggiorna pure le boe
           renderer.render(scene, cam);
           if ((hudT += dt) >= .03) { // HUD e minimappa a ~30 Hz
