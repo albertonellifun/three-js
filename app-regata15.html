@@ -4817,7 +4817,7 @@ gl_FragColor=vec4(col,al);
           passive: true
         });
         const renderer = new T.WebGLRenderer({
-          antialias: !MOB,
+          antialias: FORCEHIGHDETAILS || !MOB,
           powerPreference: "high-performance"
         });
         renderer.shadowMap.enabled = SHADOWS;
