@@ -4535,7 +4535,8 @@ gl_FragColor=vec4(col,al);
           const vx = new Float32Array(n),
             vz = new Float32Array(n);
           const hitCd = new Float32Array(n),
-            splash = new Float32Array(n);
+            splash = new Float32Array(n),
+            side = new Float32Array(n);
           const q = new T.Quaternion(),
             qt = new T.Quaternion(),
             qf = new T.Quaternion(),
@@ -4555,7 +4556,7 @@ gl_FragColor=vec4(col,al);
             const dayLum = .2 + .8 * dayK;
             const boatW = boat.position;
             const hitR = 4.8; // raggio d'urto scafo + boa (m)//3.8
-            const maxDisp = 3.6; // spostamento massimo consentito (m)//2.6
+            const maxDisp = 4.5; // spostamento massimo consentito (m)//3.6
             for (let i = 0; i < n; i++) {
               const d = buoyP[i];
               if (hitCd[i] > 0) hitCd[i] = Math.max(0, hitCd[i] - dt);
@@ -4567,37 +4568,37 @@ gl_FragColor=vec4(col,al);
               // posizione attuale della boa sull'acqua per rilevare il contatto con la barca
               p.copy(d).multiplyScalar(R).addScaledVector(e1, ox[i]).addScaledVector(e2, oz[i]).normalize();
               const h = waveH(p.clone().multiplyScalar(R), t) * .9;
-              // punto più vicino lungo l'asse prua-poppa della barca (scafo ~14 m => semi-lunghezza ~5.8 m)
-              const halfLen = 5.8;
-              const boatAxisX = -Math.sin(hd);
-              const boatAxisZ = -Math.cos(hd);
-              const dxW = bPos.x - boatW.x;
-              const dzW = bPos.z - boatW.z;
-              const along = clamp(dxW * boatAxisX + dzW * boatAxisZ, -halfLen, halfLen);
-              const cx = boatW.x + boatAxisX * along;
-              const cz = boatW.z + boatAxisZ * along;
-              rel.set(bPos.x - cx, bPos.y - boatW.y, bPos.z - cz);
-              const dist = rel.length();
-              const hullHitR = 3.1; // raggio attorno allo scafo (larghezza ~2.1 m + raggio boa ~1.6 m con margine)
-              if (dist < hullHitR && dist > 1e-4) {
-                const pen = (hullHitR - dist) / hullHitR;
-                const nx = rel.x / dist;
-                const nz = rel.z / dist;
-                // spinta immediata fuori dallo scafo così non ci entra dentro
-                const depen = hullHitR - dist;
-                ox[i] = clamp(ox[i] + nx * depen, -maxDisp, maxDisp);
-                oz[i] = clamp(oz[i] + nz * depen, -maxDisp, maxDisp);
+              // distanza dallo scafo (segmento prua-poppa) nel piano tangente, coordinate mondo
+              const halfLen = 5.8,
+                hullHitR = 3.1;
+              bPos.copy(p).multiplyScalar(R); // <-- mancava
+              rel.copy(bPos).sub(boatW);
+              rel.addScaledVector(P, -rel.dot(P));
+              rel.addScaledVector(Tn, -clamp(rel.dot(Tn), -halfLen, halfLen));
+              const dist0 = rel.length();
+              if (dist0 < hullHitR) {
+                const lat = rel.dot(Rt);
+                if (!side[i]) side[i] = lat >= 0 ? 1 : -1; // lato fissato al primo contatto
+                rel.addScaledVector(Rt, side[i] * Math.abs(lat) - lat); // la boa non può scavalcare l'asse
+                const dist = rel.length();
+                if (dist > 1e-3) rel.divideScalar(dist);
+                else rel.copy(Rt).multiplyScalar(side[i]);
+                const pen = (hullHitR - dist) / hullHitR,
+                  depen = hullHitR - dist;
+                const n1 = rel.dot(e1),
+                  n2 = rel.dot(e2); // normale nel frame della boa
+                ox[i] = clamp(ox[i] + n1 * depen, -maxDisp, maxDisp);
+                oz[i] = clamp(oz[i] + n2 * depen, -maxDisp, maxDisp);
                 const push = (2.2 + Math.abs(speed) * 1.35) * pen;
-                vx[i] += rel.dot(e1) / dist * push * 16 * dt;
-                vz[i] += rel.dot(e2) / dist * push * 16 * dt;
-                // attiva l'onda di schiuma proporzionale alla velocità della barca
+                vx[i] += n1 * push * 16 * dt;
+                vz[i] += n2 * push * 16 * dt;
                 splash[i] = Math.min(1, Math.max(splash[i], clamp((Math.abs(speed) + 1.5) / 8, .35, 1) * (.45 + .55 * pen)));
                 if (hitCd[i] <= 0 && Math.abs(speed) > 1.2) {
                   hitCd[i] = 0.55;
                   Snd.hit(Math.abs(speed) * 0.45);
                   speed *= 0.96;
                 }
-              }
+              } else if (dist0 > hullHitR + 1.5) side[i] = 0; // contatto finito: lato libero
               // molla di richiamo + smorzamento (rinculo contenuto)
               const kSpring = 18.0,
                 damp = 6.5;
