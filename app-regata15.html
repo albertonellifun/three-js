@@ -332,7 +332,8 @@
         }
       }
 
-      #m_info {
+      #m_info,
+      #m_highdetails {
         position: fixed;
         top: max(12px, env(safe-area-inset-top));
         right: 12px;
@@ -348,6 +349,15 @@
         font: 700 20px/1 system-ui, sans-serif;
         cursor: pointer;
         touch-action: manipulation
+      }
+
+      #m_highdetails {
+        top: max(62px, env(safe-area-inset-top));
+      }
+
+      #m_highdetails.blue {
+        transform: scale(.94);
+        background: rgba(8, 130, 255, .55);
       }
 
       #m_info:active {
@@ -749,6 +759,7 @@
     <div id="menu">
       <canvas id="m_bg"></canvas>
       <button id="m_info" type="button" aria-label="Info, credits &amp; licenses" title="Info">?</button>
+      <button id="m_highdetails" type="button" aria-label="High details" title="High Details">👁️</button>
       <div id="m_card">
         <header id="m_head" class="m_in" style="--i:0">
           <div id="m_logo">⛵</div>
@@ -786,6 +797,7 @@
 
     <script src="./three-r151.min.js"></script>
     <script>
+      let FORCEHIGHDETAILS = false;
       /* livree: fuori da startGame così il menu può leggerle */
       const cupLiveries = [{
           name: "Standard",
@@ -1077,12 +1089,12 @@
           }
         }
         const MOB = matchMedia("(pointer:coarse)").matches || innerWidth < 700;
-        const N = +new URLSearchParams(location.search).get('n') || (MOB ? 64 : 128);
-        const WATERDETAIL = +new URLSearchParams(location.search).get('d') || (MOB ? 2 : 3);
+        const N = FORCEHIGHDETAILS ? 256 : (+new URLSearchParams(location.search).get('n') || (MOB ? 64 : 128));
+        const WATERDETAIL = FORCEHIGHDETAILS ? 4 : (+new URLSearchParams(location.search).get('d') || (MOB ? 2 : 3));
         /* ?a= : ampiezza (pendenza) dei ripple, indipendente dalla frequenza (?d=). Default = d, come prima */
         const WAMP = +new URLSearchParams(location.search).get('a') || WATERDETAIL;
         const SHADOWS = new URLSearchParams(location.search).get('s') !== '0';
-        const SH = MOB ? 64 : 128;
+        const SH = FORCEHIGHDETAILS ? 512 : (MOB ? 64 : 128);
         const idx = new Map();
         const dir = [];
         const ind = [];
@@ -1900,10 +1912,73 @@ gl_FragColor=vec4(col,al2);
 #include <encodings_fragment>
 }`
         });
+        //ad uso e consumo della geometria dell'oceano
+        function cubeSphere(n) {
+          const map = new Map(),
+            dir = [],
+            ind = [];
+          const vid = (x, y, z) => {
+            const k = ((x + n) * (2 * n + 1) + (y + n)) * (2 * n + 1) + (z + n);
+            let v = map.get(k);
+            if (v === undefined) {
+              v = dir.length / 3;
+              map.set(k, v);
+              const l = Math.hypot(x, y, z);
+              dir.push(x / l, y / l, z / l);
+            }
+            return v;
+          };
+          for (let f = 0; f < 6; f++) {
+            const a = f >> 1,
+              s = f & 1 ? 1 : -1,
+              u = (a + 1) % 3,
+              w = (a + 2) % 3;
+            const P = (i, j) => {
+              const c = [0, 0, 0];
+              c[a] = s * n;
+              c[u] = 2 * i - n;
+              c[w] = 2 * j - n;
+              return vid(c[0], c[1], c[2]);
+            };
+            for (let i = 0; i < n; i++)
+              for (let j = 0; j < n; j++) {
+                const p = P(i, j),
+                  q = P(i + 1, j),
+                  r = P(i + 1, j + 1),
+                  t = P(i, j + 1);
+                s > 0 ? ind.push(p, q, r, p, r, t) : ind.push(p, r, q, p, t, r);
+              }
+          }
+          return {
+            dir,
+            ind
+          };
+        }
+        const NO = FORCEHIGHDETAILS ? 1024 : (+new URLSearchParams(location.search).get('no') || (MOB ? 128 : 256));
+        const oc = cubeSphere(NO),
+          nO = oc.dir.length / 3;
+        //const opO = new T.Float32BufferAttribute(nO * 3, 3);
+        const opA = new Float32Array(nO * 3),
+          aDO = new Float32Array(nO);
+        for (let i = 0; i < nO; i++) {
+          const x = oc.dir[i * 3],
+            y = oc.dir[i * 3 + 1],
+            z = oc.dir[i * 3 + 2];
+          opA[i * 3] = x * R;
+          opA[i * 3 + 1] = y * R;
+          opA[i * 3 + 2] = z * R;
+          aDO[i] = -meshH(x, y, z); // profondità sulla mesh *renderizzata* del fondale
+        }
+        const og = new T.BufferGeometry();
+        og.setAttribute('position', new T.BufferAttribute(opA, 3));
+        og.setAttribute('aD', new T.BufferAttribute(aDO, 1));
+        og.setIndex(oc.ind);
+        /*
         const og = new T.BufferGeometry();
         og.setAttribute('position', new T.BufferAttribute(op, 3));
         og.setAttribute('aD', new T.BufferAttribute(H.map(h => -h), 1));
         og.setIndex(ind);
+		*/
         const ocean = new T.Mesh(og, oceanMat);
         ocean.frustumCulled = false;
         scene.add(ocean);
@@ -3601,15 +3676,15 @@ transformed=normalize(position)*(${r}+hw+.06);}`);
         P.copy(startSpot.p);
         Tn.copy(startSpot.t);
         /* ---------- forziere sulla spiaggia ---------- */
-        let chestD = null,
-          chestUpdate = () => {};
+        let chestD = null;
+        let chestUpdate = () => {};
         (function() {
           const OPEN_D = 8; // m dallo scafo (prua, centro o poppa)
           /* sito: sabbia alta (le onde non arrivano) con acqua profonda per la barca entro ~12 m */
           let best = null;
           for (let i = 0; i < 120000 && !best; i++) {
-            const d = rdir(),
-              h = hAt(d.x, d.y, d.z);
+            const d = rdir();
+            const h = hAt(d.x, d.y, d.z);
             if (h < 1.9 || h > 2.3 || lastVol < 60 || lastIsl < 60) continue;
             const [e1, e2] = tang(d);
             let sea = null;
@@ -3627,6 +3702,7 @@ transformed=normalize(position)*(${r}+hw+.06);}`);
           }
           if (!best) {
             console.warn('Forziere: nessuna spiaggia adatta');
+            document.getElementById('help').textContent += ` · Chest not created`;
             return;
           }
           chestD = best.d;
@@ -4150,7 +4226,7 @@ gl_FragColor=vec4(col,al);
               nextScream = t + 20 + rnd() * 20;
               creature.getWorldPosition(sv).applyMatrix4(cam.matrixWorldInverse);
               const dd = sv.length();
-              Snd.scream(clamp(sv.x / Math.max(dd, 1), -1, 1) * .85, Math.pow(1 - dd / 500, 1.5));
+              Snd.scream(clamp(sv.x / Math.max(dd, 1), -1, 1) * .85, Math.max(0, Math.pow(1 - dd / 500, 1.5))); //Math.pow = Nan se base < 0
             }
             if (mode === 1) { // passaggio radente sulla barca
               tg.copy(P).addScaledVector(pp, -P.dot(pp)).normalize();
@@ -4236,8 +4312,8 @@ gl_FragColor=vec4(col,al);
         const WHUB = 120; //altezza mozzo 120m
         const WBL = 62; //lunghezza pala 62m
         const WB = V3();
-        let turbD = null,
-          turbUpdate = () => {};
+        let turbD = null;
+        let turbUpdate = () => {};
         (function() {
           const SEP = Math.cos(Math.min(.9, Math.max(.25, 160 / R)));
           for (let i = 0; i < 60000 && !turbD; i++) {
@@ -4256,6 +4332,7 @@ gl_FragColor=vec4(col,al);
           }
           if (!turbD) {
             console.warn('Pala eolica: nessun sito valido');
+            document.getElementById('help').textContent += ` · Turbine not created`;
             return;
           }
           const yb = meshH(turbD.x, turbD.y, turbD.z) - 2; // il monopalo entra nel fondale
@@ -4751,8 +4828,8 @@ gl_FragColor=vec4(col,al);
         renderer.toneMappingExposure = .95;
         /* risoluzione dinamica: scende se gli FPS calano sotto ~52, risale piano (max = pixel ratio di partenza).
            L'HUD è DOM, quindi resta nitido. */
-        let PR = Math.min(devicePixelRatio, MOB ? 1.5 : 2),
-          PRmax = PR;
+        let PR = Math.min(devicePixelRatio, MOB ? 1.5 : 2);
+        let PRmax = PR;
         const PRmin = .75,
           drs = {
             t: 0,
@@ -5092,9 +5169,9 @@ URL = ${location.search || '(nessun parametro)'}`);
             mp.lineTo(MW, j * MH / 6)
           }
           mp.stroke();
-          //isola faro
+          //isola faro rossa bordo bianco
           if (isl) {
-            mp.fillStyle = '#ff3333';
+            mp.fillStyle = '#f00';
             mp.strokeStyle = '#fff';
             mp.lineWidth = 1;
             mp.beginPath();
@@ -5102,9 +5179,9 @@ URL = ${location.search || '(nessun parametro)'}`);
             mp.fill();
             mp.stroke();
           }
-          //isola petrolio
+          //isola petrolio arancio bordo bianco
           if (plat) {
-            mp.fillStyle = '#ffcc00';
+            mp.fillStyle = '#ff8800';
             mp.strokeStyle = '#fff';
             mp.lineWidth = 1;
             mp.beginPath();
@@ -5112,7 +5189,7 @@ URL = ${location.search || '(nessun parametro)'}`);
             mp.fill();
             mp.stroke();
           }
-          //turbina eolica
+          //turbina eolica verde bordo bianco
           if (turbD) {
             mp.fillStyle = '#33cc55';
             mp.strokeStyle = '#fff';
@@ -5122,23 +5199,23 @@ URL = ${location.search || '(nessun parametro)'}`);
             mp.fill();
             mp.stroke();
           }
-          //boe
-          mp.fillStyle = '#bb44ff';
+          //boe grigio bordo bianco
+          mp.fillStyle = '#666';
           mp.strokeStyle = '#fff';
-          mp.lineWidth = .6;
+          mp.lineWidth = 0.6;
           for (const b of buoyCur) {
             mp.beginPath();
-            mp.arc((Math.atan2(-b.z, b.x) / Math.PI + 1) / 2 * MW, (.5 - Math.asin(b.y) / Math.PI) * MH, 1.8, 0, TAU);
+            mp.arc((Math.atan2(-b.z, b.x) / Math.PI + 1) / 2 * MW, (.5 - Math.asin(b.y) / Math.PI) * MH, 2.0, 0, TAU);
             mp.fill();
             mp.stroke();
           }
-          //il forziere
+          //forziere blu bordo bianco
           if (chestD) {
-            mp.fillStyle = '#eedd00';
+            mp.fillStyle = '#0000ff';
             mp.strokeStyle = '#fff';
-            mp.lineWidth = 0.6;
+            mp.lineWidth = 1;
             mp.beginPath();
-            mp.arc((Math.atan2(-chestD.z, chestD.x) / Math.PI + 1) / 2 * MW, (.5 - Math.asin(chestD.y) / Math.PI) * MH, 1.8, 0, TAU);
+            mp.arc((Math.atan2(-chestD.z, chestD.x) / Math.PI + 1) / 2 * MW, (.5 - Math.asin(chestD.y) / Math.PI) * MH, 2.6, 0, TAU);
             mp.fill();
             mp.stroke();
           }
@@ -5160,8 +5237,8 @@ URL = ${location.search || '(nessun parametro)'}`);
           mp.beginPath();
           mp.arc(0, 0, 11 + 2.5 * Math.sin(time * 5), 0, TAU);
           mp.stroke();
-          // Freccia più marcata
-          mp.fillStyle = '#ffd60a';
+          //Freccia barca gialla bordo nero
+          mp.fillStyle = '#ffdd00';
           mp.strokeStyle = '#000';
           mp.lineWidth = 1.4 / s;
           mp.beginPath();
@@ -5419,7 +5496,7 @@ URL = ${location.search || '(nessun parametro)'}`);
           //
           function dest(pan, vol) { // gain + pan stereo
             const g = ctx.createGain();
-            g.gain.value = vol;
+            g.gain.value = isNaN(vol) ? 0 : vol;
             if (ctx.createStereoPanner) {
               const pn = ctx.createStereoPanner();
               pn.pan.value = pan;
@@ -5502,8 +5579,8 @@ URL = ${location.search || '(nessun parametro)'}`);
               if (!on) return;
               creak(.8);
               thud(.25);
-              const g = dest(pan, vol),
-                t0 = ctx.currentTime + .15;
+              const g = dest(pan, vol);
+              const t0 = ctx.currentTime + .15;
               for (let i = 0; i < 46; i++) {
                 const t = t0 + Math.pow(Math.random(), 1.7) * 1.8, // fitte all'inizio, poi si diradano
                   f = 1800 + Math.random() * 3400,
@@ -5531,11 +5608,11 @@ URL = ${location.search || '(nessun parametro)'}`);
             },
             scream(pan, vol) { // urlo dello pterosauro
               if (!on) return;
-              const g = dest(pan, vol * .8),
-                t = ctx.currentTime + .02,
-                D = 1.5,
-                bp = ctx.createBiquadFilter(),
-                env = ctx.createGain();
+              const g = dest(pan, vol * .8);
+              const t = ctx.currentTime + .02;
+              const D = 1.5;
+              const bp = ctx.createBiquadFilter();
+              const env = ctx.createGain();
               bp.type = 'bandpass';
               bp.Q.value = 1.6; // formante che sale e scende
               bp.frequency.setValueAtTime(900, t);
@@ -6242,6 +6319,12 @@ ${inf.programs ? inf.programs.length : '?'} shader`;
             });
           });
           liv.appendChild(b);
+        });
+        //forza risoluzione super!
+        const highDetailsBtn = $('m_highdetails');
+        highDetailsBtn.addEventListener('click', function() {
+          highDetailsBtn.classList.toggle('blue');
+          FORCEHIGHDETAILS = !FORCEHIGHDETAILS;
         });
         const info = $('info'),
           openInfo = () => {
