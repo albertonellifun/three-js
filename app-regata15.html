@@ -3600,6 +3600,288 @@ transformed=normalize(position)*(${r}+hw+.06);}`);
         const startSpot = findOceanSpot(-30, true);
         P.copy(startSpot.p);
         Tn.copy(startSpot.t);
+        /* ---------- forziere sulla spiaggia ---------- */
+        let chestD = null,
+          chestUpdate = () => {};
+        (function() {
+          const OPEN_D = 8; // m dallo scafo (prua, centro o poppa)
+          /* sito: sabbia alta (le onde non arrivano) con acqua profonda per la barca entro ~12 m */
+          let best = null;
+          for (let i = 0; i < 120000 && !best; i++) {
+            const d = rdir(),
+              h = hAt(d.x, d.y, d.z);
+            if (h < 1.9 || h > 2.3 || lastVol < 60 || lastIsl < 60) continue;
+            const [e1, e2] = tang(d);
+            let sea = null;
+            for (const r of [6, 9, 12])
+              for (let k = 0; k < 16 && !sea; k++) {
+                const a = k / 16 * 6.2832,
+                  u = e1.clone().multiplyScalar(Math.cos(a)).addScaledVector(e2, Math.sin(a)),
+                  p = d.clone().multiplyScalar(Math.cos(r / R)).addScaledVector(u, Math.sin(r / R));
+                if (hAt(p.x, p.y, p.z) < -3.5) sea = u; // direzione verso acqua navigabile
+              }
+            if (sea) best = {
+              d,
+              sea
+            };
+          }
+          if (!best) {
+            console.warn('Forziere: nessuna spiaggia adatta');
+            return;
+          }
+          chestD = best.d;
+          const d = best.d,
+            sea = best.sea,
+            hb = meshH(d.x, d.y, d.z),
+            WP = d.clone().multiplyScalar(R + hb - .1), // base del forziere (world)
+            cc = d.clone().multiplyScalar(R + hb + .5), // centro (world)
+            xa = V3().crossVectors(d, sea).normalize();
+          const grp = new T.Group(); // +Y = su, +Z = verso il mare (davanti)
+          grp.position.copy(WP);
+          grp.quaternion.setFromRotationMatrix(new T.Matrix4().makeBasis(xa, d, sea));
+          scene.add(grp);
+          /* ---- modello ---- */
+          const wood = (() => {
+            const c = document.createElement('canvas');
+            c.width = c.height = 256;
+            const x = c.getContext('2d');
+            ['#6b4423', '#74502b', '#62401f', '#7a5530'].forEach((col, i) => {
+              x.fillStyle = col;
+              x.fillRect(0, i * 64, 256, 64);
+              for (let k = 0; k < 28; k++) { // venature
+                const y = i * 64 + rnd() * 64;
+                x.strokeStyle = `rgba(30,16,6,${.1 + rnd() * .2})`;
+                x.lineWidth = .6 + rnd();
+                x.beginPath();
+                x.moveTo(0, y);
+                x.bezierCurveTo(80, y + (rnd() - .5) * 8, 170, y + (rnd() - .5) * 8, 256, y + (rnd() - .5) * 4);
+                x.stroke();
+              }
+              x.fillStyle = '#24140a';
+              x.fillRect(0, i * 64, 256, 3); // fessura tra le assi
+              x.fillStyle = '#3a3a3a';
+              [10, 246].forEach(nx => {
+                x.beginPath();
+                x.arc(nx, i * 64 + 32, 3, 0, 6.2832);
+                x.fill();
+              }); // chiodi
+            });
+            const t = new T.CanvasTexture(c);
+            t.encoding = T.sRGBEncoding;
+            t.anisotropy = 8;
+            return t;
+          })();
+          const woodM = new T.MeshStandardMaterial({
+              map: wood,
+              roughness: .8,
+              side: T.DoubleSide
+            }),
+            ironM = new T.MeshStandardMaterial({
+              color: lin(0x2b2a2a),
+              roughness: .5,
+              metalness: .6
+            }),
+            brassM = new T.MeshStandardMaterial({
+              color: lin(0xb58a2a),
+              roughness: .35,
+              metalness: .5
+            }),
+            goldM = new T.MeshStandardMaterial({
+              color: lin(0xffc233),
+              roughness: .28,
+              metalness: .5,
+              emissive: lin(0x8a5200),
+              emissiveIntensity: .4
+            });
+          const add = (par, g, m, x, y, z) => {
+            const o = new T.Mesh(g, m);
+            o.position.set(x, y, z);
+            o.castShadow = true;
+            par.add(o);
+            return o;
+          };
+          add(grp, new T.BoxGeometry(1.8, .8, 1.1), woodM, 0, .4, 0); // corpo
+          [-.6, .6].forEach(x => add(grp, new T.BoxGeometry(.14, .82, 1.14), ironM, x, .4, 0)); // fasce di ferro
+          [
+            [0, .87, .51, 1.8, .14, .08],
+            [0, .87, -.51, 1.8, .14, .08],
+            [.86, .87, 0, .08, .14, .94],
+            [-.86, .87, 0, .08, .14, .94]
+          ]
+          .forEach(([x, y, z, w, h, dd]) => add(grp, new T.BoxGeometry(w, h, dd), woodM, x, y, z)); // bordo
+          add(grp, new T.BoxGeometry(.3, .32, .07), brassM, 0, .7, .58); // serratura
+          add(grp, new T.BoxGeometry(.05, .12, .08), ironM, 0, .68, .6);
+          const pile = add(grp, new T.SphereGeometry(1, 16, 10), goldM, 0, .84, 0); // mucchio d'oro
+          pile.scale.set(.8, .2, .45);
+          pile.castShadow = false;
+          const ci = new T.InstancedMesh(new T.CylinderGeometry(.13, .13, .025, 10), goldM, 70), // monete sul mucchio
+            mm = new T.Matrix4(),
+            qq = new T.Quaternion(),
+            ee = new T.Euler();
+          for (let i = 0; i < 70; i++) {
+            let x, z, q2;
+            do {
+              x = (rnd() * 2 - 1) * .78;
+              z = (rnd() * 2 - 1) * .43;
+              q2 = 1 - (x / .8) ** 2 - (z / .45) ** 2;
+            } while (q2 < .05);
+            ci.setMatrixAt(i, mm.compose(V3(x, .84 + .2 * Math.sqrt(q2), z),
+              qq.setFromEuler(ee.set((rnd() - .5) * 1.2, rnd() * 6.28, (rnd() - .5) * 1.2)), V3(1, 1, 1)));
+          }
+          grp.add(ci);
+          const lid = new T.Group();
+          lid.position.set(0, .8, -.55);
+          grp.add(lid); // cerniera sul retro
+          add(lid, new T.CylinderGeometry(.55, .55, 1.8, 20, 1, false, 0, Math.PI).rotateZ(Math.PI / 2), woodM, 0, 0, .55);
+          [-.6, .6].forEach(x => add(lid, new T.TorusGeometry(.56, .045, 6, 16, Math.PI).rotateY(Math.PI / 2), ironM, x, 0, .55));
+          add(lid, new T.BoxGeometry(.3, .2, .06), brassM, 0, .06, 1.1);
+          /* ---- luce da sotto: aloni additivi + PointLight (solo desktop) ---- */
+          const gc = document.createElement('canvas');
+          gc.width = gc.height = 64;
+          {
+            const x = gc.getContext('2d'),
+              g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+            g.addColorStop(0, 'rgba(255,255,255,1)');
+            g.addColorStop(.3, 'rgba(255,255,255,.45)');
+            g.addColorStop(1, 'rgba(255,255,255,0)');
+            x.fillStyle = g;
+            x.fillRect(0, 0, 64, 64);
+          }
+          const gtex = new T.CanvasTexture(gc);
+          const halo = (sc, y, z) => {
+            const s = new T.Sprite(new T.SpriteMaterial({
+              map: gtex,
+              color: 0xffb94a,
+              blending: T.AdditiveBlending,
+              transparent: true,
+              depthWrite: false,
+              fog: false
+            }));
+            s.position.set(0, y, z);
+            s.scale.set(sc, sc, 1);
+            s.renderOrder = 4;
+            grp.add(s);
+            return s;
+          };
+          const under = halo(11, .2, .1),
+            top = halo(5, 1.1, 0);
+          const lamp = MOB ? null : new T.PointLight(0xffa83a, 0, 24, 2);
+          if (lamp) {
+            lamp.position.set(0, .15, .2);
+            grp.add(lamp);
+          }
+          /* ---- monete: particelle CPU con rimbalzo sul terreno reale (meshH), poi restano a terra ---- */
+          const NC = MOB ? 90 : 180,
+            cp = new Float32Array(NC * 3),
+            cv = new Float32Array(NC * 3),
+            cf = new Float32Array(NC),
+            cd = new Float32Array(NC),
+            cr = new Float32Array(NC * 4).map(rnd),
+            pg = new T.BufferGeometry();
+          pg.setAttribute('position', new T.BufferAttribute(cp, 3));
+          pg.setAttribute('r', new T.BufferAttribute(cr, 4));
+          pg.setAttribute('fl', new T.BufferAttribute(cf, 1));
+          const pts = new T.Points(pg, new T.ShaderMaterial({
+            transparent: true,
+            depthWrite: false,
+            uniforms: {
+              t: U.t,
+              day: U.day,
+              sc: {
+                value: 700
+              }
+            },
+            vertexShader: `attribute vec4 r;attribute float fl;uniform float t,sc;varying float vSp,vTw;
+void main(){vec4 mv=modelViewMatrix*vec4(position,1.);
+float tw=pow(max(sin(t*(6.+r.x*8.)+r.y*40.),0.),8.);
+vTw=tw;vSp=r.z*6.2832+fl*t*(8.+r.w*10.);
+gl_Position=projectionMatrix*mv;gl_PointSize=clamp(sc*.2*(1.+tw*1.2)/-mv.z,2.,48.);}`,
+            fragmentShader: `uniform float day;varying float vSp,vTw;
+void main(){vec2 q0=gl_PointCoord-.5,q=q0;float c=cos(vSp),s=sin(vSp);
+q=vec2(q.x*c-q.y*s,q.x*s+q.y*c);q.x/=max(abs(cos(vSp*1.7)),.2);            // la moneta ruota: si "schiaccia"
+float coin=1.-smoothstep(.4,.5,length(q));
+float star=vTw*(max(0.,1.-abs(q0.x)*16.)*(1.-abs(q0.y)*2.)+max(0.,1.-abs(q0.y)*16.)*(1.-abs(q0.x)*2.)); // lampo a croce
+float al=max(coin,star);if(al<.02)discard;
+vec3 col=mix(vec3(.55,.22,.01),vec3(1.,.62,.12),1.-length(q)*1.6)*(.5+.5*day)*coin+vec3(1.,.9,.6)*star*2.;
+gl_FragColor=vec4(col,al);
+#include <encodings_fragment>
+}`
+          }));
+          pts.frustumCulled = false;
+          pts.visible = false;
+          pts.renderOrder = 3;
+          grp.add(pts);
+          const _g = V3(),
+            sv = V3(),
+            bp = V3(),
+            ground = (x, z) => { // quota locale del terreno (0 = base del forziere)
+              _g.copy(WP).addScaledVector(xa, x).addScaledVector(sea, z);
+              const l = _g.length();
+              return meshH(_g.x / l, _g.y / l, _g.z / l) - hb + .1;
+            };
+          let tOpen = -1,
+            flying = 0;
+          const open = t => {
+            tOpen = t;
+            pts.visible = true;
+            flying = NC;
+            for (let i = 0; i < NC; i++) {
+              const a = rnd() * 6.2832,
+                sp = 1.2 + rnd() * 2.8;
+              cp.set([(rnd() - .5) * 1.2, .9, (rnd() - .5) * .6], i * 3);
+              cv.set([Math.cos(a) * sp, 4 + rnd() * 5, Math.sin(a) * sp * .8 + 1.5], i * 3); // +z: verso il mare
+              cd[i] = .12 + rnd() * .25;
+              cf[i] = 1;
+            }
+            sv.copy(cc).applyMatrix4(cam.matrixWorldInverse);
+            const dd = sv.length();
+            Snd.coins(clamp(sv.x / Math.max(dd, 1), -1, 1) * .85, clamp(1.2 - dd / 80, .35, 1));
+          };
+          chestUpdate = (dt, t, dayK) => {
+            const night = 1 - dayK;
+            if (tOpen < 0) { // distanza minima di prua, centro, poppa
+              let dm = 1e9;
+              for (const s of [0, 7, -7]) dm = Math.min(dm, cc.distanceTo(bp.copy(boat.position).addScaledVector(Tn, s)));
+              if (dm < OPEN_D) open(t);
+            }
+            const k = tOpen < 0 ? 0 : clamp((t - tOpen) / .8, 0, 1),
+              e = 1 + 2.70158 * (k - 1) ** 3 + 1.70158 * (k - 1) ** 2; // easeOutBack: rimbalzo del coperchio
+            lid.rotation.x = -1.95 * e;
+            if (flying) {
+              const age = t - tOpen;
+              let n = 0;
+              for (let i = 0; i < NC; i++) {
+                if (!cf[i]) continue;
+                n++;
+                if (age < cd[i]) continue;
+                const j = i * 3;
+                cv[j + 1] -= 16 * dt;
+                cp[j] += cv[j] * dt;
+                cp[j + 1] += cv[j + 1] * dt;
+                cp[j + 2] += cv[j + 2] * dt;
+                const gy = ground(cp[j], cp[j + 2]) + .03;
+                if (cp[j + 1] < gy) {
+                  cp[j + 1] = gy;
+                  if (cv[j + 1] < -2.5) {
+                    cv[j + 1] *= -.35;
+                    cv[j] *= .6;
+                    cv[j + 2] *= .6;
+                  } // rimbalza
+                  else {
+                    cf[i] = 0;
+                    n--;
+                  } // si ferma a terra
+                }
+              }
+              flying = n;
+              pg.attributes.position.needsUpdate = pg.attributes.fl.needsUpdate = true;
+            }
+            const op = tOpen < 0 ? 0 : 1;
+            under.material.opacity = .1 + .6 * night + .25 * op;
+            top.material.opacity = op * (.25 + .12 * Math.sin(t * 3)) * (.6 + .4 * night);
+            if (lamp) lamp.intensity = (.2 + 5 * night) * (1 + .6 * op) * (.9 + .1 * Math.sin(t * 5));
+          };
+        })();
         /* ---------- pterosauro ---------- */
         let ptUpdate = () => {};
         (function() {
@@ -3848,6 +4130,9 @@ transformed=normalize(position)*(${r}+hw+.06);}`);
             turn = 0,
             flap = .5,
             ph = 0;
+          let nextScream = 0,
+            pre = false;
+          const sv = V3(); //urlo dello pterodattilo
           const jp = (o, out) => {
             out.setFromMatrixPosition(o.matrixWorld);
             return body.worldToLocal(out);
@@ -3856,6 +4141,17 @@ transformed=normalize(position)*(${r}+hw+.06);}`);
             const dB = Math.acos(clamp(pp.dot(P), -1, 1)) * R; // distanza dalla barca (m)
             let rate, altT, spd = 22;
             if (mode === 0 && t > nextPass) mode = 1;
+            //urlo pterodattilo
+            if (mode === 1 && !pre && dB < 320) {
+              pre = true;
+              nextScream = t;
+            } // urlo all'attacco
+            if (t > nextScream && dB < 500) { // poi ogni 20-40 s se è vicino
+              nextScream = t + 20 + rnd() * 20;
+              creature.getWorldPosition(sv).applyMatrix4(cam.matrixWorldInverse);
+              const dd = sv.length();
+              Snd.scream(clamp(sv.x / Math.max(dd, 1), -1, 1) * .85, Math.pow(1 - dd / 500, 1.5));
+            }
             if (mode === 1) { // passaggio radente sulla barca
               tg.copy(P).addScaledVector(pp, -P.dot(pp)).normalize();
               rate = clamp(Math.atan2(cr.crossVectors(tn, tg).dot(pp), tn.dot(tg)) * 1.4, -.7, .7);
@@ -3865,6 +4161,7 @@ transformed=normalize(position)*(${r}+hw+.06);}`);
                 mode = 0;
                 nextPass = t + 60 + rnd() * 60;
                 holdUntil = t + 8;
+                pre = false; //pterodattilo
               } // sopra la barca: riprende quota
             } else {
               rate = .32 * Math.sin(t * .11 + 1.3) + .22 * Math.sin(t * .047);
@@ -4834,6 +5131,16 @@ URL = ${location.search || '(nessun parametro)'}`);
             mp.fill();
             mp.stroke();
           }
+          //il forziere
+          if (chestD) {
+            mp.fillStyle = '#eedd00';
+            mp.strokeStyle = '#fff';
+            mp.lineWidth = 0.6;
+            mp.beginPath();
+            mp.arc((Math.atan2(-chestD.z, chestD.x) / Math.PI + 1) / 2 * MW, (.5 - Math.asin(chestD.y) / Math.PI) * MH, 1.8, 0, TAU);
+            mp.fill();
+            mp.stroke();
+          }
           const la = Math.asin(clamp(P.y, -1, 1)),
             lo = Math.atan2(-P.z, P.x),
             X = (lo / Math.PI + 1) / 2 * MW,
@@ -5108,6 +5415,18 @@ URL = ${location.search || '(nessun parametro)'}`);
             shore = best;
             sp0 = clamp(sp / Math.max(sw, 1e-3), -1, 1) * .8
           }
+          //
+          function dest(pan, vol) { // gain + pan stereo
+            const g = ctx.createGain();
+            g.gain.value = vol;
+            if (ctx.createStereoPanner) {
+              const pn = ctx.createStereoPanner();
+              pn.pan.value = pan;
+              g.connect(pn);
+              pn.connect(out);
+            } else g.connect(out);
+            return g;
+          }
           return {
             start() {
               if (on) {
@@ -5176,6 +5495,84 @@ URL = ${location.search || '(nessun parametro)'}`);
               lastHit = ctx.currentTime;
               thud(clamp(v / 8, .15, 1));
               creak(1)
+            },
+            /* il forziere */
+            coins(pan, vol) { // coperchio + pioggia di monete
+              if (!on) return;
+              creak(.8);
+              thud(.25);
+              const g = dest(pan, vol),
+                t0 = ctx.currentTime + .15;
+              for (let i = 0; i < 46; i++) {
+                const t = t0 + Math.pow(Math.random(), 1.7) * 1.8, // fitte all'inizio, poi si diradano
+                  f = 1800 + Math.random() * 3400,
+                  d = .08 + Math.random() * .22,
+                  a = (.1 + Math.random() * .1) * (1 - (t - t0) / 2.4);
+                [
+                  [1, 1],
+                  [2.76, .45],
+                  [5.4, .2]
+                ].forEach(([m, w]) => { // parziali inarmonici = timbro metallico
+                  const o = ctx.createOscillator(),
+                    e = ctx.createGain();
+                  o.type = 'sine';
+                  o.frequency.value = f * m;
+                  e.gain.setValueAtTime(.0001, t);
+                  e.gain.linearRampToValueAtTime(a * w, t + .003);
+                  e.gain.exponentialRampToValueAtTime(.0001, t + d);
+                  o.connect(e);
+                  e.connect(g);
+                  o.start(t);
+                  o.stop(t + d + .02);
+                });
+              }
+              burst(B.white, 'bandpass', 6000, .12, .9, g); // fruscio metallico
+            },
+            scream(pan, vol) { // urlo dello pterosauro
+              if (!on) return;
+              const g = dest(pan, vol * .8),
+                t = ctx.currentTime + .02,
+                D = 1.5,
+                bp = ctx.createBiquadFilter(),
+                env = ctx.createGain();
+              bp.type = 'bandpass';
+              bp.Q.value = 1.6; // formante che sale e scende
+              bp.frequency.setValueAtTime(900, t);
+              bp.frequency.linearRampToValueAtTime(3000, t + .35);
+              bp.frequency.exponentialRampToValueAtTime(700, t + D);
+              env.gain.setValueAtTime(.0001, t);
+              env.gain.linearRampToValueAtTime(1, t + .1);
+              env.gain.setValueAtTime(.9, t + .5);
+              env.gain.exponentialRampToValueAtTime(.001, t + D);
+              bp.connect(env);
+              env.connect(g);
+              [
+                [1, 0, .5],
+                [1.5, 7, .22],
+                [.5, -5, .3]
+              ].forEach(([m, ct, w]) => {
+                const o = ctx.createOscillator(),
+                  og = ctx.createGain(),
+                  lfo = ctx.createOscillator(),
+                  lg = ctx.createGain();
+                o.type = 'sawtooth';
+                o.detune.value = ct;
+                o.frequency.setValueAtTime(560 * m, t);
+                o.frequency.linearRampToValueAtTime(1500 * m, t + .35);
+                o.frequency.exponentialRampToValueAtTime(430 * m, t + D);
+                lfo.frequency.value = 34 + Math.random() * 10;
+                lg.gain.value = 70 * m; // vibrato rapido: raucedine
+                lfo.connect(lg);
+                lg.connect(o.frequency);
+                og.gain.value = w;
+                o.connect(og);
+                og.connect(bp);
+                o.start(t);
+                lfo.start(t);
+                o.stop(t + D + .1);
+                lfo.stop(t + D + .1);
+              });
+              burst(B.white, 'bandpass', 2600, .18, D * .7, g); // fiato
             },
             /* gpt gabbiani con suono claude */
             gull(pan, vol) {
@@ -5664,6 +6061,7 @@ ${inf.programs ? inf.programs.length : '?'} shader`;
           faroUpdate(time, dayK); //isola faro
           platUpdate(time, dayK); //isola petrolio
           turbUpdate(time, dt, wf, windKn, dayK); //turbine eoliche piene di pale!
+          chestUpdate(dt, time, dayK); //il forziere
           updateBirds(time); //uccelli gpt
           ptUpdate(dt, time, dayK); //pterodattilo!
           buoyUpdate(time, dt, dayK); //aggiorna pure le boe
