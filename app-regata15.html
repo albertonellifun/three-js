@@ -705,6 +705,35 @@
       body.nui .g {
         filter: url(#nightFx);
       }
+/* Privacy Policy button */
+.privacy-link {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 10px);
+  left: calc(env(safe-area-inset-left) + 10px);
+  z-index: 50;
+
+  padding: 7px 12px;
+  border-radius: var(--radius-sm);
+
+  color: var(--text);
+  background: rgba(255,255,255,.10);
+  border: 1px solid var(--border);
+
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: none;
+
+  backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
+}
+
+.privacy-link:hover {
+  background: rgba(255,255,255,.20);
+}
+
+.privacy-link.hidden {
+  display: none;
+}
     </style>
   </head>
 
@@ -760,6 +789,16 @@
       <canvas id="m_bg"></canvas>
       <button id="m_info" type="button" aria-label="Info, credits &amp; licenses" title="Info">?</button>
       <button id="m_highdetails" type="button" aria-label="High details" title="High Details">👁️</button>
+<a
+  id="privacyLink"
+  class="privacy-link"
+  href="https://albertonellifun.github.io/lab/privacy-policy-planetsail.html"
+  target="_blank"
+  rel="noopener noreferrer"
+  aria-label="Privacy Policy"
+>
+  🔒 Privacy Policy
+</a>
       <div id="m_card">
         <header id="m_head" class="m_in" style="--i:0">
           <div id="m_logo">⛵</div>
@@ -809,7 +848,7 @@
           deckColor: 0xddbb77,
           cabinColor: 0xffcc88,
           sailColor: 0xeeeeee,
-          spColors: ['#ff2222', '#ff4444', '#ff6666', '#ff8888', '#ffaaaa', '#ffcccc', '#ffffff']
+          spColors: ['#f20', '#f40', '#f62', '#f84', '#fa6', '#fc8', '#ffa']
         },
         {
           name: "Luna Rossa Prada",
@@ -6385,6 +6424,7 @@ ${inf.programs ? inf.programs.length : '?'} shader`;
               startGame(R, li, mk);
               ui.style.display = 'block';
               menu.remove();
+			  $("privacyLink").classList.add("hidden");
             } catch (e) {
               console.error(e);
               err.textContent = 'Error during world generation: ' + e.message;
