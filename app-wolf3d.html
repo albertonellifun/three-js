@@ -1,0 +1,4319 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WOLF3D THREE-JS</title>
+<style>
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #004040;
+    font-family: 'Courier New', Courier, monospace;
+  }
+
+  /* Contenitore principale stile monitor retro con cornice verde acqua Wolf3D */
+  #game-frame {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #004848;
+    border: 8px solid #005858;
+    box-shadow: inset 0 0 24px rgba(0,0,0,0.85);
+  }
+
+  /* Viewport 3D */
+  #viewport-wrap {
+    position: relative;
+    flex: 1;
+    width: 100%;
+    overflow: hidden;
+    background: #05070a;
+    border: 4px solid #002828;
+    box-shadow: inset 0 0 40px rgba(0,0,0,0.9);
+  }
+
+  #gl-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Flash rosso quando colpiti / dorato su kill */
+  #screen-flash {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.12s ease-out;
+    z-index: 5;
+  }
+
+  /* Mirino centrale minimalista */
+  #crosshair {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 18px;
+    height: 18px;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 6;
+    opacity: 0.75;
+  }
+  #crosshair::before, #crosshair::after {
+    content: '';
+    position: absolute;
+    background: rgba(255, 255, 255, 0.85);
+    box-shadow: 0 0 4px #000;
+  }
+  #crosshair::before {
+    top: 8px; left: 2px; width: 14px; height: 2px;
+  }
+  #crosshair::after {
+    left: 8px; top: 2px; width: 2px; height: 14px;
+  }
+
+  /* Minimappa in alto a destra */
+  #minimap-box {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 176px;
+    height: 176px;
+    background: rgba(0, 12, 24, 0.82);
+    border: 3px solid #008888;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.75), inset 0 0 12px rgba(0, 168, 168, 0.35);
+    border-radius: 4px;
+    z-index: 8;
+    overflow: hidden;
+  }
+  #minimap-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  #minimap-label {
+    position: absolute;
+    bottom: 2px;
+    left: 6px;
+    font-size: 10px;
+    font-weight: bold;
+    color: #55ffff;
+    letter-spacing: 1px;
+    text-shadow: 1px 1px 0 #000;
+    pointer-events: none;
+  }
+
+  /* Indicatore rapido tasti in alto a sinistra discreto */
+  #controls-hint {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    color: rgba(200, 240, 240, 0.75);
+    font-size: 11px;
+    line-height: 1.45;
+    background: rgba(0, 18, 28, 0.55);
+    padding: 6px 10px;
+    border-left: 3px solid #00a8a8;
+    text-shadow: 1px 1px 0 #000;
+    pointer-events: none;
+    z-index: 7;
+  }
+
+  /* Overlay PLAY centrale */
+  #play-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at center, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.68) 100%);
+    z-index: 20;
+    backdrop-filter: blur(2px);
+  }
+
+  #play-btn {
+    padding: 22px 68px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 42px;
+    font-weight: 900;
+    letter-spacing: 6px;
+    color: #ffffff;
+    background: linear-gradient(180deg, #b80000 0%, #7a0000 52%, #4e0000 100%);
+    border: 4px solid #ffd700;
+    box-shadow:
+      0 0 0 4px #2a0000,
+      0 12px 35px rgba(0, 0, 0, 0.9),
+      0 0 30px rgba(255, 60, 0, 0.55),
+      inset 0 2px 6px rgba(255, 255, 255, 0.45);
+    cursor: pointer;
+    text-shadow: 3px 3px 0 #000;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+  }
+  #play-btn:hover {
+    transform: scale(1.06);
+    filter: brightness(1.15);
+    box-shadow:
+      0 0 0 4px #2a0000,
+      0 16px 42px rgba(0, 0, 0, 0.95),
+      0 0 45px rgba(255, 180, 0, 0.85),
+      inset 0 2px 8px rgba(255, 255, 255, 0.65);
+  }
+  #play-btn:active {
+    transform: scale(0.98);
+  }
+
+  #death-msg {
+    display: none;
+    color: #ff3b3b;
+    font-size: 26px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    margin-bottom: 18px;
+    text-shadow: 2px 2px 0 #000;
+  }
+
+  /* Barra UI inferiore classica Wolfenstein 3D */
+  #wolf-hud {
+    height: 96px;
+    min-height: 96px;
+    width: 100%;
+    background: #004848;
+    padding: 6px 8px 4px 8px;
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    z-index: 15;
+  }
+
+  .hud-bar-inner {
+    width: 100%;
+    max-width: 1180px;
+    height: 100%;
+    background: #0000a8;
+    border-top: 3px solid #3858ff;
+    border-left: 3px solid #3858ff;
+    border-right: 3px solid #000050;
+    border-bottom: 3px solid #000050;
+    display: grid;
+    grid-template-columns: 1fr 1.35fr 0.95fr 84px 1.25fr 1.15fr 1.6fr;
+    gap: 4px;
+    padding: 4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.8);
+  }
+
+  .hud-cell {
+    background: #00009c;
+    border-top: 2px solid #000048;
+    border-left: 2px solid #000048;
+    border-right: 2px solid #4466ff;
+    border-bottom: 2px solid #4466ff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 6px;
+    position: relative;
+  }
+
+  .hud-label {
+    color: #55ffff;
+    font-size: 15px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    text-shadow: 2px 2px 0 #000044;
+    line-height: 1;
+  }
+
+  .hud-value {
+    color: #ffffff;
+    font-size: 30px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-shadow: 2px 2px 0 #000044;
+    line-height: 1;
+  }
+
+  #hud-face-cell {
+    padding: 2px;
+    justify-content: center;
+    background: #000078;
+  }
+
+  #bj-face-canvas {
+    width: 68px;
+    height: 72px;
+    image-rendering: pixelated;
+    border: 2px solid #000038;
+  }
+
+  #hud-weapon-cell {
+    justify-content: center;
+    padding: 3px;
+  }
+
+  #weapon-hud-canvas {
+    width: 100%;
+    height: 64px;
+    image-rendering: pixelated;
+  }
+
+  .weapon-badge {
+    position: absolute;
+    top: 3px;
+    right: 6px;
+    font-size: 10px;
+    color: #55ffff;
+    font-weight: bold;
+    text-shadow: 1px 1px 0 #000;
+  }
+
+  @media (max-width: 760px) {
+    #wolf-hud { height: 78px; min-height: 78px; }
+    .hud-label { font-size: 11px; }
+    .hud-value { font-size: 20px; }
+    .hud-bar-inner { grid-template-columns: 0.9fr 1.2fr 0.8fr 64px 1.1fr 1fr 1.3fr; }
+    #bj-face-canvas { width: 54px; height: 58px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="game-frame">
+  <div id="viewport-wrap">
+    <canvas id="gl-canvas"></canvas>
+    <div id="screen-flash"></div>
+    <div id="crosshair"></div>
+
+    <div id="controls-hint">
+      <b>WASD</b> Muovi &nbsp;|&nbsp; <b>MOUSE</b> Mira &nbsp;|&nbsp; <b>CLICK</b> Spara<br>
+      <b>1</b> Mauser &nbsp; <b>2</b> Shotgun &nbsp; <b>3</b> Mitragliatore &nbsp;|&nbsp; Avvicinati alle porte per aprirle
+    </div>
+
+    <div id="minimap-box">
+      <canvas id="minimap-canvas" width="176" height="176"></canvas>
+      <div id="minimap-label">RADAR CASTELLO</div>
+    </div>
+
+    <div id="play-overlay">
+      <div id="death-msg">SEI STATO ELIMINATO</div>
+      <button id="play-btn" type="button">PLAY</button>
+    </div>
+  </div>
+
+  <!-- HUD Originale Wolfenstein 3D -->
+  <div id="wolf-hud">
+    <div class="hud-bar-inner">
+      <div class="hud-cell">
+        <div class="hud-label">FLOOR</div>
+        <div class="hud-value" id="hud-floor">1</div>
+      </div>
+      <div class="hud-cell">
+        <div class="hud-label">SCORE</div>
+        <div class="hud-value" id="hud-score">0</div>
+      </div>
+      <div class="hud-cell">
+        <div class="hud-label">LIVES</div>
+        <div class="hud-value" id="hud-lives">3</div>
+      </div>
+      <div class="hud-cell" id="hud-face-cell">
+        <canvas id="bj-face-canvas" width="32" height="34"></canvas>
+      </div>
+      <div class="hud-cell">
+        <div class="hud-label">HEALTH</div>
+        <div class="hud-value" id="hud-health">100%</div>
+      </div>
+      <div class="hud-cell">
+        <div class="hud-label">AMMO</div>
+        <div class="hud-value" id="hud-ammo">99</div>
+      </div>
+      <div class="hud-cell" id="hud-weapon-cell">
+        <span class="weapon-badge" id="hud-weapon-name">[1] MAUSER</span>
+        <canvas id="weapon-hud-canvas" width="96" height="44"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Caricamento locale Three.js r151 richiesto + fallback silente se aperto in sandbox -->
+<script src="./three-r151.min.js"></script>
+
+<script>
+(function() {
+  'use strict';
+
+  /* ============================================================================
+     CONFIGURAZIONE GLOBALE & COSTANTI
+     ============================================================================ */
+  var CELL_SIZE = 4.0;
+  var WALL_HEIGHT = 3.6;
+  var PLAYER_HEIGHT = 1.75;
+  var PLAYER_RADIUS = 0.55;
+  var GRID_HALF = 48; // Griglia da -48 a +48 (96x96 celle)
+  var MAX_PITCH = 3.14*0.5;//angolo massimo inclinazione visuale (0.35)
+  var CELL_VOID = 0;
+  var CELL_FLOOR = 1;
+  var CELL_WALL_STONE = 2;
+  var CELL_WALL_BRICK = 3;
+  var CELL_WALL_WOOD = 4;
+  var CELL_DOOR_CLOSED = 5;
+  var CELL_DOOR_OPEN = 6;
+  var CELL_PILLAR = 7;
+  var CELL_WALL_ROCK = 8;
+  var CELL_WALL_MOSS = 9;
+  var CELL_WALL_GRAY = 10;
+  var CELL_WALL_BLUE = 11;
+  var CELL_WALL_METAL = 12;
+  var CELL_WALL_WOOD_DECOR = 13;//svastica
+  var CELL_WALL_GRAY_DECOR = 14;
+  var CELL_WALL_BLUE_DECOR = 15;
+  var CELL_WALL_METAL_DECOR = 16;
+  var CELL_WALL_STONE_DECOR = 17;
+  var CELL_WALL_BRICK_DECOR = 18;
+  var wallThemes = [
+	CELL_WALL_STONE,
+	CELL_WALL_BRICK,
+	CELL_WALL_WOOD,
+	CELL_WALL_ROCK,
+    CELL_WALL_MOSS,
+	CELL_WALL_GRAY,
+	CELL_WALL_BLUE,
+	CELL_WALL_METAL
+  ];
+
+  /* ============================================================================
+     STATO DEL GIOCO
+     ============================================================================ */
+  var state = {
+    playing: false,
+    dead: false,
+    score: 0,
+    lives: 3,
+    health: 100,
+    ammo: 99,
+    currentWeapon: 1, // 1: Mauser, 2: Shotgun, 3: Mitragliatore
+    fireCooldown: 0,
+    weaponRecoil: 0,
+    pumpProgress: 0,
+    muzzleLightTimer: 0,
+    faceLookDir: 0, // -1 sinistra, 0 centro, 1 destra
+    faceTimer: 0,
+    faceGrinTimer: 0,
+    facePainTimer: 0,
+    roomsGenerated: 0,
+    time: 0,
+    pickupPrompt: ''
+  };
+
+  var player = {
+    x: 0,
+    z: 0,
+    yaw: 0,
+    pitch: 0,
+    bobPhase: 0,
+    bobAmount: 0
+  };
+
+  var keys = {};
+  var mouseDown = false;
+
+  /* ============================================================================
+     INIZIALIZZAZIONE RENDERER, SCENA & ILLUMINAZIONE AAA
+     ============================================================================ */
+  var viewportWrap = document.getElementById('viewport-wrap');
+  var glCanvas = document.getElementById('gl-canvas');
+
+  var renderer = new THREE.WebGLRenderer({
+    canvas: glCanvas,
+    antialias: true,
+    powerPreference: 'high-performance'
+  });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(viewportWrap.clientWidth, viewportWrap.clientHeight);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.18;
+  renderer.outputEncoding = THREE.sRGBEncoding;
+
+  var scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x05070b);
+  // Densità aumentata da 0.012 a 0.080 per rendere la nebbia ben visibile
+  scene.fog = new THREE.FogExp2(0x070a10, 0.08);
+
+  var camera = new THREE.PerspectiveCamera(
+    72,
+    viewportWrap.clientWidth / viewportWrap.clientHeight,
+    0.1,
+    75
+  );
+  scene.add(camera);
+
+  // Luce ambientale soffusa blu-fredda per contrastare le luci calde dei lampadari
+  var hemiLight = new THREE.HemisphereLight(0x3a527a, 0x161210, 0.42);
+  scene.add(hemiLight);
+
+  // Torcia dinamica leggera attorno al giocatore (rim light su armi e pareti vicine)
+  var playerFillLight = new THREE.PointLight(0x88aadd, 0.55, 9, 1.8);
+  camera.add(playerFillLight);
+
+  // Luce lampo di sparo (Muzzle Flash Light)
+  var muzzleLight = new THREE.PointLight(0xffaa33, 0, 18, 1.5);
+  muzzleLight.position.set(0.25, -0.15, -0.8);
+  camera.add(muzzleLight);
+
+  /* ============================================================================
+     GENERATORE PROCEDURALE DI TEXTURE PBR (ALBEDO + BUMP/NORMAL + ROUGHNESS)
+     Stile Wolf3D Pixel-Art ad alta definizione con profondità fisica
+     ============================================================================ */
+  function createPixelPBRTexture(size, drawFn, repeatX, repeatY) {
+    var diffCanvas = document.createElement('canvas');
+    diffCanvas.width = size;
+    diffCanvas.height = size;
+    var dCtx = diffCanvas.getContext('2d');
+
+    var bumpCanvas = document.createElement('canvas');
+    bumpCanvas.width = size;
+    bumpCanvas.height = size;
+    var bCtx = bumpCanvas.getContext('2d');
+
+    var roughCanvas = document.createElement('canvas');
+    roughCanvas.width = size;
+    roughCanvas.height = size;
+    var rCtx = roughCanvas.getContext('2d');
+
+    drawFn(dCtx, bCtx, rCtx, size);
+
+    var map = new THREE.CanvasTexture(diffCanvas);
+    map.magFilter = THREE.NearestFilter;
+    map.minFilter = THREE.LinearMipmapLinearFilter;
+    map.encoding = THREE.sRGBEncoding;
+
+    var bumpMap = new THREE.CanvasTexture(bumpCanvas);
+    bumpMap.magFilter = THREE.LinearFilter;
+    bumpMap.minFilter = THREE.LinearMipmapLinearFilter;
+
+    var roughnessMap = new THREE.CanvasTexture(roughCanvas);
+    roughnessMap.magFilter = THREE.LinearFilter;
+    roughnessMap.minFilter = THREE.LinearMipmapLinearFilter;
+
+    if (repeatX && repeatY) {
+      [map, bumpMap, roughnessMap].forEach(function(t) {
+        t.wrapS = THREE.RepeatWrapping;
+        t.wrapT = THREE.RepeatWrapping;
+        t.repeat.set(repeatX, repeatY);
+      });
+    }
+
+    return { map: map, bumpMap: bumpMap, roughnessMap: roughnessMap };
+  }
+  
+  //ALB: aggiunta hash2+altre funzioni mancanti
+  // Helper rumore deterministico
+  function hash2(x, y) {
+    var n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453123;
+    return n - Math.floor(n);
+  }
+  
+  //aggancia svastica
+  function svastica(d, b, r, s) {
+	d.fillStyle = '#b8860b';
+    d.fillRect(24, 14, 80, 96);
+    d.fillStyle = '#ffd700';
+    d.fillRect(26, 16, 76, 2);
+    d.fillStyle = '#b80e0e';
+    d.fillRect(28, 18, 72, 88);
+    d.fillStyle = '#eeeeee';
+    d.fillRect(58, 18, 12, 88);
+    d.fillRect(28, 56, 72, 12);
+    d.fillStyle = '#111111';
+    d.fillRect(61, 18, 6, 88);
+    d.fillRect(28, 59, 72, 6);
+    d.fillStyle = '#ffffff';
+    d.beginPath();
+    d.arc(64, 62, 17, 0, Math.PI * 2);
+    d.fill();
+    d.lineWidth = 3;
+    d.strokeStyle = '#111111';
+    d.stroke();
+    d.fillStyle = '#151515';
+    d.fillRect(61, 51, 6, 22);
+    d.fillRect(53, 59, 22, 6);
+    b.fillStyle = '#808080';
+    b.fillRect(0, 0, s, s);
+    b.fillStyle = '#e5e5e5';
+    b.fillRect(24, 14, 80, 96);
+    r.fillStyle = '#454545';
+    r.fillRect(0, 0, s, s);
+  }
+
+
+  // 1. Pietra Blu Classica Wolf3D con rilievi e malta profonda
+  var stoneTex = createPixelPBRTexture(128, function(d, b, r, s) {
+    d.fillStyle = '#182442';
+    d.fillRect(0, 0, s, s);
+    b.fillStyle = '#181818';
+    b.fillRect(0, 0, s, s);
+    r.fillStyle = '#e6e6e6';
+    r.fillRect(0, 0, s, s);
+
+    var rows = 8;
+    var rowH = s / rows;
+    for (var row = 0; row < rows; row++) {
+      var cols = 4;
+      var colW = s / cols;
+      var offset = (row % 2) * (colW * 0.5);
+      for (var col = -1; col <= cols; col++) {
+        var bx = col * colW + offset + 2;
+        var by = row * rowH + 2;
+        var bw = colW - 4;
+        var bh = rowH - 4;
+        var shade = 52 + Math.floor(hash2(col + row * 7, row) * 38);
+        var blue = shade + 58;
+
+        // Blocco base
+        d.fillStyle = 'rgb(' + Math.floor(shade * 0.55) + ',' + Math.floor(shade * 0.78) + ',' + blue + ')';
+        d.fillRect(bx, by, bw, bh);
+
+        // Bordo luce superiore
+        d.fillStyle = 'rgba(170, 210, 255, 0.35)';
+										  
+																									
+																		
+        d.fillRect(bx, by, bw, 2);
+        d.fillRect(bx, by, 2, bh);
+
+        // Ombra inferiore
+        d.fillStyle = 'rgba(5, 10, 25, 0.55)';
+        d.fillRect(bx, by + bh - 2, bw, 2);
+        d.fillRect(bx + bw - 2, by, 2, bh);
+
+        // Pixel speckle su pietra
+        for (var p = 0; p < 18; p++) {
+          var px = bx + 2 + Math.floor(hash2(p, row * 13 + col) * (bw - 4));
+          var py = by + 2 + Math.floor(hash2(col * 19, p + row) * (bh - 4));
+          d.fillStyle = (p % 2 === 0) ? 'rgba(200,230,255,0.18)' : 'rgba(8,14,35,0.28)';
+          d.fillRect(px, py, 2, 2);
+        }
+
+        // Bump alto sul blocco, basso nella malta
+        var bVal = 175 + Math.floor(hash2(col, row) * 65);
+        b.fillStyle = 'rgb(' + bVal + ',' + bVal + ',' + bVal + ')';
+        b.fillRect(bx, by, bw, bh);
+														 
+
+        // Roughness: pietra leggermente umida riflette le luci dinamiche
+        var rVal = 95 + Math.floor(hash2(row, col) * 65);
+        r.fillStyle = 'rgb(' + rVal + ',' + rVal + ',' + rVal + ')';
+        r.fillRect(bx, by, bw, bh);
+      }
+    }
+  });
+
+  var stoneDecorTex = createPixelPBRTexture(128, function(d, b, r, s) {
+    d.fillStyle = '#182442';
+    d.fillRect(0, 0, s, s);
+    b.fillStyle = '#181818';
+    b.fillRect(0, 0, s, s);
+    r.fillStyle = '#e6e6e6';
+    r.fillRect(0, 0, s, s);
+
+    var rows = 8;
+    var rowH = s / rows;
+    for (var row = 0; row < rows; row++) {
+      var cols = 4;
+      var colW = s / cols;
+      var offset = (row % 2) * (colW * 0.5);
+      for (var col = -1; col <= cols; col++) {
+        var bx = col * colW + offset + 2;
+        var by = row * rowH + 2;
+        var bw = colW - 4;
+        var bh = rowH - 4;
+        var shade = 52 + Math.floor(hash2(col + row * 7, row) * 38);
+        var blue = shade + 58;
+
+        // Blocco base
+        d.fillStyle = 'rgb(' + Math.floor(shade * 0.55) + ',' + Math.floor(shade * 0.78) + ',' + blue + ')';
+        d.fillRect(bx, by, bw, bh);
+
+        // Bordo luce superiore
+        d.fillStyle = 'rgba(170, 210, 255, 0.35)';
+										  
+																									
+																		
+        d.fillRect(bx, by, bw, 2);
+        d.fillRect(bx, by, 2, bh);
+
+        // Ombra inferiore
+        d.fillStyle = 'rgba(5, 10, 25, 0.55)';
+        d.fillRect(bx, by + bh - 2, bw, 2);
+        d.fillRect(bx + bw - 2, by, 2, bh);
+
+        // Pixel speckle su pietra
+        for (var p = 0; p < 18; p++) {
+          var px = bx + 2 + Math.floor(hash2(p, row * 13 + col) * (bw - 4));
+          var py = by + 2 + Math.floor(hash2(col * 19, p + row) * (bh - 4));
+          d.fillStyle = (p % 2 === 0) ? 'rgba(200,230,255,0.18)' : 'rgba(8,14,35,0.28)';
+          d.fillRect(px, py, 2, 2);
+        }
+
+        // Bump alto sul blocco, basso nella malta
+        var bVal = 175 + Math.floor(hash2(col, row) * 65);
+        b.fillStyle = 'rgb(' + bVal + ',' + bVal + ',' + bVal + ')';
+        b.fillRect(bx, by, bw, bh);
+														 
+
+        // Roughness: pietra leggermente umida riflette le luci dinamiche
+        var rVal = 95 + Math.floor(hash2(row, col) * 65);
+        r.fillStyle = 'rgb(' + rVal + ',' + rVal + ',' + rVal + ')';
+        r.fillRect(bx, by, bw, bh);
+      }
+    }
+	svastica(d,b,r,s);
+  });
+
+
+  // 2. Mattoni Rossi del Castello
+  var brickTex = createPixelPBRTexture(128, function(d, b, r, s) {
+    d.fillStyle = '#2a1816';
+    d.fillRect(0, 0, s, s);
+    b.fillStyle = '#151515';
+    b.fillRect(0, 0, s, s);
+    r.fillStyle = '#f0f0f0';
+    r.fillRect(0, 0, s, s);
+
+    var rows = 12;
+    var rowH = s / rows;
+    for (var row = 0; row < rows; row++) {
+      var cols = 6;
+      var colW = s / cols;
+      var off = (row % 2) * (colW * 0.5);
+      for (var col = -1; col <= cols; col++) {
+        var bx = col * colW + off + 1.5;
+        var by = row * rowH + 1.5;
+        var bw = colW - 3;
+        var bh = rowH - 3;
+        var red = 115 + Math.floor(hash2(col * 3, row * 5) * 55);
+        d.fillStyle = 'rgb(' + red + ',' + Math.floor(red * 0.24) + ',' + Math.floor(red * 0.18) + ')';
+        d.fillRect(bx, by, bw, bh);
+        d.fillStyle = 'rgba(255,170,130,0.24)';
+        d.fillRect(bx, by, bw, 1.5);
+
+        b.fillStyle = '#c8c8c8';
+        b.fillRect(bx, by, bw, bh);
+        r.fillStyle = '#888888';
+        r.fillRect(bx, by, bw, bh);
+      }
+    }
+  });
+
+  var brickDecorTex = createPixelPBRTexture(128, function(d, b, r, s) {
+    d.fillStyle = '#2a1816';
+    d.fillRect(0, 0, s, s);
+    b.fillStyle = '#151515';
+    b.fillRect(0, 0, s, s);
+    r.fillStyle = '#f0f0f0';
+    r.fillRect(0, 0, s, s);
+
+    var rows = 12;
+    var rowH = s / rows;
+    for (var row = 0; row < rows; row++) {
+      var cols = 6;
+      var colW = s / cols;
+      var off = (row % 2) * (colW * 0.5);
+      for (var col = -1; col <= cols; col++) {
+        var bx = col * colW + off + 1.5;
+        var by = row * rowH + 1.5;
+        var bw = colW - 3;
+        var bh = rowH - 3;
+        var red = 115 + Math.floor(hash2(col * 3, row * 5) * 55);
+        d.fillStyle = 'rgb(' + red + ',' + Math.floor(red * 0.24) + ',' + Math.floor(red * 0.18) + ')';
+        d.fillRect(bx, by, bw, bh);
+        d.fillStyle = 'rgba(255,170,130,0.24)';
+        d.fillRect(bx, by, bw, 1.5);
+
+        b.fillStyle = '#c8c8c8';
+        b.fillRect(bx, by, bw, bh);
+        r.fillStyle = '#888888';
+        r.fillRect(bx, by, bw, bh);
+      }
+    }
+	svastica(d,b,r,s);
+  });
+
+ 
+  
+  
+  // 3. Pannelli in legno; la decorazione è una variante separata, usata solo al centro dei lati.
+  var woodTex = createPixelPBRTexture(128, function(d, b, r, s) {
+    d.fillStyle = '#4a2810';
+    d.fillRect(0, 0, s, s);
+    b.fillStyle = '#808080';
+    b.fillRect(0, 0, s, s);
+    r.fillStyle = '#707070';
+    r.fillRect(0, 0, s, s);
+    for (var x = 0; x < s; x += 16) {
+      var tone = 68 + Math.floor(hash2(x, 3) * 26);
+      d.fillStyle = 'rgb(' + tone + ',' + Math.floor(tone * 0.52) + ',' + Math.floor(tone * 0.22) + ')';
+      d.fillRect(x + 1, 0, 14, s);
+      d.fillStyle = '#221004';
+      d.fillRect(x, 0, 1, s);
+      b.fillStyle = '#303030';
+      b.fillRect(x, 0, 1, s);
+    }
+  });
+  
+  var woodDecorTex = createPixelPBRTexture(128, function(d, b, r, s) {
+    d.fillStyle = '#4a2810';
+    d.fillRect(0, 0, s, s);
+    for (var x = 0; x < s; x += 16) {
+      var tone = 68 + Math.floor(hash2(x, 3) * 26);
+      d.fillStyle = 'rgb(' + tone + ',' + Math.floor(tone * 0.52) + ',' + Math.floor(tone * 0.22) + ')';
+      d.fillRect(x + 1, 0, 14, s);
+      d.fillStyle = '#221004';
+      d.fillRect(x, 0, 1, s);
+    }
+    svastica(d,b,r,s);
+  });
+
+  // 4. Porta Scorrevole Metallica Ciano/Verde Acqua (iconica Wolf3D!)
+  var doorTex = createPixelPBRTexture(128, function(d, b, r, s) {
+    d.fillStyle = '#0e6e78';
+    d.fillRect(0, 0, s, s);
+    b.fillStyle = '#909090';
+    b.fillRect(0, 0, s, s);
+    r.fillStyle = '#383838'; // Metallo lucido
+    r.fillRect(0, 0, s, s);
+
+    // Pannelli metallici incassati
+    d.fillStyle = '#149aa6';
+    d.fillRect(10, 10, 48, 108);
+    d.fillRect(70, 10, 48, 108);
+
+    // Bordi luce e ombra
+    d.fillStyle = '#5ee8f5';
+    d.fillRect(10, 10, 48, 3);
+    d.fillRect(70, 10, 48, 3);
+    d.fillStyle = '#063840';
+    d.fillRect(10, 115, 48, 3);
+    d.fillRect(70, 115, 48, 3);
+
+    // Linea centrale di chiusura
+									  
+										
+										   
+    d.fillStyle = '#042228';
+    d.fillRect(62, 0, 4, s);
+
+    // Serratura dorata centrale
+					   
+    d.fillStyle = '#d4af37';
+    d.fillRect(54, 54, 20, 22);
+    d.fillStyle = '#111111';
+    d.fillRect(62, 60, 4, 10);
+				
+											 
+																
+								 
+		 
+
+    // Rivetti
+    d.fillStyle = '#8ef5ff';
+    for (var ry = 16; ry < 116; ry += 16) {
+      d.fillRect(14, ry, 3, 3);
+      d.fillRect(52, ry, 3, 3);
+      d.fillRect(74, ry, 3, 3);
+      d.fillRect(112, ry, 3, 3);
+    }
+
+    b.fillStyle = '#e0e0e0';
+    b.fillRect(10, 10, 48, 108);
+    b.fillRect(70, 10, 48, 108);
+    b.fillStyle = '#ffffff';
+    b.fillRect(54, 54, 20, 22);
+  });
+
+  // 5. Pavimento in Pietra Scuro Lucidato con Riflessi
+  var floorTexOLD = createPixelPBRTexture(128, function(d, b, r, s) {
+    d.fillStyle = '#252830';
+    d.fillRect(0, 0, s, s);
+    b.fillStyle = '#808080';
+    b.fillRect(0, 0, s, s);
+    r.fillStyle = '#404040';
+    r.fillRect(0, 0, s, s);
+
+    var tile = 64;
+    for (var ty = 0; ty < 2; ty++) {
+      for (var tx = 0; tx < 2; tx++) {
+        var x = tx * tile;
+        var y = ty * tile;
+        var checker = (tx + ty) % 2 === 0;
+        d.fillStyle = checker ? '#343842' : '#282c34';
+        d.fillRect(x + 2, y + 2, tile - 4, tile - 4);
+
+        // Fuga scura
+						
+										  
+				   
+						  
+										 
+											  
+									  
+								
+						  
+						  
+										  
+											
+        d.fillStyle = '#14161a';
+        d.fillRect(x, y, tile, 2);
+        d.fillRect(x, y, 2, tile);
+
+        b.fillStyle = '#252525';
+        b.fillRect(x, y, tile, 2);
+        b.fillRect(x, y, 2, tile);
+        b.fillStyle = '#b5b5b5';
+        b.fillRect(x + 2, y + 2, tile - 4, tile - 4);
+		 
+
+        // Chiazze di umidità/lucido per riflessi dinamici
+        var rv = checker ? 48 : 76;
+        r.fillStyle = 'rgb(' + rv + ',' + rv + ',' + rv + ')';
+        r.fillRect(x + 2, y + 2, tile - 4, tile - 4);
+      }
+    }
+  }, 48, 48);
+  //ALB-fine ^^^
+  
+  // 5. Pavimento in Pietra Scuro Lucidato con Riflessi (mattonelle più piccole e fitte)
+  var floorTex = createPixelPBRTexture(128, function(d, b, r, s) {
+    d.fillStyle = '#22262e';
+    d.fillRect(0, 0, s, s);
+    b.fillStyle = '#808080';
+    b.fillRect(0, 0, s, s);
+    r.fillStyle = '#404040';
+    r.fillRect(0, 0, s, s);
+
+    var tilesPerSide = 4;
+    var tile = s / tilesPerSide;
+    for (var ty = 0; ty < tilesPerSide; ty++) {
+      for (var tx = 0; tx < tilesPerSide; tx++) {
+        var x = tx * tile;
+        var y = ty * tile;
+        var checker = (tx + ty) % 2 === 0;
+        var v = checker ? 54 + Math.floor(hash2(tx, ty) * 10) : 40 + Math.floor(hash2(ty, tx) * 10);
+        d.fillStyle = 'rgb(' + v + ',' + (v + 4) + ',' + (v + 12) + ')';
+        d.fillRect(x + 1.5, y + 1.5, tile - 3, tile - 3);
+
+        d.fillStyle = 'rgba(210, 230, 255, 0.14)';
+        d.fillRect(x + 1.5, y + 1.5, tile - 3, 1.5);
+
+        // Fuga scura
+        d.fillStyle = '#11141a';
+        d.fillRect(x, y, tile, 1.5);
+        d.fillRect(x, y, 1.5, tile);
+
+        b.fillStyle = '#242424';
+        b.fillRect(x, y, tile, 1.5);
+        b.fillRect(x, y, 1.5, tile);
+        b.fillStyle = '#bcbcbc';
+        b.fillRect(x + 1.5, y + 1.5, tile - 3, tile - 3);
+
+        var rv = checker ? 42 : 70;
+        r.fillStyle = 'rgb(' + rv + ',' + rv + ',' + rv + ')';
+        r.fillRect(x + 1.5, y + 1.5, tile - 3, tile - 3);
+      }
+    }
+  }, 110, 110);
+
+  // 6. Soffitto a Cassettoni con Travi e Rilievi Dedicati
+  var ceilTex = createPixelPBRTexture(128, function(d, b, r, s) {
+    d.fillStyle = '#191c24';
+    d.fillRect(0, 0, s, s);
+    b.fillStyle = '#404040';
+    b.fillRect(0, 0, s, s);
+    r.fillStyle = '#888888';
+    r.fillRect(0, 0, s, s);
+
+    // Travi perimetrali del cassettone
+    d.fillStyle = '#2d241e';
+    d.fillRect(0, 0, s, 12);
+    d.fillRect(0, 0, 12, s);
+    d.fillStyle = '#45382e';
+    d.fillRect(12, 12, s - 24, 3);
+							
+    d.fillRect(12, 12, 3, s - 24);
+			 
+
+    // Pannello centrale incassato con borchie
+    d.fillStyle = '#222733';
+    d.fillRect(16, 16, s - 32, s - 32);
+    d.fillStyle = '#13161e';
+    d.strokeStyle = '#363e52';
+    d.lineWidth = 2;
+    d.strokeRect(24, 24, s - 48, s - 48);
+
+    // Borchie angolari
+    d.fillStyle = '#7a6848';
+    var studs = [18, s - 22];
+    for (var sx = 0; sx < studs.length; sx++) {
+      for (var sy = 0; sy < studs.length; sy++) {
+        d.fillRect(studs[sx], studs[sy], 4, 4);
+        b.fillRect(studs[sx], studs[sy], 4, 4);
+      }
+    }
+
+    b.fillStyle = '#dcdcdc';
+    b.fillRect(16, 16, s - 32, s - 32);
+    b.fillStyle = '#707070';
+    b.fillRect(24, 24, s - 48, s - 48);
+  }, 96, 96);
+
+    // 7. Placche di roccia angolari, con contorni profondi e luci pixel-art.
+  var rockTex = createPixelPBRTexture(128, function(d, b, r, s) {
+    d.fillStyle = '#211b17';
+    d.fillRect(0, 0, s, s);
+    b.fillStyle = '#161616';
+    b.fillRect(0, 0, s, s);
+    r.fillStyle = '#d8d8d8';
+    r.fillRect(0, 0, s, s);
+
+    var rows = 5;
+    var rowH = s / rows;
+    for (var row = 0; row < rows; row++) {
+      var offset = row % 2 ? -14 : 0;
+      for (var col = -1; col < 5; col++) {
+        var seed = hash2(col + 17, row + 31);
+        var bx = col * 34 + offset + 2;
+        var by = row * rowH + 2;
+        var bw = 27 + Math.floor(seed * 9);
+        var bh = rowH - 5;
+        var n = hash2(col * 7 + 2, row * 11 + 4);
+        var red = 86 + Math.floor(n * 65);
+        var green = 56 + Math.floor(n * 43);
+        var blue = 37 + Math.floor(n * 30);
+        var cut = 4 + Math.floor(seed * 5);
+        var points = [
+          [bx + cut, by], [bx + bw - 4, by + 1], [bx + bw, by + 5],
+          [bx + bw - 2, by + bh - 4], [bx + bw - 7, by + bh],
+          [bx + 4, by + bh - 1], [bx, by + bh - 6]
+        ];
+        d.fillStyle = '#100d0b';
+        d.beginPath();
+        d.moveTo(points[0][0] - 2, points[0][1] + 2);
+        for (var p = 1; p < points.length; p++) d.lineTo(points[p][0], points[p][1] + 2);
+        d.closePath();
+        d.fill();
+        d.fillStyle = 'rgb(' + red + ',' + green + ',' + blue + ')';
+        d.beginPath();
+        d.moveTo(points[0][0], points[0][1]);
+        for (var q = 1; q < points.length; q++) d.lineTo(points[q][0], points[q][1]);
+        d.closePath();
+        d.fill();
+        d.fillStyle = 'rgba(235, 190, 135, 0.36)';
+        d.beginPath();
+        d.moveTo(points[0][0], points[0][1]);
+        d.lineTo(points[1][0], points[1][1]);
+        d.lineTo(points[2][0], points[2][1]);
+        d.lineTo(points[3][0], points[3][1]);
+        d.lineTo(points[2][0] - 3, points[2][1] + 3);
+        d.lineTo(points[1][0] - 2, points[1][1] + 3);
+        d.closePath();
+        d.fill();
+        b.fillStyle = '#b8b8b8';
+        b.beginPath();
+        b.moveTo(points[0][0], points[0][1]);
+        for (var bp = 1; bp < points.length; bp++) b.lineTo(points[bp][0], points[bp][1]);
+        b.closePath();
+        b.fill();
+        b.fillStyle = '#242424';
+        b.fillRect(bx + 5, by + 8, 3, 2);
+        var rough = 145 + Math.floor(n * 90);
+        r.fillStyle = 'rgb(' + rough + ',' + rough + ',' + rough + ')';
+        r.fillRect(bx, by, bw, bh);
+      }
+    }
+  });
+
+  // 8. Muro di Pietra Antica con Muschio e Crepe
+  var mossWallTex = createPixelPBRTexture(128, function(d, b, r, s) {
+    d.fillStyle = '#1c2420';
+    d.fillRect(0, 0, s, s);
+    b.fillStyle = '#222222';
+    b.fillRect(0, 0, s, s);
+    r.fillStyle = '#cccccc';
+    r.fillRect(0, 0, s, s);
+
+    var rows = 6;
+    var rowH = s / rows;
+    for (var row = 0; row < rows; row++) {
+      var cols = 3;
+      var colW = s / cols;
+      var off = (row % 2) * (colW * 0.5);
+      for (var col = -1; col <= cols; col++) {
+        var bx = col * colW + off + 2;
+        var by = row * rowH + 2;
+        var bw = colW - 4;
+        var bh = rowH - 4;
+        var h = hash2(col + 11, row + 23);
+        var baseG = 66 + Math.floor(h * 34);
+        d.fillStyle = 'rgb(' + Math.floor(baseG * 0.72) + ',' + baseG + ',' + Math.floor(baseG * 0.78) + ')';
+        d.fillRect(bx, by, bw, bh);
+
+        // Chiazze di muschio verde scuro
+        if (h > 0.42) {
+          d.fillStyle = 'rgba(42, 108, 44, 0.55)';
+          d.fillRect(bx + 3, by + bh - 8, bw - 6, 6);
+        }
+
+        var bVal = 150 + Math.floor(h * 90);
+        b.fillStyle = 'rgb(' + bVal + ',' + bVal + ',' + bVal + ')';
+        b.fillRect(bx, by, bw, bh);
+      }
+    }
+    });
+
+  // Varianti aggiuntive: blocchi grigi classici, pietra blu e pannelli metallici.
+  function createBlockWallTexture(palette, addSvastica=false) {
+    var xxx = createPixelPBRTexture(128, function(d, b, r, s) {
+      d.fillStyle = '#17191e';
+      d.fillRect(0, 0, s, s);
+      b.fillStyle = '#202020';
+      b.fillRect(0, 0, s, s);
+      r.fillStyle = '#d0d0d0';
+      r.fillRect(0, 0, s, s);
+      var rows = 6;
+      var rowH = s / rows;
+      for (var row = 0; row < rows; row++) {
+        var colW = 34;
+        var offset = row % 2 ? -17 : 0;
+        for (var col = -1; col < 5; col++) {
+          var bx = col * colW + offset + 2;
+          var by = row * rowH + 2;
+          var bw = colW - 4;
+          var bh = rowH - 4;
+          var n = hash2(col + 19, row + palette.length * 3);
+          var tone = palette[Math.floor(n * palette.length)];
+          d.fillStyle = tone;
+          d.fillRect(bx, by, bw, bh);
+          d.fillStyle = 'rgba(255,255,255,0.25)';
+          d.fillRect(bx + 1, by + 1, bw - 2, 2);
+          d.fillRect(bx + 1, by + 1, 2, bh - 2);
+          d.fillStyle = 'rgba(0,0,0,0.48)';
+          d.fillRect(bx + 1, by + bh - 3, bw - 1, 3);
+          d.fillRect(bx + bw - 3, by + 1, 3, bh - 2);
+          b.fillStyle = '#bdbdbd';
+          b.fillRect(bx + 2, by + 2, bw - 4, bh - 4);
+          b.fillStyle = '#262626';
+          b.fillRect(bx, by, bw, 2);
+          b.fillRect(bx, by, 2, bh);
+          var rough = 130 + Math.floor(n * 90);
+          r.fillStyle = 'rgb(' + rough + ',' + rough + ',' + rough + ')';
+          r.fillRect(bx, by, bw, bh);
+        }
+      }
+	  if(addSvastica) svastica(d,b,r,s);
+    });
+	return xxx;
+  }
+
+  var grayWallTex = createBlockWallTexture(['#777a7e', '#8c8e91', '#686b70', '#a0a1a2'],false);
+  var blueWallTex = createBlockWallTexture(['#08185f', '#102b9a', '#14266f', '#1b3db3'],false);
+  
+  var grayWallDecorTex = createBlockWallTexture(['#777a7e', '#8c8e91', '#686b70', '#a0a1a2'],true);
+  var blueWallDecorTex = createBlockWallTexture(['#08185f', '#102b9a', '#14266f', '#1b3db3'],true);
+  
+  var metalWallTex = createPixelPBRTexture(128, function(d, b, r, s) {
+    d.fillStyle = '#38434a';
+    d.fillRect(0, 0, s, s);
+    b.fillStyle = '#555555';
+    b.fillRect(0, 0, s, s);
+    r.fillStyle = '#666666';
+    r.fillRect(0, 0, s, s);
+    for (var y = 0; y < s; y += 32) {
+      for (var x = 0; x < s; x += 32) {
+        d.fillStyle = '#657078';
+        d.fillRect(x + 2, y + 2, 28, 28);
+        d.fillStyle = '#aab7bd';
+        d.fillRect(x + 4, y + 4, 24, 2);
+        d.fillStyle = '#242c32';
+        d.fillRect(x + 4, y + 26, 24, 2);
+        d.fillStyle = '#111820';
+        for (var bolt = 0; bolt < 4; bolt++) {
+          var bx = x + (bolt % 2 ? 25 : 5);
+          var by = y + (bolt < 2 ? 5 : 25);
+          d.fillRect(bx, by, 3, 3);
+          b.fillRect(bx, by, 3, 3);
+        }
+        b.fillStyle = '#c0c0c0';
+        b.fillRect(x + 4, y + 4, 24, 20);
+        r.fillStyle = '#777777';
+        r.fillRect(x + 2, y + 2, 28, 28);
+      }
+    }
+  });
+
+  var metalWallDecorTex = createPixelPBRTexture(128, function(d, b, r, s) {
+    d.fillStyle = '#38434a';
+    d.fillRect(0, 0, s, s);
+    b.fillStyle = '#555555';
+    b.fillRect(0, 0, s, s);
+    r.fillStyle = '#666666';
+    r.fillRect(0, 0, s, s);
+    for (var y = 0; y < s; y += 32) {
+      for (var x = 0; x < s; x += 32) {
+        d.fillStyle = '#657078';
+        d.fillRect(x + 2, y + 2, 28, 28);
+        d.fillStyle = '#aab7bd';
+        d.fillRect(x + 4, y + 4, 24, 2);
+        d.fillStyle = '#242c32';
+        d.fillRect(x + 4, y + 26, 24, 2);
+        d.fillStyle = '#111820';
+        for (var bolt = 0; bolt < 4; bolt++) {
+          var bx = x + (bolt % 2 ? 25 : 5);
+          var by = y + (bolt < 2 ? 5 : 25);
+          d.fillRect(bx, by, 3, 3);
+          b.fillRect(bx, by, 3, 3);
+        }
+        b.fillStyle = '#c0c0c0';
+        b.fillRect(x + 4, y + 4, 24, 20);
+        r.fillStyle = '#777777';
+        r.fillRect(x + 2, y + 2, 28, 28);
+      }
+    }
+	svastica(d,b,r,s);
+  });
+
+  /* ============================================================================
+     MATERIALI PBR CONDIVISI
+     ============================================================================ */
+  var matStone = new THREE.MeshStandardMaterial({
+    map: stoneTex.map,
+    bumpMap: stoneTex.bumpMap,
+    bumpScale: 0.06,
+    roughnessMap: stoneTex.roughnessMap,
+    roughness: 0.52,
+    metalness: 0.12
+  });
+  
+  var matStoneDecor = new THREE.MeshStandardMaterial({
+    map: stoneDecorTex.map,
+    bumpMap: stoneDecorTex.bumpMap,
+    bumpScale: 0.06,
+    roughnessMap: stoneDecorTex.roughnessMap,
+    roughness: 0.52,
+    metalness: 0.12
+  });
+
+  var matBrick = new THREE.MeshStandardMaterial({
+    map: brickTex.map,
+    bumpMap: brickTex.bumpMap,
+    bumpScale: 0.055,
+    roughnessMap: brickTex.roughnessMap,
+    roughness: 0.65,
+    metalness: 0.08
+  });
+
+  var matBrickDecor = new THREE.MeshStandardMaterial({
+    map: brickDecorTex.map,
+    bumpMap: brickDecorTex.bumpMap,
+    bumpScale: 0.055,
+    roughnessMap: brickDecorTex.roughnessMap,
+    roughness: 0.65,
+    metalness: 0.08
+  });
+
+  
+  var matWood = new THREE.MeshStandardMaterial({
+    map: woodTex.map,
+    bumpMap: woodTex.bumpMap,
+    bumpScale: 0.04,
+    roughnessMap: woodTex.roughnessMap,
+    roughness: 0.58,
+    metalness: 0.05
+  });
+
+  var matWoodDecor = new THREE.MeshStandardMaterial({
+    map: woodDecorTex.map,
+    bumpMap: woodDecorTex.bumpMap,
+    bumpScale: 0.04,
+    roughnessMap: woodDecorTex.roughnessMap,
+    roughness: 0.58,
+    metalness: 0.05
+  });
+
+  var matGrayWall = new THREE.MeshStandardMaterial({
+    map: grayWallTex.map, bumpMap: grayWallTex.bumpMap, bumpScale: 0.055,
+    roughnessMap: grayWallTex.roughnessMap, roughness: 0.82, metalness: 0.02
+  });
+  var matBlueWall = new THREE.MeshStandardMaterial({
+    map: blueWallTex.map, bumpMap: blueWallTex.bumpMap, bumpScale: 0.055,
+    roughnessMap: blueWallTex.roughnessMap, roughness: 0.72, metalness: 0.04
+  });
+  var matMetalWall = new THREE.MeshStandardMaterial({
+    map: metalWallTex.map, bumpMap: metalWallTex.bumpMap, bumpScale: 0.035,
+    roughnessMap: metalWallTex.roughnessMap, roughness: 0.42, metalness: 0.62
+  });
+  
+  var matGrayWallDecor = new THREE.MeshStandardMaterial({
+    map: grayWallDecorTex.map, bumpMap: grayWallDecorTex.bumpMap, bumpScale: 0.055,
+    roughnessMap: grayWallDecorTex.roughnessMap, roughness: 0.82, metalness: 0.02
+  });
+  var matBlueWallDecor = new THREE.MeshStandardMaterial({
+    map: blueWallDecorTex.map, bumpMap: blueWallDecorTex.bumpMap, bumpScale: 0.055,
+    roughnessMap: blueWallDecorTex.roughnessMap, roughness: 0.72, metalness: 0.04
+  });
+  var matMetalWallDecor = new THREE.MeshStandardMaterial({
+    map: metalWallDecorTex.map, bumpMap: metalWallDecorTex.bumpMap, bumpScale: 0.035,
+    roughnessMap: metalWallDecorTex.roughnessMap, roughness: 0.42, metalness: 0.62
+  });
+
+  var matRock = new THREE.MeshStandardMaterial({
+    map: rockTex.map,
+    bumpMap: rockTex.bumpMap,
+    bumpScale: 0.09,
+    roughnessMap: rockTex.roughnessMap,
+    roughness: 0.82,
+    metalness: 0.05
+  });
+
+  var matMoss = new THREE.MeshStandardMaterial({
+    map: mossWallTex.map,
+    bumpMap: mossWallTex.bumpMap,
+    bumpScale: 0.07,
+    roughnessMap: mossWallTex.roughnessMap,
+    roughness: 0.74,
+    metalness: 0.06
+  });
+
+  var matDoor = new THREE.MeshStandardMaterial({
+    map: doorTex.map,
+    bumpMap: doorTex.bumpMap,
+    bumpScale: 0.05,
+    roughnessMap: doorTex.roughnessMap,
+    roughness: 0.26,
+    metalness: 0.72
+  });
+
+  var matDoorFrame = new THREE.MeshStandardMaterial({
+    color: 0x1e262e,
+    roughness: 0.35,
+    metalness: 0.8
+  });
+
+  // Pavimento grande unico con ombre ricevute e riflessi speculari
+  var floorGeo = new THREE.PlaneGeometry(GRID_HALF * 2 * CELL_SIZE, GRID_HALF * 2 * CELL_SIZE);
+  var floorMat = new THREE.MeshStandardMaterial({
+    map: floorTex.map,
+    bumpMap: floorTex.bumpMap,
+    bumpScale: 0.025,
+    roughnessMap: floorTex.roughnessMap,
+    roughness: 0.26,
+    metalness: 0.28
+  });
+  var floorMesh = new THREE.Mesh(floorGeo, floorMat);
+  floorMesh.rotation.x = -Math.PI / 2;
+  floorMesh.receiveShadow = true;
+  scene.add(floorMesh);
+
+  // Soffitto con texture dedicata a cassettoni e travi
+  var ceilMat = new THREE.MeshStandardMaterial({
+    map: ceilTex.map,
+    bumpMap: ceilTex.bumpMap,
+    bumpScale: 0.06,
+    roughnessMap: ceilTex.roughnessMap,
+    roughness: 0.62,
+    metalness: 0.22
+  });
+  var ceilMesh = new THREE.Mesh(floorGeo, ceilMat);
+  ceilMesh.rotation.x = Math.PI / 2;
+  ceilMesh.position.y = WALL_HEIGHT;
+  ceilMesh.receiveShadow = true;
+  scene.add(ceilMesh);
+
+  /* ============================================================================
+     DECALCOMANIE DI IMPATTO SUI MURI (FORI DI PROIETTILE / MACCHIE)
+     ============================================================================ */
+  var wallDecals = [];
+  var maxWallDecals = 260;
+
+  var decalTexCanvas = document.createElement('canvas');
+  decalTexCanvas.width = 32;
+  decalTexCanvas.height = 32;
+  var dCtx = decalTexCanvas.getContext('2d');
+  dCtx.clearRect(0, 0, 32, 32);
+  // Alone di bruciatura e scheggiatura
+  var grad = dCtx.createRadialGradient(16, 16, 1, 16, 16, 14);
+  grad.addColorStop(0, 'rgba(8, 8, 8, 0.95)');
+  grad.addColorStop(0.45, 'rgba(28, 24, 20, 0.68)');
+  grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  dCtx.fillStyle = grad;
+  dCtx.beginPath();
+  dCtx.arc(16, 16, 14, 0, Math.PI * 2);
+  dCtx.fill();
+  // Foro centrale scuro
+  dCtx.fillStyle = '#050505';
+  dCtx.beginPath();
+  dCtx.arc(16, 16, 4.5, 0, Math.PI * 2);
+  dCtx.fill();
+
+  var decalTexture = new THREE.CanvasTexture(decalTexCanvas);
+  var decalGeo = new THREE.PlaneGeometry(0.28, 0.28);
+
+  function spawnWallDecal(wx, wy, wz, nx, nz) {
+    var mat = new THREE.MeshBasicMaterial({
+      map: decalTexture,
+      transparent: true,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -2
+    });
+    var mesh = new THREE.Mesh(decalGeo, mat);
+    // Posiziona leggermente staccata dalla faccia del muro per evitare z-fighting
+    mesh.position.set(wx + nx * 0.02, Math.max(0.25, Math.min(WALL_HEIGHT - 0.25, wy)), wz + nz * 0.02);
+    // Orienta la normale del piano (+Z locale) lungo il vettore normale del muro (nx, 0, nz)
+    mesh.lookAt(mesh.position.x + nx, mesh.position.y, mesh.position.z + nz);
+    mesh.rotateZ(Math.random() * Math.PI * 2);
+
+    var scale = (state.currentWeapon === 2) ? (0.85 + Math.random() * 0.55) : (0.65 + Math.random() * 0.35);
+    mesh.scale.set(scale, scale, 1);
+
+    scene.add(mesh);
+    wallDecals.push(mesh);
+
+    if (wallDecals.length > maxWallDecals) {
+      var oldest = wallDecals.shift();
+      scene.remove(oldest);
+      oldest.material.dispose();
+    }
+  }
+
+  /* ============================================================================
+     GRIGLIA MONDO & GENERAZIONE STANZE PROCEDURALI SENZA INCASTRI
+     ============================================================================ */
+  var worldGrid = {}; // chiave "gx,gz" -> cellType
+  var worldMeshes = new THREE.Group();
+  scene.add(worldMeshes);
+
+  var doors = [];       // { gx, gz, axis: 'x'|'z', openAmount, opening, slab, group, expanded }
+  var doorMap = {};     // chiave "gx,gz" -> oggetto door per lookup O(1) nelle collisioni
+  var pillarThemeMap = {}; // Memorizza il tema muro della stanza per ogni pillar
+  var chandeliers = []; // { light, bulbMat, phase, baseIntensity }
+  var guards = [];      // Guardie attive
+  var dogs = [];        // Cani pastori tedeschi attivi
+  var droppedPickups = []; // Armi e munizioni cadute dalle guardie eliminate
+    var gorePieces = [];  // Parti del corpo smembrate con fisica di volo e rotolamento
+  var bloodStains = [];
+  var bloodCanvas = document.createElement('canvas');
+  bloodCanvas.width = bloodCanvas.height = 64;
+  var bloodCtx = bloodCanvas.getContext('2d');
+  bloodCtx.fillStyle = 'rgba(100, 0, 0, 0.78)';
+  bloodCtx.beginPath();
+  bloodCtx.ellipse(32, 32, 19, 14, 0.2, 0, Math.PI * 2);
+  bloodCtx.fill();
+  for (var bloodDot = 0; bloodDot < 18; bloodDot++) {
+    var bloodAngle = bloodDot * 2.4;
+    var bloodDistance = 15 + (bloodDot % 4) * 4;
+    bloodCtx.beginPath();
+    bloodCtx.arc(32 + Math.cos(bloodAngle) * bloodDistance, 32 + Math.sin(bloodAngle) * bloodDistance, 1.5 + bloodDot % 3, 0, Math.PI * 2);
+    bloodCtx.fill();
+  }
+  var bloodTexture = new THREE.CanvasTexture(bloodCanvas);
+  var bloodGeo = new THREE.PlaneGeometry(1, 1);
+  var bloodMat = new THREE.MeshBasicMaterial({
+    map: bloodTexture, transparent: true, depthWrite: false,
+    polygonOffset: true, polygonOffsetFactor: -2
+  });
+
+  function addBloodStain(x, z) {
+    var stain = new THREE.Mesh(bloodGeo, bloodMat);
+    stain.rotation.x = -Math.PI / 2;
+    stain.rotation.z = Math.random() * Math.PI * 2;
+    stain.position.set(x, 0.012, z);
+    var size = 0.65 + Math.random() * 0.45;
+    stain.scale.set(size, size, 1);
+    scene.add(stain);
+    bloodStains.push(stain);
+    if (bloodStains.length > 500) scene.remove(bloodStains.shift());
+  }
+  
+  function spawnBloodPool(wx, wz, scaleMult) {
+	  var poolMat = new THREE.MeshBasicMaterial({
+		map: bloodTexture,
+		color: 0xaa0000,
+		transparent: true,
+		opacity: 0.92,
+		depthWrite: false,
+		polygonOffset: true,
+		polygonOffsetFactor: -2
+	  });
+	  var pool = new THREE.Mesh(bloodGeo, poolMat);
+	  pool.rotation.x = -Math.PI / 2;
+	  pool.rotation.z = Math.random() * Math.PI * 2;
+	  pool.position.set(wx, 0.014, wz);
+	  var s = (1.35 + Math.random() * 0.65) * (scaleMult || 1);
+	  pool.scale.set(s, s, 1);
+	  scene.add(pool);
+	  bloodStains.push(pool);
+	  if (bloodStains.length > 150) {
+		var old = bloodStains.shift();
+		scene.remove(old);
+	  }
+	}
+
+  function disposeGoreMaterials(mesh) {
+    mesh.traverse(function(child) {
+      if (child.userData.goreHitMaterial) child.material.dispose();
+    });
+  }
+
+    function isWallCellType(c) {
+    return c === CELL_WALL_STONE || c === CELL_WALL_BRICK || c === CELL_WALL_WOOD ||
+           c === CELL_WALL_ROCK || c === CELL_WALL_MOSS || c === CELL_WALL_GRAY ||
+           c === CELL_WALL_BLUE || c === CELL_WALL_METAL || 
+		   c === CELL_WALL_WOOD_DECOR || c === CELL_WALL_GRAY_DECOR || c === CELL_WALL_BLUE_DECOR || c === CELL_WALL_METAL_DECOR || c === CELL_WALL_STONE_DECOR || c === CELL_WALL_BRICK_DECOR;
+  }
+  
+  function isDecorWallCellType(c) {
+  return c === CELL_WALL_WOOD_DECOR || c === CELL_WALL_GRAY_DECOR ||
+         c === CELL_WALL_BLUE_DECOR || c === CELL_WALL_METAL_DECOR ||
+         c === CELL_WALL_STONE_DECOR || c === CELL_WALL_BRICK_DECOR;
+}
+
+function isAdjacentToDecor(gx, gz) {
+  return isDecorWallCellType(getCell(gx + 1, gz)) ||
+         isDecorWallCellType(getCell(gx - 1, gz)) ||
+         isDecorWallCellType(getCell(gx, gz + 1)) ||
+         isDecorWallCellType(getCell(gx, gz - 1));
+}
+
+  function gridKey(gx, gz) {
+    return gx + ',' + gz;
+  }
+
+  function getCell(gx, gz) {
+    var v = worldGrid[gridKey(gx, gz)];
+    return v === undefined ? CELL_VOID : v;
+  }
+
+  function setCell(gx, gz, val) {
+    worldGrid[gridKey(gx, gz)] = val;
+  }
+
+  function gridToWorldX(gx) { return gx * CELL_SIZE; }
+  function gridToWorldZ(gz) { return gz * CELL_SIZE; }
+  function worldToGridX(wx) { return Math.round(wx / CELL_SIZE); }
+  function worldToGridZ(wz) { return Math.round(wz / CELL_SIZE); }
+
+  var wallBoxGeo = new THREE.BoxGeometry(CELL_SIZE, WALL_HEIGHT, CELL_SIZE);
+  var pillarGeo = new THREE.CylinderGeometry(0.55, 0.65, WALL_HEIGHT, 12);
+  
+
+  // Colonna quadrata ben rifinita con base e capitello sagomati
+  function createSquarePillarMesh(mat) {
+    var pGroup = new THREE.Group();
+    var shaft = new THREE.Mesh(new THREE.BoxGeometry(1.06, WALL_HEIGHT - 0.72, 1.06), mat);
+    shaft.position.y = WALL_HEIGHT * 0.5;
+    shaft.castShadow = true;
+    shaft.receiveShadow = true;
+    pGroup.add(shaft);
+
+    var base = new THREE.Mesh(new THREE.BoxGeometry(1.36, 0.36, 1.36), matDoorFrame);
+    base.position.y = 0.18;
+    base.castShadow = true;
+    base.receiveShadow = true;
+    pGroup.add(base);
+
+    var cap = new THREE.Mesh(new THREE.BoxGeometry(1.38, 0.36, 1.38), matDoorFrame);
+    cap.position.y = WALL_HEIGHT - 0.18;
+    cap.castShadow = true;
+    cap.receiveShadow = true;
+    pGroup.add(cap);
+
+    return pGroup;
+  }
+
+  // Costruisce una singola cella 3D se non già costruita
+  var builtCells = {};
+
+  function buildCellGeometry(gx, gz) {
+    var k = gridKey(gx, gz);
+    if (builtCells[k]) return;
+
+    var type = getCell(gx, gz);
+    if (type === CELL_VOID || type === CELL_FLOOR || type === CELL_DOOR_OPEN) return;
+
+    builtCells[k] = true;
+    var wx = gridToWorldX(gx);
+    var wz = gridToWorldZ(gz);
+
+
+	var effectiveType = (type === CELL_PILLAR && pillarThemeMap[k]) ? pillarThemeMap[k] : type;
+
+    var mat = matStone;
+         if (effectiveType === CELL_WALL_BRICK) mat = matBrick;
+    else if (effectiveType === CELL_WALL_WOOD) mat = matWood;
+    else if (effectiveType === CELL_WALL_WOOD_DECOR) mat = matWoodDecor;
+    else if (effectiveType === CELL_WALL_ROCK) mat = matRock;
+    else if (effectiveType === CELL_WALL_MOSS) mat = matMoss;
+    else if (effectiveType === CELL_WALL_GRAY) mat = matGrayWall;
+    else if (effectiveType === CELL_WALL_BLUE) mat = matBlueWall;
+    else if (effectiveType === CELL_WALL_METAL) mat = matMetalWall;
+    else if (effectiveType === CELL_WALL_GRAY_DECOR) mat = matGrayWallDecor;
+    else if (effectiveType === CELL_WALL_BLUE_DECOR) mat = matBlueWallDecor;
+    else if (effectiveType === CELL_WALL_METAL_DECOR) mat = matMetalWallDecor;
+    else if (effectiveType === CELL_WALL_BRICK_DECOR) mat = matBrickDecor;
+    else if (effectiveType === CELL_WALL_STONE_DECOR) mat = matStoneDecor;
+
+
+    if (isWallCellType(type)) {
+      var m = new THREE.Mesh(wallBoxGeo, mat);
+      m.position.set(wx, WALL_HEIGHT * 0.5, wz);
+      m.castShadow = true;
+      m.receiveShadow = true;
+      worldMeshes.add(m);
+    } else if (type === CELL_PILLAR) {
+      var p = createSquarePillarMesh(mat);
+      p.position.set(wx, 0, wz);
+      worldMeshes.add(p);
+    } else if (type === CELL_DOOR_CLOSED) {																
+      var cN = getCell(gx, gz - 1);
+      var cS = getCell(gx, gz + 1);
+      var wallNorthSouth = isWallCellType(cN) || isWallCellType(cS);
+																		   
+      var axis = wallNorthSouth ? 'z' : 'x';
+
+      var doorGroup = new THREE.Group();
+      doorGroup.position.set(wx, 0, wz);
+      if (axis === 'z') {
+        doorGroup.rotation.y = Math.PI / 2;
+      }
+
+																
+      var jambGeo = new THREE.BoxGeometry(0.36, WALL_HEIGHT, 0.65);
+      var jambL = new THREE.Mesh(jambGeo, matDoorFrame);
+      jambL.position.set(-CELL_SIZE * 0.5 + 0.18, WALL_HEIGHT * 0.5, 0);
+      jambL.castShadow = true;
+      jambL.receiveShadow = true;
+      doorGroup.add(jambL);
+
+      var jambR = new THREE.Mesh(jambGeo, matDoorFrame);
+      jambR.position.set(CELL_SIZE * 0.5 - 0.18, WALL_HEIGHT * 0.5, 0);
+      jambR.castShadow = true;
+      jambR.receiveShadow = true;
+      doorGroup.add(jambR);
+
+      var headerGeo = new THREE.BoxGeometry(CELL_SIZE, 0.36, 0.65);
+      var header = new THREE.Mesh(headerGeo, matDoorFrame);
+      header.position.set(0, WALL_HEIGHT - 0.18, 0);
+      doorGroup.add(header);
+
+									   
+      var slabGeo = new THREE.BoxGeometry(CELL_SIZE - 0.52, WALL_HEIGHT - 0.32, 0.28);
+      var slab = new THREE.Mesh(slabGeo, matDoor);
+      slab.position.set(0, (WALL_HEIGHT - 0.32) * 0.5, 0);
+      slab.castShadow = true;
+      slab.receiveShadow = true;
+      doorGroup.add(slab);
+
+      worldMeshes.add(doorGroup);
+
+      var doorObj = {
+        gx: gx,
+        gz: gz,
+        axis: axis,
+        openAmount: 0,
+        opening: false,
+        slab: slab,
+        group: doorGroup,
+        expanded: false
+      };
+      doors.push(doorObj);
+      doorMap[k] = doorObj;
+    }
+  }
+
+  // Lampadario Wolf3D classico con luce volumetrica, alone e ombre dinamiche
+  function addChandelier(wx, wz, colorHex, intensity) {
+    var group = new THREE.Group();
+    group.position.set(wx, WALL_HEIGHT, wz);
+
+    // Catena
+    var chain = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.03, 0.03, 0.65, 6),
+      matDoorFrame
+    );
+    chain.position.y = -0.32;
+    group.add(chain);
+
+    // Corona dorata stile candelabro Wolf3D
+    var ring = new THREE.Mesh(
+      new THREE.TorusGeometry(0.45, 0.045, 6, 12),
+      new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.85, roughness: 0.25 })
+    );
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = -0.68;
+    group.add(ring);
+
+    // Candele luminose emissive
+    var bulbColorHex = colorHex || 0xffee88;
+    var bulbMat = new THREE.MeshBasicMaterial({ color: bulbColorHex });
+    for (var i = 0; i < 6; i++) {
+      var a = (i / 6) * Math.PI * 2;
+      var bulb = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.16, 0.08), bulbMat);
+      bulb.position.set(Math.cos(a) * 0.45, -0.58, Math.sin(a) * 0.45);
+      group.add(bulb);
+    }
+
+    // Cono di luce volumetrica finta (effetto "AAA god-ray")
+    var coneBaseOpacity = 0.055;
+    var coneGeo = new THREE.ConeGeometry(2.3, 3.1, 16, 1, true);
+    var coneMat = new THREE.MeshBasicMaterial({
+      color: colorHex || 0xffdd77,
+      transparent: true,
+      opacity: coneBaseOpacity,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    });
+    var cone = new THREE.Mesh(coneGeo, coneMat);
+    cone.position.y = -2.15;
+    group.add(cone);
+
+    // PointLight reale con ombre morbide
+    var baseInt = intensity || 2.4;
+    var light = new THREE.PointLight(colorHex || 0xffcc66, baseInt, 20, 1.45);
+    light.position.set(0, -0.82, 0);
+    if (chandeliers.length < 10) {
+      light.castShadow = true;
+      light.shadow.mapSize.width = 1024;
+      light.shadow.mapSize.height = 1024;
+      light.shadow.bias = -0.002;
+    }
+    group.add(light);
+
+    worldMeshes.add(group);
+
+    var isBroken = Math.random() < 0.35;
+    var baseColor = new THREE.Color(bulbColorHex);
+
+    chandeliers.push({
+      light: light,
+      cone: cone,
+      coneMat: coneMat,
+      coneBaseOpacity: coneBaseOpacity,
+      bulbMat: bulbMat,
+      baseColor: baseColor,
+      baseIntensity: baseInt,
+      phase: Math.random() * Math.PI * 2,
+      broken: isBroken,
+      flickerTimer: 0,
+      flickerFactor: 1
+    });
+  }
+
+  // Verifica rigorosa che una stanza con perimetro completo (inclusi tutti gli angoli)
+  // possa essere inserita sulla griglia senza toccare stanze o porte già esistenti
+  function canPlaceRoom(minX, maxX, minZ, maxZ, entryDoorX, entryDoorZ) {
+    if (minX < -GRID_HALF + 2 || maxX > GRID_HALF - 2 || minZ < -GRID_HALF + 2 || maxZ > GRID_HALF - 2) {
+      return false;
+    }
+    for (var x = minX; x <= maxX; x++) {
+      for (var z = minZ; z <= maxZ; z++) {
+        if (x === entryDoorX && z === entryDoorZ) {
+          continue;
+        }
+        var existing = getCell(x, z);
+        var isPerimeter = (x === minX || x === maxX || z === minZ || z === maxZ);
+        if (isPerimeter) {
+																												 
+          if (existing !== CELL_VOID && !isWallCellType(existing)) {
+											 
+											 
+											
+            return false;
+          }
+        } else {
+																			 
+          if (existing !== CELL_VOID) {
+            return false;
+          }
+        }
+      }
+    }
+    return true;
+  }
+
+  // Calcola se esiste almeno una stanza valida oltre una candidata porta (dx, dz) in direzione (dirX, dirZ)
+  function findRoomFitBeyondDoor(dx, dz, dirX, dirZ) {
+    var sizes = [
+      { w: 5, d: 5 },
+      { w: 5, d: 4 },
+      { w: 4, d: 5 },
+      { w: 4, d: 4 },
+      { w: 4, d: 3 },
+      { w: 3, d: 4 },
+      { w: 3, d: 3 },
+      { w: 3, d: 2 },
+      { w: 2, d: 3 },
+      { w: 2, d: 2 },
+      { w: 2, d: 1 },
+      { w: 1, d: 2 }
+    ];
+
+    for (var s = 0; s < sizes.length; s++) {
+      var rw = sizes[s].w;
+      var rd = sizes[s].d;
+      // Prova diversi offset laterali così la stanza si adatta anche in spazi stretti
+      var offsets = [0, -1, 1, -2, 2];
+      offsets.sort(function() { return Math.random() - 0.5; });
+
+      for (var o = 0; o < offsets.length; o++) {
+        var lat = offsets[o];
+        var minX, maxX, minZ, maxZ;
+
+        if (dirX === 1) {
+          minX = dx;
+          maxX = dx + rw + 1;
+          minZ = dz - Math.floor(rd / 2) - 1 + lat;
+          maxZ = minZ + rd + 1;
+          if (dz <= minZ || dz >= maxZ) continue;
+        } else if (dirX === -1) {
+          maxX = dx;
+          minX = dx - rw - 1;
+          minZ = dz - Math.floor(rd / 2) - 1 + lat;
+          maxZ = minZ + rd + 1;
+          if (dz <= minZ || dz >= maxZ) continue;
+        } else if (dirZ === 1) {
+          minZ = dz;
+          maxZ = dz + rd + 1;
+          minX = dx - Math.floor(rw / 2) - 1 + lat;
+          maxX = minX + rw + 1;
+          if (dx <= minX || dx >= maxX) continue;
+        } else {
+          maxZ = dz;
+          minZ = dz - rd - 1;
+          minX = dx - Math.floor(rw / 2) - 1 + lat;
+          maxX = minX + rw + 1;
+          if (dx <= minX || dx >= maxX) continue;
+        }
+
+        if (canPlaceRoom(minX, maxX, minZ, maxZ, dx, dz)) {
+          return { minX: minX, maxX: maxX, minZ: minZ, maxZ: maxZ };
+        }
+      }
+    }
+    return null;
+  }
+
+  // Verifica che una cella sia un muro solido perimetrale adatto ad ospitare una porta
+																						   
+function isValidDoorWallCell(gx, gz, dirX, dirZ) {
+  var cur = getCell(gx, gz);
+  if (!isWallCellType(cur)){// || isDecorWallCellType(cur)) {
+    return false;
+  }
+  if (isAdjacentToDecor(gx, gz)) {
+    return false;
+  }
+  if (getCell(gx - dirX, gz - dirZ) !== CELL_FLOOR) {
+    return false;
+  }
+  if (getCell(gx + dirX, gz + dirZ) !== CELL_VOID) {
+    return false;
+  }
+  var perpX = dirZ;
+  var perpZ = dirX;
+  var sideA = getCell(gx + perpX, gz + perpZ);
+  var sideB = getCell(gx - perpX, gz - perpZ);
+  return isWallCellType(sideA) && isWallCellType(sideB);
+}
+
+  // Scava una stanza rettangolare sigillata su tutti i 4 lati + angoli, aggiunge luci, guardie, cani e porte
+  function carveRoom(minX, maxX, minZ, maxZ, wallTheme, entryDoorX, entryDoorZ, spawnGuardsCount) {
+        state.roomsGenerated++;
+
+    // Ogni stanza usa il tema principale e al massimo un tema d'accento.
+    var accentTheme = Math.random() < 0.00000005 ? wallThemes[Math.floor(Math.random() * wallThemes.length)] : wallTheme;
+
+    for (var x = minX; x <= maxX; x++) {
+      for (var z = minZ; z <= maxZ; z++) {
+        if (x === entryDoorX && z === entryDoorZ) {
+          continue;
+        }
+        var isPerimeter = (x === minX || x === maxX || z === minZ || z === maxZ);
+        if (isPerimeter) {
+															   
+          if (getCell(x, z) === CELL_VOID) {
+            // Mantiene una sola texture d'accento oltre al tema principale.
+            var modVal = Math.abs(x * 3 + z * 5) % 5;
+            var cellWall = /*(modVal === 0) ? accentTheme : */wallTheme;
+            var isCenterWall = ((x === minX || x === maxX) && z === Math.round((minZ + maxZ) * 0.5)) ||
+              ((z === minZ || z === maxZ) && x === Math.round((minX + maxX) * 0.5));
+            if (cellWall === CELL_WALL_WOOD && isCenterWall) cellWall = CELL_WALL_WOOD_DECOR;
+			if (cellWall === CELL_WALL_METAL && isCenterWall) cellWall = CELL_WALL_METAL_DECOR;
+			if (cellWall === CELL_WALL_GRAY && isCenterWall) cellWall = CELL_WALL_GRAY_DECOR;
+			if (cellWall === CELL_WALL_BLUE && isCenterWall) cellWall = CELL_WALL_BLUE_DECOR;
+			if (cellWall === CELL_WALL_STONE && isCenterWall) cellWall = CELL_WALL_STONE_DECOR;
+			if (cellWall === CELL_WALL_BRICK && isCenterWall) cellWall = CELL_WALL_BRICK_DECOR;
+            setCell(x, z, cellWall);
+          }
+        } else {
+          setCell(x, z, CELL_FLOOR);
+        }
+      }
+    }
+
+    // Colonne quadrate interne (solo in stanze grandi e lontano dalle porte)
+    var w = maxX - minX - 1;
+    var d = maxZ - minZ - 1;
+    if (w >= 4 && d >= 4) {
+      var px1 = minX + 2;
+      var px2 = maxX - 2;
+      var pz1 = minZ + 2;
+      var pz2 = maxZ - 2;
+      if (Math.abs(px1 - entryDoorX) + Math.abs(pz1 - entryDoorZ) > 2) {
+        setCell(px1, pz1, CELL_PILLAR);
+        pillarThemeMap[gridKey(px1, pz1)] = wallTheme;
+      }
+      if (Math.abs(px2 - entryDoorX) + Math.abs(pz2 - entryDoorZ) > 2) {
+        setCell(px2, pz2, CELL_PILLAR);
+        pillarThemeMap[gridKey(px2, pz2)] = wallTheme;
+      }
+    }
+
+																	 
+																			 
+    var candidateDoors = [];
+
+    for (var px = minX + 1; px <= maxX - 1; px++) {
+      if (!(px === entryDoorX && minZ === entryDoorZ) && isValidDoorWallCell(px, minZ, 0, -1)) {
+        if (findRoomFitBeyondDoor(px, minZ, 0, -1)) {
+          candidateDoors.push({ x: px, z: minZ, dx: 0, dz: -1 });
+        }
+      }
+      if (!(px === entryDoorX && maxZ === entryDoorZ) && isValidDoorWallCell(px, maxZ, 0, 1)) {
+        if (findRoomFitBeyondDoor(px, maxZ, 0, 1)) {
+          candidateDoors.push({ x: px, z: maxZ, dx: 0, dz: 1 });
+        }
+      }
+    }
+
+    for (var pz = minZ + 1; pz <= maxZ - 1; pz++) {
+      if (!(minX === entryDoorX && pz === entryDoorZ) && isValidDoorWallCell(minX, pz, -1, 0)) {
+        if (findRoomFitBeyondDoor(minX, pz, -1, 0)) {
+          candidateDoors.push({ x: minX, z: pz, dx: -1, dz: 0 });
+        }
+      }
+      if (!(maxX === entryDoorX && pz === entryDoorZ) && isValidDoorWallCell(maxX, pz, 1, 0)) {
+        if (findRoomFitBeyondDoor(maxX, pz, 1, 0)) {
+          candidateDoors.push({ x: maxX, z: pz, dx: 1, dz: 0 });
+        }
+      }
+    }
+
+    candidateDoors.sort(function() { return Math.random() - 0.5; });
+    var placedDoors = [];
+    for (var i = 0; i < candidateDoors.length && placedDoors.length < 3; i++) {
+      var cd = candidateDoors[i];
+														
+      var tooClose = false;
+      for (var j = 0; j < placedDoors.length; j++) {
+        if (Math.abs(placedDoors[j].x - cd.x) + Math.abs(placedDoors[j].z - cd.z) <= 2) {
+          tooClose = true;
+          break;
+        }
+      }
+      if (!tooClose && isValidDoorWallCell(cd.x, cd.z, cd.dx, cd.dz)) {
+        setCell(cd.x, cd.z, CELL_DOOR_CLOSED);
+        placedDoors.push(cd);
+      }
+    }
+
+																				
+    for (var gx = minX; gx <= maxX; gx++) {
+      for (var gz = minZ; gz <= maxZ; gz++) {
+        buildCellGeometry(gx, gz);
+      }
+    }
+
+										   
+    var centerWX = gridToWorldX((minX + maxX) * 0.5);
+    var centerWZ = gridToWorldZ((minZ + maxZ) * 0.5);
+    var lightColors = [0xffd27d, 0xffb85c, 0x99d6ff, 0xffaa66];
+    var lCol = lightColors[state.roomsGenerated % lightColors.length];
+    addChandelier(centerWX, centerWZ, lCol, 2.65);
+
+    // Genera guardie all'interno della stanza
+    var spawned = 0;
+    var attempts = 0;
+    while (spawned < spawnGuardsCount && attempts < 30) {
+      attempts++;
+      var rx = minX + 1 + Math.floor(Math.random() * (maxX - minX - 1));
+      var rz = minZ + 1 + Math.floor(Math.random() * (maxZ - minZ - 1));
+      if (getCell(rx, rz) === CELL_FLOOR) {
+        var gwx = gridToWorldX(rx);
+        var gwz = gridToWorldZ(rz);
+        var distToPlayer = Math.hypot(gwx - player.x, gwz - player.z);
+        if (distToPlayer > CELL_SIZE * 1.6) {
+          spawnGuard(gwx, gwz);
+          spawned++;
+        }
+      }
+    }
+
+    // Genera anche cani pastori tedeschi nelle stanze (dal secondo gruppo in poi o con probabilità alta)
+    if (spawnGuardsCount > 0 && Math.random() < 0.72) {
+      var dAttempts = 0;
+      while (dAttempts < 20) {
+        dAttempts++;
+        var drx = minX + 1 + Math.floor(Math.random() * (maxX - minX - 1));
+        var drz = minZ + 1 + Math.floor(Math.random() * (maxZ - minZ - 1));
+        if (getCell(drx, drz) === CELL_FLOOR) {
+          var dwx = gridToWorldX(drx);
+          var dwz = gridToWorldZ(drz);
+          if (Math.hypot(dwx - player.x, dwz - player.z) > CELL_SIZE * 1.8) {
+            spawnGermanShepherd(dwx, dwz);
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  // Genera istantaneamente e completamente la stanza dall'altro lato PRIMA che la porta inizi a scorrere.
+  // Ritorna true se la stanza è pronta/esistente, false se non è possibile aprirla (in tal caso resta sigillata).
+  function expandBeyondDoor(door) {
+    if (door.expanded) return true;
+
+    var dirs = [
+      { dx: 0, dz: -1 },
+      { dx: 0, dz: 1 },
+      { dx: -1, dz: 0 },
+      { dx: 1, dz: 0 }
+    ];
+
+    var targetDir = null;
+    for (var i = 0; i < dirs.length; i++) {
+      var nx = door.gx + dirs[i].dx;
+      var nz = door.gz + dirs[i].dz;
+      var neighborCell = getCell(nx, nz);
+      // Cerca il lato VOID verso cui espandere (l'altro lato è già CELL_FLOOR della stanza attuale)
+      if (neighborCell === CELL_VOID) {
+        targetDir = dirs[i];
+        break;
+      }
+    }
+
+    // Se non c'è nessun lato VOID, verifica se entrambi i lati lungo il passaggio sono già pavimento/porta
+    if (!targetDir) {
+      var passA = (door.axis === 'z') ? getCell(door.gx - 1, door.gz) : getCell(door.gx, door.gz - 1);
+      var passB = (door.axis === 'z') ? getCell(door.gx + 1, door.gz) : getCell(door.gx, door.gz + 1);
+      if ((passA === CELL_FLOOR || passA === CELL_DOOR_OPEN) &&
+          (passB === CELL_FLOOR || passB === CELL_DOOR_OPEN)) {
+        door.expanded = true;
+        return true;
+      }
+      sealDoorIntoWall(door);
+      return false;
+    }
+
+    var fit = findRoomFitBeyondDoor(door.gx, door.gz, targetDir.dx, targetDir.dz);
+    if (fit) {
+      door.expanded = true;
+      var chosenTheme = wallThemes[Math.floor(Math.random() * wallThemes.length)];
+      var guardCount = 1 + Math.floor(Math.random() * 2);
+      carveRoom(fit.minX, fit.maxX, fit.minZ, fit.maxZ, chosenTheme, door.gx, door.gz, guardCount);
+      return true;
+    }
+
+																							  
+																					  
+    var ex = door.gx + targetDir.dx;
+    var ez = door.gz + targetDir.dz;
+    if (getCell(ex, ez) === CELL_VOID) {
+      door.expanded = true;
+      carveRoom(ex - 1, ex + 1, ez - 1, ez + 1, CELL_WALL_ROCK, door.gx, door.gz, 1);
+      return true;
+    }
+
+    sealDoorIntoWall(door);
+    return false;
+  }
+
+  function sealDoorIntoWall(door) {
+    door.expanded = true;
+    door.opening = false;
+    setCell(door.gx, door.gz, CELL_WALL_STONE);
+    worldMeshes.remove(door.group);
+    delete builtCells[gridKey(door.gx, door.gz)];
+    delete doorMap[gridKey(door.gx, door.gz)];
+    buildCellGeometry(door.gx, door.gz);
+  }
+
+  /* ============================================================================
+     COSTRUZIONE GUARDIE 3D CURATE, ARMA IN DIAGONALE, MORTE & SMEMBRAMENTO
+     ============================================================================ */
+  var guardUniformTex = createPixelPBRTexture(64, function(d, b, r, s) {
+    d.fillStyle = '#6e583e';
+    d.fillRect(0, 0, s, s);
+    // Risvolti colletto e tasche
+    d.fillStyle = '#4a3a28';
+    d.fillRect(18, 4, 28, 10);
+    d.fillRect(8, 24, 16, 10);
+    d.fillRect(40, 24, 16, 10);
+    // Cintura e fibbia in ottone
+    d.fillStyle = '#181818';
+    d.fillRect(0, 38, s, 8);
+    d.fillStyle = '#d4af37';
+    d.fillRect(28, 38, 8, 8);
+			  
+							 
+							 
+    b.fillStyle = '#959595';
+    b.fillRect(0, 0, s, s);
+    r.fillStyle = '#787878';
+    r.fillRect(0, 0, s, s);
+  });
+
+  var guardFaceTex = createPixelPBRTexture(64, function(d, b, r, s) {
+    d.fillStyle = '#dca078';
+    d.fillRect(0, 0, s, s);
+    // Sopracciglia aggrottate
+    d.fillStyle = '#2b180e';
+    d.fillRect(10, 18, 14, 4);
+    d.fillRect(40, 18, 14, 4);
+    // Occhi
+    d.fillStyle = '#12161f';
+    d.fillRect(13, 22, 11, 7);
+    d.fillRect(40, 22, 11, 7);
+    d.fillStyle = '#66d9ff';
+    d.fillRect(17, 24, 4, 4);
+    d.fillRect(43, 24, 4, 4);
+    // Bocca
+    d.fillStyle = '#521818';
+    d.fillRect(21, 44, 22, 7);
+    d.fillStyle = '#e8e8e8';
+    d.fillRect(23, 45, 18, 2);
+    b.fillStyle = '#858585';
+    b.fillRect(0, 0, s, s);
+    r.fillStyle = '#686868';
+    r.fillRect(0, 0, s, s);
+  });
+
+  var matGuardUniform = new THREE.MeshStandardMaterial({
+    map: guardUniformTex.map,
+    bumpMap: guardUniformTex.bumpMap,
+    bumpScale: 0.035,
+    roughness: 0.62,
+    metalness: 0.12
+  });
+
+  var matGuardFace = new THREE.MeshStandardMaterial({
+    map: guardFaceTex.map,
+    roughness: 0.52
+  });
+
+  var matHelmet = new THREE.MeshStandardMaterial({
+    color: 0x38424a,
+    roughness: 0.28,
+    metalness: 0.78
+  });
+
+  var matBoots = new THREE.MeshStandardMaterial({
+    color: 0x151820,
+    roughness: 0.3,
+    metalness: 0.5
+  });
+
+  var matGunMetal = new THREE.MeshStandardMaterial({
+    color: 0x22262c,
+    roughness: 0.22,
+    metalness: 0.9
+  });
+
+  var matGore = new THREE.MeshStandardMaterial({
+    color: 0x8a0808,
+    roughness: 0.35,
+    metalness: 0.15
+  });
+
+  // Crea un frammento smembrato che vola in base alla direzione del colpo e rotola sul pavimento
+  function spawnDismemberPiece(wx, wy, wz, hitDirX, hitDirZ, kind) {
+    var mesh;
+    if (kind === 'head') {
+      var hg = new THREE.Group();
+      var hHead = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.36, 0.36), matGuardFace);
+      var hHelm = new THREE.Mesh(new THREE.SphereGeometry(0.26, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.6), matHelmet);
+      hHelm.position.y = 0.12;
+      hg.add(hHead);
+      hg.add(hHelm);
+      mesh = hg;
+    } else if (kind === 'arms') {
+      var ag = new THREE.Group();
+      var bar = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.18, 0.18), matGuardUniform);
+      var gun = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.12, 0.65), matGunMetal);
+      gun.position.set(0.18, -0.04, 0.25);
+      ag.add(bar);
+      ag.add(gun);
+      mesh = ag;
+    } else {
+      var lg = new THREE.Group();
+      var l1 = new THREE.Mesh(new THREE.BoxGeometry(0.21, 0.68, 0.22), matBoots);
+      l1.position.set(-0.15, 0, 0);
+      var l2 = new THREE.Mesh(new THREE.BoxGeometry(0.21, 0.68, 0.22), matBoots);
+      l2.position.set(0.15, 0, 0);
+      lg.add(l1);
+      lg.add(l2);
+      mesh = lg;
+    }
+
+    mesh.position.set(wx, wy, wz);
+    mesh.traverse(function(child) {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
+    });
+    scene.add(mesh);
+
+    var spreadAngle = (Math.random() - 0.5) * 1.1;
+    var cosA = Math.cos(spreadAngle);
+    var sinA = Math.sin(spreadAngle);
+    var dx = hitDirX * cosA - hitDirZ * sinA;
+    var dz = hitDirX * sinA + hitDirZ * cosA;
+    var speed = 4.2 + Math.random() * 4.5;
+
+    gorePieces.push({
+      mesh: mesh,
+      vx: dx * speed,
+      vy: 3.8 + Math.random() * 3.5,
+      vz: dz * speed,
+      rvx: (Math.random() - 0.5) * 16,
+      rvy: (Math.random() - 0.5) * 14,
+      rvz: (Math.random() - 0.5) * 16,
+      floorY: (kind === 'head') ? 0.2 : 0.14,
+          });
+
+    spawnParticles(wx, wy, wz, 0xbb0808, 12, 4.8);
+  }
+
+  // Crea pickup raccoglibile (arma caduta + munizioni) quando muore una guardia
+  function spawnDroppedPickup(wx, wz) {
+    var weaponTypes = [2, 3]; // Shotgun o Mitragliatore cadono dalle guardie
+    var wType = weaponTypes[Math.floor(Math.random() * weaponTypes.length)];
+    var ammoBonus = 14 + Math.floor(Math.random() * 14);
+
+    var pGroup = new THREE.Group();
+    pGroup.position.set(wx, 0.16, wz);
+
+    // Calcio in legno
+    var stock = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.12, 0.34), matWalnutWood);
+    stock.position.set(0, 0.04, 0.22);
+    stock.rotation.x = 0.15;
+    pGroup.add(stock);
+
+    // Canna e castello metallico
+    var body = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.11, 0.58), matGunMetal);
+    body.position.set(0, 0.07, -0.12);
+    pGroup.add(body);
+
+    // Scatoletta munizioni in ottone accanto all'arma
+    var ammoBox = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.11, 0.14), matBrass);
+    ammoBox.position.set(0.28, 0.055, 0.08);
+    pGroup.add(ammoBox);
+
+    pGroup.traverse(function(c) {
+      if (c.isMesh) c.castShadow = true;
+    });
+
+    scene.add(pGroup);
+    droppedPickups.push({
+      group: pGroup,
+      x: wx,
+      z: wz,
+      weaponType: wType,
+      ammoBonus: ammoBonus,
+      collected: false
+    });
+  }
+
+  function collectPickup(pk) {
+    if (pk.collected) return;
+    pk.collected = true;
+    scene.remove(pk.group);
+    state.ammo += pk.ammoBonus;
+    state.score += 50;
+    switchWeapon(pk.weaponType);
+    triggerScreenFlash('rgba(80, 220, 120, 0.22)');
+    updateHUD();
+  }
+
+    function isGuardPositionClear(wx, wz, ignoredGuard) {
+    var minSeparation = 1.05;
+    for (var i = 0; i < guards.length; i++) {
+      var other = guards[i];
+      if (other === ignoredGuard || !other.alive) continue;
+      if (Math.hypot(other.x - wx, other.z - wz) < minSeparation) return false;
+    }
+    return true;
+  }
+
+  function spawnGuard(wx, wz) {
+    if (!isGuardPositionClear(wx, wz, null)) {
+      var foundPosition = false;
+      for (var attempt = 0; attempt < 12; attempt++) {
+        var angle = (attempt / 12) * Math.PI * 2;
+        var candidateX = wx + Math.cos(angle) * 1.1;
+        var candidateZ = wz + Math.sin(angle) * 1.1;
+        if (isWalkable(candidateX, candidateZ, 0.42) && isGuardPositionClear(candidateX, candidateZ, null)) {
+          wx = candidateX;
+          wz = candidateZ;
+          foundPosition = true;
+          break;
+        }
+      }
+      if (!foundPosition) return;
+    }
+
+    var root = new THREE.Group();
+    root.position.set(wx, 0, wz);
+
+    // Pivot ai piedi per crollo realistico a terra senza fucile verticale
+    var bodyPivot = new THREE.Group();
+    root.add(bodyPivot);
+
+    // Gambe con ginocchia e stivali
+    var legGeo = new THREE.BoxGeometry(0.21, 0.74, 0.23);
+    var legL = new THREE.Mesh(legGeo, matBoots);
+    legL.position.set(-0.16, 0.37, 0);
+    legL.castShadow = true;
+    legL.receiveShadow = true;
+    bodyPivot.add(legL);
+
+    var legR = new THREE.Mesh(legGeo, matBoots);
+    legR.position.set(0.16, 0.37, 0);
+    legR.castShadow = true;
+    legR.receiveShadow = true;
+    bodyPivot.add(legR);
+
+    // Torso sagomato + spalline
+    var torso = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.76, 0.34), matGuardUniform);
+    torso.position.set(0, 1.12, 0);
+    torso.castShadow = true;
+    torso.receiveShadow = true;
+    bodyPivot.add(torso);
+
+    var shoulderGeo = new THREE.SphereGeometry(0.15, 10, 10);
+    var shL = new THREE.Mesh(shoulderGeo, matGuardUniform);
+    shL.position.set(-0.37, 1.40, 0);
+    shL.castShadow = true;
+    bodyPivot.add(shL);
+
+    var shR = new THREE.Mesh(shoulderGeo, matGuardUniform);
+    shR.position.set(0.37, 1.40, 0);
+    shR.castShadow = true;
+    bodyPivot.add(shR);
+
+    // Testa + elmetto sagomato tondeggiante
+    var headGroup = new THREE.Group();
+    headGroup.position.set(0, 1.72, 0);
+
+    var head = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.38, 0.38), matGuardFace);
+    head.castShadow = true;
+    headGroup.add(head);
+
+    var helmetDome = new THREE.Mesh(
+      new THREE.SphereGeometry(0.25, 14, 12, 0, Math.PI * 2, 0, Math.PI * 0.58),
+      matHelmet
+    );
+    helmetDome.position.set(0, 0.11, -0.01);
+    helmetDome.castShadow = true;
+    headGroup.add(helmetDome);
+
+    var helmetSkirt = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.24, 0.27, 0.11, 14, 1, true),
+      matHelmet
+    );
+    helmetSkirt.material = matHelmet.clone();
+    helmetSkirt.material.side = THREE.DoubleSide;
+    helmetSkirt.position.set(0, 0.09, -0.02);
+    helmetSkirt.rotation.x = 0.14;
+    helmetSkirt.castShadow = true;
+    headGroup.add(helmetSkirt);
+
+																   
+																						
+										 
+								   
+    bodyPivot.add(headGroup);
+
+    // Gruppo braccia + arma tenuta realisticamente in diagonale/mira (non dritta verticale!)
+    var armsGroup = new THREE.Group();
+    armsGroup.position.set(0, 1.26, 0.12);
+								   
+						
+
+    var armL = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.48, 0.16), matGuardUniform);
+    armL.position.set(-0.28, -0.04, 0.16);
+    armL.rotation.set(-Math.PI * 0.42, 0.25, -0.2);
+    armL.castShadow = true;
+    armsGroup.add(armL);
+
+    var armR = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.48, 0.16), matGuardUniform);
+    armR.position.set(0.28, -0.06, 0.12);
+    armR.rotation.set(-Math.PI * 0.38, -0.22, 0.22);
+    armR.castShadow = true;
+    armsGroup.add(armR);
+
+    // Fucile inclinato realisticamente in diagonale
+    var rifleGroup = new THREE.Group();
+    rifleGroup.position.set(0.12, -0.06, 0.24);
+    rifleGroup.rotation.set(0.14, -0.18, 0.32);
+
+    var rStock = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.11, 0.34), matWalnutWood);
+    rStock.position.set(0, -0.02, -0.16);
+    rStock.rotation.x = 0.22;
+    rifleGroup.add(rStock);
+
+    var rBarrel = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.095, 0.68), matGunMetal);
+    rBarrel.position.set(0, 0.02, 0.26);
+    rBarrel.castShadow = true;
+    rifleGroup.add(rBarrel);
+
+    armsGroup.add(rifleGroup);
+    bodyPivot.add(armsGroup);
+
+	// Lampo di sparo della guardia
+    var enemyFlash = new THREE.Mesh(
+      new THREE.SphereGeometry(0.15, 8, 8),
+      new THREE.MeshBasicMaterial({ color: 0xffaa22 })
+    );
+    enemyFlash.position.set(0, 0.03, 0.64);
+    enemyFlash.visible = false;
+    rifleGroup.add(enemyFlash);
+
+    scene.add(root);
+
+    guards.push({
+      root: root,
+      bodyPivot: bodyPivot,
+      headGroup: headGroup,
+      armsGroup: armsGroup,
+      rifleGroup: rifleGroup,
+      torso: torso,
+      legL: legL,
+      legR: legR,
+      enemyFlash: enemyFlash,
+      x: wx,
+      z: wz,
+      yaw: Math.random() * Math.PI * 2,
+      alive: true,
+      alerted: false,
+      painTimer: 0,
+      shootCooldown: 1.2 + Math.random() * 1.4,
+      flashTimer: 0,
+      deathProgress: 0,
+      walkPhase: Math.random() * 6.28,
+      dismemberedHead: false,
+      dismemberedArms: false,
+      dismemberedLegs: false,
+	  vx: 0,
+	  vz: 0
+    });
+  }
+
+  /* ============================================================================
+     CANI PASTORI TEDESCHI CLASSICI DI WOLFENSTEIN 3D
+     ============================================================================ */
+  var matDogFur = new THREE.MeshStandardMaterial({
+    color: 0x7a461c,
+    roughness: 0.72,
+    metalness: 0.05
+  });
+
+  var matDogDark = new THREE.MeshStandardMaterial({
+    color: 0x1c1815,
+    roughness: 0.68,
+    metalness: 0.08
+  });
+
+  function throwDogGorePiece(mesh, dog, localX, localY, localZ, hitDirX, hitDirZ, floorY) {
+    var cosYaw = Math.cos(dog.yaw);
+    var sinYaw = Math.sin(dog.yaw);
+    var wx = dog.x + localX * cosYaw + localZ * sinYaw;
+    var wz = dog.z - localX * sinYaw + localZ * cosYaw;
+    mesh.position.set(wx, localY, wz);
+    mesh.rotation.y = dog.yaw;
+    mesh.traverse(function(child) {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
+    });
+    scene.add(mesh);
+
+    var spread = (Math.random() - 0.5) * 0.8;
+    var cosSpread = Math.cos(spread);
+    var sinSpread = Math.sin(spread);
+    var dx = hitDirX * cosSpread - hitDirZ * sinSpread;
+    var dz = hitDirX * sinSpread + hitDirZ * cosSpread;
+    var speed = 3.5 + Math.random() * 3.5;
+    gorePieces.push({
+      mesh: mesh,
+      vx: dx * speed,
+      vy: 3.5 + Math.random() * 2.5,
+      vz: dz * speed,
+      rvx: (Math.random() - 0.5) * 12,
+      rvy: (Math.random() - 0.5) * 12,
+      rvz: (Math.random() - 0.5) * 12,
+      floorY: floorY
+    });
+  }
+
+  function dismemberDog(dog, hitDirX, hitDirZ) {
+    dog.body.visible = false;
+
+    var torso = new THREE.Group();
+    torso.add(new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.38, 0.86), matDogFur));
+    var saddle = new THREE.Mesh(new THREE.BoxGeometry(0.37, 0.14, 0.76), matDogDark);
+    saddle.position.set(0, 0.15, -0.02);
+    torso.add(saddle);
+    var tail = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.34), matDogDark);
+    tail.position.set(0, 0.08, -0.54);
+    tail.rotation.x = -0.45;
+    torso.add(tail);
+    throwDogGorePiece(torso, dog, 0, 0.56, 0, hitDirX, hitDirZ, 0.2);
+
+    var head = new THREE.Group();
+    head.add(new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.26, 0.28), matDogFur));
+    var snout = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.15, 0.26), matDogDark);
+    snout.position.set(0, -0.04, 0.22);
+    head.add(snout);
+    var earGeo = new THREE.ConeGeometry(0.075, 0.22, 6);
+    var earL = new THREE.Mesh(earGeo, matDogDark);
+    earL.position.set(-0.09, 0.21, -0.02);
+    head.add(earL);
+    var earR = new THREE.Mesh(earGeo, matDogDark);
+    earR.position.set(0.09, 0.21, -0.02);
+    head.add(earR);
+    throwDogGorePiece(head, dog, 0, 0.74, 0.46, hitDirX, hitDirZ, 0.18);
+
+    var legOffsets = [
+      [-0.12, 0.30, matDogFur], [0.12, 0.30, matDogFur],
+      [-0.12, -0.30, matDogDark], [0.12, -0.30, matDogDark]
+    ];
+    for (var i = 0; i < legOffsets.length; i++) {
+      var leg = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.42, 0.11), legOffsets[i][2]);
+      throwDogGorePiece(leg, dog, legOffsets[i][0], 0.21, legOffsets[i][1], hitDirX, hitDirZ, 0.12);
+    }
+    spawnParticles(dog.x, 0.55, dog.z, 0xff1111, 14, 5.0);
+  }
+
+  function spawnGermanShepherd(wx, wz) {
+    var root = new THREE.Group();
+    root.position.set(wx, 0, wz);
+
+    var body = new THREE.Group();
+    root.add(body);
+
+    // Tronco allungato + dorso nero tipico del pastore tedesco
+    var torso = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.38, 0.86), matDogFur);
+    torso.position.set(0, 0.56, 0);
+    torso.castShadow = true;
+    torso.receiveShadow = true;
+    body.add(torso);
+
+    var saddle = new THREE.Mesh(new THREE.BoxGeometry(0.37, 0.14, 0.76), matDogDark);
+    saddle.position.set(0, 0.71, -0.02);
+    saddle.castShadow = true;
+    body.add(saddle);
+
+    // Testa, muso allungato e orecchie a punta
+    var head = new THREE.Group();
+    head.position.set(0, 0.74, 0.46);
+
+    var skull = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.26, 0.28), matDogFur);
+    skull.castShadow = true;
+    head.add(skull);
+
+    var snout = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.15, 0.26), matDogDark);
+    snout.position.set(0, -0.04, 0.22);
+    snout.castShadow = true;
+    head.add(snout);
+
+    var earGeo = new THREE.ConeGeometry(0.075, 0.22, 6);
+    var earL = new THREE.Mesh(earGeo, matDogDark);
+    earL.position.set(-0.09, 0.21, -0.02);
+    earL.rotation.z = 0.15;
+    earL.castShadow = true;
+    head.add(earL);
+
+    var earR = new THREE.Mesh(earGeo, matDogDark);
+    earR.position.set(0.09, 0.21, -0.02);
+    earR.rotation.z = -0.15;
+    earR.castShadow = true;
+    head.add(earR);
+
+    // Occhi gialli/rossi minacciosi
+    var eyeMat = new THREE.MeshBasicMaterial({ color: 0xffcc22 });
+    var eyeL = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.03), eyeMat);
+    eyeL.position.set(-0.08, 0.04, 0.14);
+    head.add(eyeL);
+    var eyeR = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.03), eyeMat);
+    eyeR.position.set(0.08, 0.04, 0.14);
+    head.add(eyeR);
+
+    body.add(head);
+
+    // 4 zampe articolate
+    var legGeo = new THREE.BoxGeometry(0.10, 0.42, 0.11);
+    var flLeg = new THREE.Mesh(legGeo, matDogFur);
+    flLeg.position.set(-0.12, 0.21, 0.30);
+    flLeg.castShadow = true;
+    body.add(flLeg);
+
+    var frLeg = new THREE.Mesh(legGeo, matDogFur);
+    frLeg.position.set(0.12, 0.21, 0.30);
+    frLeg.castShadow = true;
+    body.add(frLeg);
+
+    var blLeg = new THREE.Mesh(legGeo, matDogDark);
+    blLeg.position.set(-0.12, 0.21, -0.30);
+    blLeg.castShadow = true;
+    body.add(blLeg);
+
+    var brLeg = new THREE.Mesh(legGeo, matDogDark);
+    brLeg.position.set(0.12, 0.21, -0.30);
+    brLeg.castShadow = true;
+    body.add(brLeg);
+
+    // Coda
+    var tail = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.34), matDogDark);
+    tail.position.set(0, 0.64, -0.54);
+    tail.rotation.x = -0.45;
+    body.add(tail);
+
+    scene.add(root);
+
+    dogs.push({
+      root: root,
+      body: body,
+      flLeg: flLeg,
+      frLeg: frLeg,
+      blLeg: blLeg,
+      brLeg: brLeg,
+      tail: tail,
+      x: wx,
+      z: wz,
+      yaw: Math.random() * Math.PI * 2,
+      alive: true,
+      alerted: false,
+      painTimer: 0,
+      biteCooldown: 1.0 + Math.random() * 0.6,
+      deathProgress: 0,
+      runPhase: Math.random() * 6.28
+    });
+  }
+
+  /* ============================================================================
+     ARMI 3D IN PRIMA PERSONA CON DUE MANI (VIEWMODELS DETTAGLIATI)
+     1: Mauser anni '30 (2 mani) | 2: Shotgun a canne mozze a pompa (2 mani, ricarica lenta)
+     3: Mitragliatore vintage (2 mani, fuoco automatico)
+     ============================================================================ */
+  var weaponHolder = new THREE.Group();
+  camera.add(weaponHolder);
+
+							 
+  var matBluedSteel = new THREE.MeshStandardMaterial({
+    color: 0x2a323d,
+    metalness: 0.9,
+    roughness: 0.22
+  });
+  var matDarkIron = new THREE.MeshStandardMaterial({
+    color: 0x181c22,
+    metalness: 0.88,
+    roughness: 0.3
+  });
+  var matWalnutWood = new THREE.MeshStandardMaterial({
+    color: 0x5c2e12,
+    metalness: 0.1,
+    roughness: 0.45
+  });
+  var matBrass = new THREE.MeshStandardMaterial({
+    color: 0xd4af37,
+    metalness: 0.92,
+    roughness: 0.2
+  });
+  var matGloveLeather = new THREE.MeshStandardMaterial({
+    color: 0x2b1d14,
+    metalness: 0.15,
+    roughness: 0.58
+  });
+  var matSkinHand = new THREE.MeshStandardMaterial({
+    color: 0xd99b72,
+    metalness: 0.05,
+    roughness: 0.6
+  });
+
+    // Palmo, dita separate e pollice articolato per ogni impugnatura.
+  function createFirstPersonHand(isLeft) {
+    var hGroup = new THREE.Group();
+    var palm = new THREE.Mesh(new THREE.BoxGeometry(0.062, 0.035, 0.066), matSkinHand);
+    palm.castShadow = true;
+    hGroup.add(palm);
+
+    var wrist = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.031, 0.055, 10), matSkinHand);
+    wrist.rotation.x = Math.PI / 2;
+    wrist.position.z = 0.05;
+    hGroup.add(wrist);
+
+    var cuff = new THREE.Mesh(new THREE.CylinderGeometry(0.033, 0.039, 0.065, 10), matGloveLeather);
+    cuff.rotation.x = Math.PI / 2;
+    cuff.position.z = 0.095;
+    hGroup.add(cuff);
+
+    var lengths = [0.043, 0.050, 0.047, 0.037];
+    for (var i = 0; i < lengths.length; i++) {
+      var finger = new THREE.Group();
+      finger.position.set(-0.024 + i * 0.016, -0.002, -0.028);
+      finger.rotation.x = -0.3;
+      var upper = new THREE.Mesh(new THREE.BoxGeometry(0.014, 0.016, lengths[i] * 0.6), matSkinHand);
+      upper.position.z = -lengths[i] * 0.3;
+      finger.add(upper);
+      var tip = new THREE.Mesh(new THREE.BoxGeometry(0.013, 0.015, lengths[i] * 0.45), matSkinHand);
+      tip.position.set(0, -0.005, -lengths[i] * 0.76);
+      tip.rotation.x = -0.55;
+      finger.add(tip);
+      hGroup.add(finger);
+    }
+
+    var thumb = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.021, 0.043), matSkinHand);
+    var side = isLeft ? 1 : -1;
+    thumb.position.set(side * 0.039, -0.009, -0.006);
+    thumb.rotation.set(-0.35, side * 0.6, side * 0.35);
+    hGroup.add(thumb);
+    return hGroup;
+  }
+
+  // --- ARMA 1: PISTOLA MAUSER C96 ANNI '30 IMPUGNATA CON 2 MANI ---
+  var mauserGroup = new THREE.Group();
+						
+  var mBarrel = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.02, 0.28, 10), matBluedSteel);
+  mBarrel.rotation.x = Math.PI / 2;
+  mBarrel.position.set(0, 0.04, -0.18);
+  mauserGroup.add(mBarrel);
+
+  var mSight = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.018, 0.015), matDarkIron);
+  mSight.position.set(0, 0.06, -0.30);
+  mauserGroup.add(mSight);
+
+  var mReceiver = new THREE.Mesh(new THREE.BoxGeometry(0.044, 0.058, 0.18), matBluedSteel);
+  mReceiver.position.set(0, 0.032, -0.02);
+  mauserGroup.add(mReceiver);
+
+  var mMag = new THREE.Mesh(new THREE.BoxGeometry(0.036, 0.065, 0.065), matDarkIron);
+  mMag.position.set(0, -0.018, -0.06);
+  mauserGroup.add(mMag);
+
+  var mGrip = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.03, 0.14, 10), matWalnutWood);
+  mGrip.rotation.x = 0.34;
+  mGrip.position.set(0, -0.055, 0.055);
+  mauserGroup.add(mGrip);
+
+  // Mano destra sull'impugnatura + mano sinistra di supporto sotto/avvolgente
+  var mRightHand = createFirstPersonHand(false);
+  mRightHand.position.set(0.01, -0.065, 0.065);
+  mRightHand.rotation.set(0.35, -0.15, 0);
+  mauserGroup.add(mRightHand);
+
+  var mLeftHand = createFirstPersonHand(true);
+  mLeftHand.position.set(-0.055, -0.055, 0.02);
+  mLeftHand.rotation.set(0.28, 0.65, 0.15);
+  mauserGroup.add(mLeftHand);
+
+  mauserGroup.position.set(0.18, -0.22, -0.40);
+  mauserGroup.rotation.y = 0.12;
+  weaponHolder.add(mauserGroup);
+
+  // --- ARMA 2: SHOTGUN A CANNE MOZZE A POMPA (2 MANI + RICARICA LENTA) ---
+  var shotgunGroup = new THREE.Group();
+															
+  var sgBarrel = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.028, 0.44, 12), matDarkIron);
+  sgBarrel.rotation.x = Math.PI / 2;
+  sgBarrel.position.set(0, 0.045, -0.24);
+  shotgunGroup.add(sgBarrel);
+
+  var sgTube = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.38, 10), matBluedSteel);
+  sgTube.rotation.x = Math.PI / 2;
+  sgTube.position.set(0, 0.008, -0.21);
+  shotgunGroup.add(sgTube);
+
+  // Gruppo pompa scorrevole + mano sinistra che aziona la pompa
+  var sgPumpAssembly = new THREE.Group();
+  var sgPump = new THREE.Mesh(new THREE.CylinderGeometry(0.034, 0.034, 0.17, 12), matWalnutWood);
+  sgPump.rotation.x = Math.PI / 2;
+  sgPump.position.set(0, 0.006, -0.24);
+  sgPumpAssembly.add(sgPump);
+
+  var sgLeftHand = createFirstPersonHand(true);
+  sgLeftHand.position.set(-0.045, -0.028, -0.23);
+  sgLeftHand.rotation.set(0.1, 0.55, 0.25);
+  sgPumpAssembly.add(sgLeftHand);
+  shotgunGroup.add(sgPumpAssembly);
+
+  var sgReceiver = new THREE.Mesh(new THREE.BoxGeometry(0.064, 0.075, 0.22), matBluedSteel);
+  sgReceiver.position.set(0, 0.025, 0.02);
+  shotgunGroup.add(sgReceiver);
+
+  var sgStock = new THREE.Mesh(new THREE.BoxGeometry(0.056, 0.09, 0.22), matWalnutWood);
+  sgStock.rotation.x = 0.25;
+  sgStock.position.set(0, -0.03, 0.18);
+  shotgunGroup.add(sgStock);
+
+  var sgRightHand = createFirstPersonHand(false);
+  sgRightHand.position.set(0.025, -0.055, 0.06);
+  sgRightHand.rotation.set(0.25, -0.25, 0);
+  shotgunGroup.add(sgRightHand);
+
+  shotgunGroup.position.set(0.20, -0.24, -0.40);
+  shotgunGroup.rotation.y = 0.14;
+  shotgunGroup.visible = false;
+  weaponHolder.add(shotgunGroup);
+
+  // --- ARMA 3: MITRAGLIATORE VINTAGE IMPUGNATO CON 2 MANI ---
+  var smgGroup = new THREE.Group();
+												 
+  var smgShroud = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.34, 12), matDarkIron);
+  smgShroud.rotation.x = Math.PI / 2;
+  smgShroud.position.set(0, 0.04, -0.24);
+  smgGroup.add(smgShroud);
+
+  var smgBarrel = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.44, 10), matBluedSteel);
+  smgBarrel.rotation.x = Math.PI / 2;
+  smgBarrel.position.set(0, 0.04, -0.28);
+  smgGroup.add(smgBarrel);
+
+				   
+  var smgBody = new THREE.Mesh(new THREE.BoxGeometry(0.062, 0.075, 0.28), matBluedSteel);
+  smgBody.position.set(0, 0.03, -0.02);
+  smgGroup.add(smgBody);
+
+										 
+  var smgMag = new THREE.Mesh(new THREE.BoxGeometry(0.032, 0.22, 0.052), matDarkIron);
+  smgMag.rotation.x = -0.15;
+  smgMag.position.set(0, -0.09, -0.11);
+  smgGroup.add(smgMag);
+
+										  
+  var smgGrip = new THREE.Mesh(new THREE.BoxGeometry(0.042, 0.12, 0.055), matWalnutWood);
+  smgGrip.rotation.x = 0.3;
+  smgGrip.position.set(0, -0.05, 0.05);
+  smgGroup.add(smgGrip);
+
+  var smgStock = new THREE.Mesh(new THREE.BoxGeometry(0.052, 0.085, 0.24), matWalnutWood);
+  smgStock.rotation.x = 0.18;
+  smgStock.position.set(0, -0.01, 0.20);
+  smgGroup.add(smgStock);
+
+							   
+  var smgSight = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.022, 0.015), matBrass);
+  smgSight.position.set(0, 0.075, -0.42);
+  smgGroup.add(smgSight);
+
+  // Mano destra sull'impugnatura + mano sinistra sull'astina/manicotto
+  var smgRightHand = createFirstPersonHand(false);
+  smgRightHand.position.set(0.025, -0.06, 0.055);
+  smgRightHand.rotation.set(0.28, -0.2, 0);
+  smgGroup.add(smgRightHand);
+
+  var smgLeftHand = createFirstPersonHand(true);
+  smgLeftHand.position.set(-0.045, -0.015, -0.22);
+  smgLeftHand.rotation.set(0.08, 0.52, 0.2);
+  smgGroup.add(smgLeftHand);
+
+  smgGroup.position.set(0.20, -0.23, -0.38);
+  smgGroup.rotation.y = 0.14;
+  smgGroup.visible = false;
+  weaponHolder.add(smgGroup);
+
+											  
+  var muzzleMesh = new THREE.Mesh(
+    new THREE.OctahedronGeometry(0.11, 0),
+    new THREE.MeshBasicMaterial({
+      color: 0xffdd55,
+      transparent: true,
+      opacity: 0.9,
+      blending: THREE.AdditiveBlending
+    })
+  );
+  muzzleMesh.position.set(0.22, -0.18, -0.82);
+  muzzleMesh.visible = false;
+  camera.add(muzzleMesh);
+  
+  
+    /* ============================================================================
+     SISTEMA DI SPARO & REGOLE DI DANNO RICHIESTE
+     - Pistola (1): 50% probabilità di uccidere la guardia
+     - Shotgun (2): 100% morte istantanea
+     - Mitragliatore (3): automatico a raffica, 50% probabilità di morte per colpo
+     ============================================================================ */
+		
+
+  /* ============================================================================
+     PARTICELLE 3D (SCINTILLE SPARO, BOSSOLI ESPULSI, SANGUE PIXEL)
+     ============================================================================ */
+  var particles = [];
+  var particleGeo = new THREE.BoxGeometry(0.05, 0.05, 0.05);
+  var shellGeo = new THREE.CylinderGeometry(0.008, 0.008, 0.032, 6);
+
+  function spawnParticles(wx, wy, wz, colorHex, count, speed) {
+    var mat = new THREE.MeshBasicMaterial({ color: colorHex });
+    for (var i = 0; i < count; i++) {
+      var m = new THREE.Mesh(particleGeo, mat);
+      m.position.set(wx, wy, wz);
+      scene.add(m);
+      particles.push({
+        mesh: m,
+        vx: (Math.random() - 0.5) * speed,
+        vy: Math.random() * speed * 0.8 + 1.0,
+        vz: (Math.random() - 0.5) * speed,
+        life: 0.35 + Math.random() * 0.25,
+        gravity: 14
+      });
+    }
+  }
+
+  function ejectShellCasing() {
+    var m = new THREE.Mesh(shellGeo, matBrass);
+    var pos = new THREE.Vector3(0.32, -0.18, -0.42);
+    pos.applyMatrix4(camera.matrixWorld);
+    m.position.copy(pos);
+    scene.add(m);
+
+    var right = new THREE.Vector3(1, 0.6, 0).applyQuaternion(camera.quaternion);
+    particles.push({
+      mesh: m,
+      vx: right.x * (1.8 + Math.random()),
+      vy: 1.6 + Math.random() * 0.8,
+      vz: right.z * (1.8 + Math.random()),
+      life: 0.75,
+      gravity: 12,
+      spin: true
+    });
+  }
+
+  /* ============================================================================
+     SISTEMA DI SPARO & REGOLE DI DANNO RICHIESTE
+     - Pistola (1): 50% probabilità di uccidere la guardia
+     - Shotgun (2): 100% morte istantanea
+     - Mitragliatore (3): automatico a raffica, 50% probabilità di morte per colpo
+     ============================================================================ */
+  function switchWeapon(num) {
+    if (num < 1 || num > 3) return;
+    state.currentWeapon = num;
+    mauserGroup.visible = (num === 1);
+    shotgunGroup.visible = (num === 2);
+    smgGroup.visible = (num === 3);
+
+    var names = { 1: '[1] MAUSER', 2: '[2] SHOTGUN', 3: '[3] MITRAGLIATORE' };
+    document.getElementById('hud-weapon-name').textContent = names[num];
+    drawWeaponSilhouette();
+  }
+  
+  
+  
+  
+  // Raycast contro muri, guardie (vive o già a terra per smembramento) e cani
+  function castBulletRay(angleOffset) {
+    var dir = new THREE.Vector3(0, 0, -1);
+    dir.applyAxisAngle(new THREE.Vector3(0, 1, 0), player.yaw + angleOffset);
+
+    var originX = player.x;
+    var originZ = player.z;
+    var maxDist = 36;
+    var step = 0.12;
+
+																		
+    var wallHitDist = maxDist;
+    var hitWallX = originX + dir.x * maxDist;
+    var hitWallZ = originZ + dir.z * maxDist;
+    var wallNormX = 0;
+    var wallNormZ = 0;
+
+    for (var d = 0.35; d <= maxDist; d += step) {
+      var tx = originX + dir.x * d;
+      var tz = originZ + dir.z * d;
+      var gx = worldToGridX(tx);
+      var gz = worldToGridZ(tz);
+      var cell = getCell(gx, gz);
+																							
+            if (isWallCellType(cell) || cell === CELL_DOOR_CLOSED) {
+        wallHitDist = d;
+        hitWallX = tx;
+        hitWallZ = tz;
+
+        // Calcola la normale della faccia del muro colpita in base alla posizione nella cella
+        var prevX = originX + dir.x * (d - step);
+        var prevZ = originZ + dir.z * (d - step);
+        var prevGx = worldToGridX(prevX);
+        var prevGz = worldToGridZ(prevZ);
+        if (prevGx < gx) { wallNormX = -1; wallNormZ = 0; }
+        else if (prevGx > gx) { wallNormX = 1; wallNormZ = 0; }
+        else if (prevGz < gz) { wallNormX = 0; wallNormZ = -1; }
+        else if (prevGz > gz) { wallNormX = 0; wallNormZ = 1; }
+        else { wallNormX = -dir.x; wallNormZ = -dir.z; }
+        break;
+      }
+
+      // I pilastri sono più piccoli della cella: colpisci solo la base realmente visibile.
+      if (cell === CELL_PILLAR) {
+        var pillarX = gridToWorldX(gx);
+        var pillarZ = gridToWorldZ(gz);
+        var pillarHalfSize = 0.53;
+        var localX = tx - pillarX;
+        var localZ = tz - pillarZ;
+        if (Math.abs(localX) <= pillarHalfSize && Math.abs(localZ) <= pillarHalfSize) {
+          wallHitDist = d;
+          hitWallX = tx;
+          hitWallZ = tz;
+
+          // Usa la faccia più vicina e porta il decal esattamente sul bordo del pilastro.
+          if (pillarHalfSize - Math.abs(localX) <= pillarHalfSize - Math.abs(localZ)) {
+            wallNormX = localX < 0 ? -1 : 1;
+            wallNormZ = 0;
+            hitWallX = pillarX + wallNormX * pillarHalfSize;
+          } else {
+            wallNormX = 0;
+            wallNormZ = localZ < 0 ? -1 : 1;
+            hitWallZ = pillarZ + wallNormZ * pillarHalfSize;
+          }
+          break;
+        }
+      }
+    }
+
+    // Controlla cani pastori tedeschi vivi
+    var bestDog = null;
+    var bestDogDist = wallHitDist;
+    for (var k = 0; k < dogs.length; k++) {
+      var dg = dogs[k];
+      if (!dg.alive) continue;
+      var toDx = dg.x - originX;
+      var toDz = dg.z - originZ;
+      var dProj = toDx * dir.x + toDz * dir.z;
+      if (dProj < 0.2 || dProj > bestDogDist) continue;
+      var dPerpSq = (toDx * toDx + toDz * toDz) - dProj * dProj;
+      var dRad = (state.currentWeapon === 2) ? 0.65 : 0.48;
+      if (dPerpSq <= dRad * dRad) {
+        bestDogDist = dProj;
+        bestDog = dg;
+      }
+    }
+
+    // Controlla guardie (vive oppure già a terra per smembramento direzionale)
+    var bestGuard = null;
+    var bestGuardDist = wallHitDist;
+
+    for (var i = 0; i < guards.length; i++) {
+      var g = guards[i];
+							 
+
+      var toGx = g.x - originX;
+      var toGz = g.z - originZ;
+      var proj = toGx * dir.x + toGz * dir.z;
+      if (proj < 0.2 || proj > bestGuardDist) continue;
+
+      var perpSq = (toGx * toGx + toGz * toGz) - proj * proj;
+      var hitRadius = g.alive ? ((state.currentWeapon === 2) ? 0.68 : 0.48) : 0.78;
+      if (perpSq <= hitRadius * hitRadius) {
+        bestGuardDist = proj;
+        bestGuard = g;
+      }
+    }
+
+        // I frammenti usano un raycast 3D, così si possono colpire anche mirando a terra.
+    if (gorePieces.length) {
+      var shotDirection = new THREE.Vector3(0, 0, -1);
+      shotDirection.applyEuler(new THREE.Euler(player.pitch, player.yaw + angleOffset, 0, 'YXZ'));
+      var shotOrigin = new THREE.Vector3(player.x, PLAYER_HEIGHT + Math.sin(player.bobPhase) * 0.055 * player.bobAmount, player.z);
+      var goreRay = new THREE.Raycaster(shotOrigin, shotDirection, 0, maxDist);
+      var nearestPiece = null;
+      var nearestHit = null;
+      var horizontalLimit = Math.min(wallHitDist, bestDogDist, bestGuard && bestGuard.alive ? bestGuardDist : wallHitDist);
+      for (var pieceIndex = 0; pieceIndex < gorePieces.length; pieceIndex++) {
+        var targetPiece = gorePieces[pieceIndex];
+        targetPiece.mesh.updateMatrixWorld(true);
+        var intersections = goreRay.intersectObject(targetPiece.mesh, true);
+        if (!intersections.length) continue;
+        var intersection = intersections[0];
+        var horizontalDistance = Math.hypot(intersection.point.x - player.x, intersection.point.z - player.z);
+        if (horizontalDistance > horizontalLimit || (nearestHit && intersection.distance >= nearestHit.distance)) continue;
+        nearestPiece = targetPiece;
+        nearestHit = intersection;
+      }
+      if (nearestPiece) {
+        nearestPiece.mesh.traverse(function(child) {
+          if (!child.isMesh || child.userData.goreHitMaterial) return;
+          child.material = child.material.clone();
+          child.material.color.setHex(0xaa0808);
+          child.material.map = null;
+          child.material.needsUpdate = true;
+          child.userData.goreHitMaterial = true;
+        });
+        var horizontalLength = Math.hypot(shotDirection.x, shotDirection.z) || 1;
+        nearestPiece.vx += shotDirection.x / horizontalLength * 3;
+        nearestPiece.vz += shotDirection.z / horizontalLength * 3;
+        nearestPiece.vy = Math.max(nearestPiece.vy, 1.5);
+        nearestPiece.rvx += (Math.random() - 0.5) * 7;
+        nearestPiece.rvy += (Math.random() - 0.5) * 7;
+        nearestPiece.rvz += (Math.random() - 0.5) * 7;
+        addBloodStain(nearestPiece.mesh.position.x, nearestPiece.mesh.position.z);
+        spawnParticles(nearestHit.point.x, nearestHit.point.y, nearestHit.point.z, 0xbb0808, 8, 3);
+        return true;
+      }
+    }
+
+    if (bestDog && bestDogDist <= bestGuardDist) {
+      bestDog.alerted = true;
+      var dHitX = originX + dir.x * bestDogDist;
+      var dHitZ = originZ + dir.z * bestDogDist;
+      spawnParticles(dHitX, 0.65, dHitZ, 0xcc0000, 10, 4.2);
+
+      var dogLethal = (state.currentWeapon === 2) ? true : (Math.random() < 0.55);
+      if (dogLethal) {
+        bestDog.alive = false;
+        dismemberDog(bestDog, dir.x, dir.z);
+		spawnBloodPool(bestDog.x, bestDog.z, 1.0);
+        state.score += 120;
+        state.faceGrinTimer = 1.1;
+        updateHUD();
+      } else {
+        bestDog.painTimer = 0.25;
+        bestDog.x += dir.x * 0.32;
+        bestDog.z += dir.z * 0.32;
+      }
+      return true;
+    }
+
+    if (bestGuard) {
+      var hitX = originX + dir.x * bestGuardDist;
+      var hitZ = originZ + dir.z * bestGuardDist;
+
+      if (bestGuard.alive) {
+        bestGuard.alerted = true;
+        spawnParticles(hitX, 1.25, hitZ, 0xcc0000, 10, 4.2);
+
+        var lethal = false;
+        if (state.currentWeapon === 2) {
+          lethal = true; // Shotgun: 100%
+        } else {
+          lethal = (Math.random() < 0.50); // Pistola & Mitragliatore: 50%
+        }
+
+        if (lethal) {
+          bestGuard.alive = false;
+          state.score += 100;
+          state.faceGrinTimer = 1.2;
+          updateHUD();
+          spawnDroppedPickup(bestGuard.x, bestGuard.z);
+          spawnBloodPool(bestGuard.x, bestGuard.z, 1.25); // Pozza di sangue sotto il cadavere
+          spawnParticles(bestGuard.x, 1.25, bestGuard.z, 0xcc0000, 28, 6.2); // Più schizzi di sangue
+        } else {
+          bestGuard.painTimer = 0.28;
+          bestGuard.x += dir.x * 0.28;
+          bestGuard.z += dir.z * 0.28;
+          addBloodStain(bestGuard.x, bestGuard.z); // Gocce a terra anche se sopravvive
+        }
+      } else {
+		// Spinta fisica al torso a terra nella direzione del colpo
+        var pushForce = (state.currentWeapon === 2) ? 6.5 : 3.2;
+        bestGuard.vx += dir.x * pushForce;
+        bestGuard.vz += dir.z * pushForce;
+        addBloodStain(bestGuard.x, bestGuard.z);
+
+        // Guardia già a terra: smembramento direzionale in base a dove e da dove spari!
+        var relX = hitX - bestGuard.x;
+        var relZ = hitZ - bestGuard.z;
+        var alongBody = relX * Math.sin(bestGuard.yaw) + relZ * Math.cos(bestGuard.yaw);
+
+        if (!bestGuard.dismemberedHead && (alongBody > 0.32 || Math.random() < 0.45)) {
+          bestGuard.dismemberedHead = true;
+          bestGuard.headGroup.visible = false;
+          spawnDismemberPiece(bestGuard.x + relX * 0.4, 0.32, bestGuard.z + relZ * 0.4, dir.x, dir.z, 'head');
+        } else if (!bestGuard.dismemberedArms && (Math.abs(alongBody) <= 0.32 || Math.random() < 0.5)) {
+          bestGuard.dismemberedArms = true;
+          bestGuard.armsGroup.visible = false;
+          spawnDismemberPiece(bestGuard.x + relX * 0.4, 0.35, bestGuard.z + relZ * 0.4, dir.x, dir.z, 'arms');
+        } else if (!bestGuard.dismemberedLegs) {
+          bestGuard.dismemberedLegs = true;
+          bestGuard.legL.visible = false;
+          bestGuard.legR.visible = false;
+          spawnDismemberPiece(bestGuard.x + relX * 0.4, 0.26, bestGuard.z + relZ * 0.4, dir.x, dir.z, 'legs');
+        } else {
+          spawnParticles(hitX, 0.22, hitZ, 0xbb0808, 8, 3.8);
+        }
+      }
+      return true;
+    } else if (wallHitDist < maxDist) {
+      // Calcola l'altezza esatta dell'impatto sul muro considerando anche il pitch della camera
+      var hitY = PLAYER_HEIGHT + Math.sin(player.pitch) * wallHitDist;
+      spawnWallDecal(hitWallX, hitY, hitWallZ, wallNormX, wallNormZ);
+      spawnParticles(hitWallX, hitY, hitWallZ, 0xffcc55, 6, 3.2);
+    }
+    return false;
+  }
+
+  function alertNearbyGuards() {
+    for (var i = 0; i < guards.length; i++) {
+      var g = guards[i];
+      if (!g.alive) continue;
+      if (Math.hypot(g.x - player.x, g.z - player.z) < CELL_SIZE * 5.5) {
+        g.alerted = true;
+      }
+    }
+    for (var d = 0; d < dogs.length; d++) {
+      var dg = dogs[d];
+      if (!dg.alive) continue;
+      if (Math.hypot(dg.x - player.x, dg.z - player.z) < CELL_SIZE * 5.5) {
+        dg.alerted = true;
+      }
+    }
+  }
+
+  function fireWeapon() {
+    if (state.fireCooldown > 0 || state.dead) return;
+
+    alertNearbyGuards();
+    ejectShellCasing();
+
+    if (state.currentWeapon === 1) {
+      // Mauser C96: colpo preciso, rinculo secco
+      state.fireCooldown = 0.28;
+      state.weaponRecoil = 1.0;
+      state.muzzleLightTimer = 0.06;
+      muzzleLight.intensity = 5.5;
+      muzzleMesh.scale.set(0.85, 0.85, 0.85);
+      castBulletRay((Math.random() - 0.5) * 0.015);
+    } else if (state.currentWeapon === 2) {
+      // Shotgun a canne mozze a pompa: lento con ricarica a pompa a 2 mani, 100% letale
+      state.fireCooldown = 1.45;
+      state.weaponRecoil = 2.0;
+      state.pumpProgress = 1.0;
+      state.muzzleLightTimer = 0.12;
+      muzzleLight.intensity = 11.5;
+      muzzleMesh.scale.set(1.75, 1.75, 1.75);
+	  // Rosa di rosata (3 raggi ravvicinati, basta 1 per uccidere al 100%)
+      var hit = castBulletRay(0);
+      if (!hit) hit = castBulletRay(-0.055);
+      if (!hit) castBulletRay(0.055);
+    } else if (state.currentWeapon === 3) {
+      // Mitragliatore vintage automatico a raffica
+      state.fireCooldown = 0.105;
+      state.weaponRecoil = 0.65;
+      state.muzzleLightTimer = 0.045;
+      muzzleLight.intensity = 6.5;
+      muzzleMesh.scale.set(1.1, 1.1, 1.1);
+      castBulletRay((Math.random() - 0.5) * 0.06);
+    }
+
+    muzzleMesh.visible = true;
+    muzzleMesh.rotation.z = Math.random() * Math.PI * 2;
+  }
+
+  /* ============================================================================
+     COLLISIONI FLUIDE & APERTURA PORTE SCORREVOLI AL CONTATTO
+     ============================================================================ */
+  function isWalkable(wx, wz, radius) {
+    var offsets = [
+      [-radius, -radius],
+      [radius, -radius],
+      [-radius, radius],
+      [radius, radius],
+      [0, 0]
+    ];
+    for (var i = 0; i < offsets.length; i++) {
+      var gx = worldToGridX(wx + offsets[i][0]);
+      var gz = worldToGridZ(wz + offsets[i][1]);
+      var c = getCell(gx, gz);
+            if (c === CELL_FLOOR || c === CELL_DOOR_OPEN) {
+        continue;
+      }
+      if (c === CELL_PILLAR) {
+        // Ingombro usato per la collisione, indipendente dalla geometria visibile.
+        var pillarHalfSize = 0.53;
+        var pillarDx = Math.max(Math.abs(wx - gridToWorldX(gx)) - pillarHalfSize, 0);
+        var pillarDz = Math.max(Math.abs(wz - gridToWorldZ(gz)) - pillarHalfSize, 0);
+        if (pillarDx * pillarDx + pillarDz * pillarDz > radius * radius) {
+          continue;
+        }
+      }
+      if (c === CELL_DOOR_CLOSED) {
+        var dObj = doorMap[gridKey(gx, gz)];
+        if (dObj && dObj.openAmount >= 0.72) {
+          continue;
+        }
+      }
+      return false;
+    }
+    return true;
+  }
+
+  // Controlla se il player si avvicina o sbatte contro una porta chiusa per espandere e aprirla automaticamente
+  function checkDoorBump(wx, wz) {
+    var reach = PLAYER_RADIUS + 0.95;
+    var checkPoints = [
+      [wx, wz],
+      [wx + reach, wz],
+      [wx - reach, wz],
+      [wx, wz + reach],
+      [wx, wz - reach],
+      [wx + reach * 0.7, wz + reach * 0.7],
+      [wx - reach * 0.7, wz + reach * 0.7],
+      [wx + reach * 0.7, wz - reach * 0.7],
+      [wx - reach * 0.7, wz - reach * 0.7]
+    ];
+    for (var i = 0; i < checkPoints.length; i++) {
+      var gx = worldToGridX(checkPoints[i][0]);
+      var gz = worldToGridZ(checkPoints[i][1]);
+      var dObj = doorMap[gridKey(gx, gz)];
+      if (dObj && !dObj.opening && getCell(gx, gz) === CELL_DOOR_CLOSED) {
+        // Genera e sigilla completamente la stanza dall'altro lato PRIMA di aprire la porta!
+        if (expandBeyondDoor(dObj)) {
+          dObj.opening = true;
+        }
+      }
+    }
+  }
+
+  /* ============================================================================
+     UI ORIGINALE WOLFENSTEIN 3D (VOLTO ANIMATO B.J., ARMA SILHOUETTE, MINIMAPPA)
+     ============================================================================ */
+  var faceCanvas = document.getElementById('bj-face-canvas');
+  var faceCtx = faceCanvas.getContext('2d');
+
+  function drawBJFace() {
+    var ctx = faceCtx;
+    ctx.clearRect(0, 0, 32, 34);
+
+    // Sfondo grigio scuro ritratto
+    ctx.fillStyle = '#383838';
+    ctx.fillRect(0, 0, 32, 34);
+
+    // Collo e spalle
+    ctx.fillStyle = '#c88458';
+    ctx.fillRect(10, 25, 12, 9);
+    ctx.fillStyle = '#4a4a4a';
+    ctx.fillRect(4, 29, 24, 5);
+
+    // Testa / Viso
+    ctx.fillStyle = '#e8a878';
+    ctx.fillRect(8, 7, 16, 19);
+    ctx.fillStyle = '#cf8c5c'; // Ombra mascella
+    ctx.fillRect(8, 22, 16, 4);
+    ctx.fillRect(7, 12, 1, 8);
+    ctx.fillRect(24, 12, 1, 8);
+
+    // Capelli biondo-ramati iconici B.J. Blazkowicz
+    ctx.fillStyle = '#b86818';
+    ctx.fillRect(7, 3, 18, 6);
+    ctx.fillStyle = '#e08828';
+    ctx.fillRect(9, 4, 14, 3);
+
+    // Sopracciglia
+    ctx.fillStyle = '#7a4210';
+    ctx.fillRect(10, 11, 5, 2);
+    ctx.fillRect(17, 11, 5, 2);
+
+    // Occhi (guardano a destra/sinistra/centro)
+    var lookOffset = state.faceLookDir;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(10, 13, 4, 3);
+    ctx.fillRect(18, 13, 4, 3);
+    ctx.fillStyle = '#1e64c8';
+    ctx.fillRect(11 + lookOffset, 13, 2, 3);
+    ctx.fillRect(19 + lookOffset, 13, 2, 3);
+
+    // Naso
+    ctx.fillStyle = '#c88050';
+    ctx.fillRect(15, 14, 2, 5);
+
+    // Espressione bocca
+    if (state.dead) {
+      // Occhi chiusi + sangue
+      ctx.fillStyle = '#cf8c5c';
+      ctx.fillRect(10, 13, 4, 3);
+      ctx.fillRect(18, 13, 4, 3);
+      ctx.fillStyle = '#990000';
+      ctx.fillRect(12, 21, 8, 3);
+    } else if (state.facePainTimer > 0) {
+      // Smorfia dolore
+      ctx.fillStyle = '#4a1212';
+      ctx.fillRect(12, 20, 8, 4);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(13, 20, 6, 1);
+    } else if (state.faceGrinTimer > 0) {
+      // Sorriso malvagio alla Wolf3D!
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(11, 20, 10, 3);
+      ctx.fillStyle = '#331111';
+      ctx.fillRect(11, 21, 10, 1);
+    } else {
+      // Bocca seria determinata
+      ctx.fillStyle = '#8a4a2a';
+      ctx.fillRect(12, 21, 8, 2);
+    }
+
+    // Graffi e sangue progressivi se salute < 75%
+    if (state.health < 75) {
+      ctx.fillStyle = '#b80000';
+      ctx.fillRect(9, 9, 2, 5);
+      ctx.fillRect(21, 17, 2, 4);
+    }
+    if (state.health < 45) {
+      ctx.fillStyle = '#cc0000';
+      ctx.fillRect(15, 19, 2, 7);
+      ctx.fillRect(10, 23, 3, 4);
+      ctx.fillRect(20, 10, 2, 6);
+    }
+  }
+
+  var weaponHudCanvas = document.getElementById('weapon-hud-canvas');
+  var weaponHudCtx = weaponHudCanvas.getContext('2d');
+
+  function drawWeaponSilhouette() {
+    var ctx = weaponHudCtx;
+    ctx.clearRect(0, 0, 96, 44);
+
+    // Stile silhouette nera/grigio scuro con riflesso ciano tipica del box destro Wolf3D
+    ctx.fillStyle = '#080c24';
+    ctx.strokeStyle = '#3868ff';
+    ctx.lineWidth = 1;
+
+    if (state.currentWeapon === 1) {
+      // Silhouette Pistola Mauser anni '30
+      ctx.fillRect(36, 14, 34, 6);  // Canna
+      ctx.fillRect(26, 13, 14, 9);  // Castello
+      ctx.fillRect(32, 22, 8, 6);   // Caricatore anteriore
+      ctx.beginPath();
+      ctx.moveTo(26, 22);
+      ctx.lineTo(20, 36);
+      ctx.lineTo(28, 36);
+      ctx.lineTo(31, 22);
+      ctx.closePath();
+      ctx.fill();
+    } else if (state.currentWeapon === 2) {
+      // Silhouette Shotgun a canne mozze a pompa
+      ctx.fillRect(32, 15, 48, 5);  // Canna
+      ctx.fillRect(42, 20, 22, 5);  // Pompa
+      ctx.fillRect(22, 15, 14, 8);  // Castello
+      ctx.beginPath();
+      ctx.moveTo(22, 18);
+      ctx.lineTo(10, 31);
+      ctx.lineTo(15, 35);
+      ctx.lineTo(26, 23);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      // Silhouette Mitragliatore vintage
+      ctx.fillRect(34, 14, 46, 6);  // Canna + manicotto
+      ctx.fillRect(22, 13, 18, 9);  // Castello
+      ctx.fillRect(42, 20, 6, 17);  // Caricatore lungo
+      ctx.fillRect(27, 22, 6, 11);  // Impugnatura
+      ctx.beginPath();
+      ctx.moveTo(22, 15);
+      ctx.lineTo(10, 26);
+      ctx.lineTo(13, 30);
+      ctx.lineTo(24, 21);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  function updateHUD() {
+    document.getElementById('hud-floor').textContent = '1';
+    document.getElementById('hud-score').textContent = state.score;
+    document.getElementById('hud-lives').textContent = state.lives;
+    document.getElementById('hud-health').textContent = Math.max(0, state.health) + '%';
+    document.getElementById('hud-ammo').textContent = state.ammo;
+    drawBJFace();
+  }
+
+  /* ============================================================================
+     MINIMAPPA / RADAR IN ALTO A DESTRA
+     ============================================================================ */
+  var mmCanvas = document.getElementById('minimap-canvas');
+  var mmCtx = mmCanvas.getContext('2d');
+
+  function drawMinimap() {
+    var w = mmCanvas.width;
+    var h = mmCanvas.height;
+    mmCtx.fillStyle = '#030b14';
+    mmCtx.fillRect(0, 0, w, h);
+
+    var scale = 9; // pixel per cella
+    var pGx = player.x / CELL_SIZE;
+    var pGz = player.z / CELL_SIZE;
+
+    var radiusCells = Math.ceil((w / 2) / scale) + 1;
+    var startX = Math.floor(pGx - radiusCells);
+    var endX = Math.ceil(pGx + radiusCells);
+    var startZ = Math.floor(pGz - radiusCells);
+    var endZ = Math.ceil(pGz + radiusCells);
+
+    for (var gx = startX; gx <= endX; gx++) {
+      for (var gz = startZ; gz <= endZ; gz++) {
+        var c = getCell(gx, gz);
+        if (c === CELL_VOID) continue;
+
+        var sx = (w * 0.5) + (gx - pGx - 0.5) * scale;
+        var sy = (h * 0.5) + (gz - pGz - 0.5) * scale;
+
+        if (c === CELL_FLOOR) {
+          mmCtx.fillStyle = '#12263a';
+        } else if (c === CELL_WALL_STONE) {
+          mmCtx.fillStyle = '#3868c8';
+        } else if (c === CELL_WALL_BRICK) {
+          mmCtx.fillStyle = '#b83830';
+        } else if (c === CELL_WALL_WOOD) {
+          mmCtx.fillStyle = '#9c6228';
+        } else if (c === CELL_WALL_ROCK) {
+          mmCtx.fillStyle = '#6e665e';
+        } else if (c === CELL_WALL_MOSS) {
+          mmCtx.fillStyle = '#387a42';
+        } else if (c === CELL_WALL_GRAY) {
+          mmCtx.fillStyle = '#909399';
+        } else if (c === CELL_WALL_BLUE) {
+          mmCtx.fillStyle = '#203db0';
+        } else if (c === CELL_WALL_METAL) {
+          mmCtx.fillStyle = '#77858c';
+        } else if (c === CELL_WALL_WOOD_DECOR) {
+          mmCtx.fillStyle = '#bd7f32';
+        } else if (c === CELL_WALL_GRAY_DECOR) {
+          mmCtx.fillStyle = '#909399';
+        } else if (c === CELL_WALL_BLUE_DECOR) {
+          mmCtx.fillStyle = '#203db0';
+        } else if (c === CELL_WALL_METAL_DECOR) {
+          mmCtx.fillStyle = '#77858c';
+		} else if (c === CELL_PILLAR) {
+          mmCtx.fillStyle = '#6888b8';
+        } else if (c === CELL_DOOR_CLOSED) {
+          mmCtx.fillStyle = '#00e5ff';
+        } else if (c === CELL_DOOR_OPEN) {
+          mmCtx.fillStyle = '#005a66';
+        }
+        mmCtx.fillRect(sx, sy, scale + 0.5, scale + 0.5);
+      }
+    }
+
+    // Guardie e cani sulla minimappa
+    for (var i = 0; i < guards.length; i++) {
+      var g = guards[i];
+      if (!g.alive) continue;
+      var gxPos = (w * 0.5) + (g.x / CELL_SIZE - pGx) * scale;
+      var gzPos = (h * 0.5) + (g.z / CELL_SIZE - pGz) * scale;
+      if (gxPos >= 0 && gxPos <= w && gzPos >= 0 && gzPos <= h) {
+        mmCtx.fillStyle = g.alerted ? '#ff2a2a' : '#ffaa00';
+        mmCtx.beginPath();
+        mmCtx.arc(gxPos, gzPos, 3, 0, Math.PI * 2);
+        mmCtx.fill();
+      }
+    }
+
+    for (var dIdx = 0; dIdx < dogs.length; dIdx++) {
+      var dg = dogs[dIdx];
+      if (!dg.alive) continue;
+      var dxPos = (w * 0.5) + (dg.x / CELL_SIZE - pGx) * scale;
+      var dzPos = (h * 0.5) + (dg.z / CELL_SIZE - pGz) * scale;
+      if (dxPos >= 0 && dxPos <= w && dzPos >= 0 && dzPos <= h) {
+        mmCtx.fillStyle = dg.alerted ? '#ff6600' : '#d4882a';
+        mmCtx.beginPath();
+        mmCtx.arc(dxPos, dzPos, 2.5, 0, Math.PI * 2);
+        mmCtx.fill();
+      }
+    }
+
+    // Cono visivo giocatore
+    var cx = w * 0.5;
+    var cy = h * 0.5;
+    var lookAng = -player.yaw - Math.PI * 0.5;
+
+    mmCtx.fillStyle = 'rgba(85, 255, 255, 0.18)';
+    mmCtx.beginPath();
+    mmCtx.moveTo(cx, cy);
+    mmCtx.arc(cx, cy, 24, lookAng - 0.55, lookAng + 0.55);
+    mmCtx.closePath();
+    mmCtx.fill();
+
+    // Puntino giocatore
+    mmCtx.fillStyle = '#55ff55';
+    mmCtx.beginPath();
+    mmCtx.arc(cx, cy, 3.5, 0, Math.PI * 2);
+    mmCtx.fill();
+  }
+
+  /* ============================================================================
+     INIZIALIZZAZIONE MAPPA INIZIALE (3 STANZE COLLEGATE CON PORTE SCORREVOLI)
+     ============================================================================ */
+  function initInitialLevel() {
+    // Pulisci eventuale stato precedente
+    while (worldMeshes.children.length > 0) {
+      worldMeshes.remove(worldMeshes.children[0]);
+    }
+    for (var i = 0; i < guards.length; i++) {
+      scene.remove(guards[i].root);
+    }
+    for (var j = 0; j < dogs.length; j++) {
+      scene.remove(dogs[j].root);
+    }
+    for (var k = 0; k < droppedPickups.length; k++) {
+      scene.remove(droppedPickups[k].group);
+    }
+        for (var m = 0; m < gorePieces.length; m++) {
+      scene.remove(gorePieces[m].mesh);
+      disposeGoreMaterials(gorePieces[m].mesh);
+    }
+    for (var bs = 0; bs < bloodStains.length; bs++) {
+      scene.remove(bloodStains[bs]);
+    }
+    bloodStains = [];
+    for (var n = 0; n < wallDecals.length; n++) {
+      scene.remove(wallDecals[n]);
+      wallDecals[n].material.dispose();
+    }
+    worldGrid = {};
+    builtCells = {};
+    doors = [];
+    doorMap = {};
+    chandeliers = [];
+    guards = [];
+    dogs = [];
+    droppedPickups = [];
+    gorePieces = [];
+    wallDecals = [];
+    state.roomsGenerated = 0;
+	pillarThemeMap = {};
+
+    // Stanza 1 (Stanza iniziale del giocatore): [-2..2] x [-2..2]
+	//xxxxxxxxxxxxxxxxxxx
+    carveRoom(-2, 2, -2, 2, CELL_WALL_STONE, 999, 999, 0);
+
+    // Porta Nord della stanza 1 (0, -2) -> Stanza 2 già presente all'avvio [-2..2] x [-6..-2]
+    var doorN = doorMap[gridKey(0, -2)];
+    if (!doorN) {
+      setCell(0, -2, CELL_DOOR_CLOSED);
+      delete builtCells[gridKey(0, -2)];
+      buildCellGeometry(0, -2);
+      doorN = doorMap[gridKey(0, -2)];
+    }
+    doorN.expanded = true;
+    carveRoom(-2, 2, -6, -2, CELL_WALL_BRICK, 0, -2, 1);
+
+    // Porta Est della stanza 1 (2, 0) -> Stanza 3 già presente all'avvio [2..6] x [-2..2]
+    var doorE = doorMap[gridKey(2, 0)];
+    if (!doorE) {
+      setCell(2, 0, CELL_DOOR_CLOSED);
+      delete builtCells[gridKey(2, 0)];
+      buildCellGeometry(2, 0);
+      doorE = doorMap[gridKey(2, 0)];
+    }
+    doorE.expanded = true;
+    carveRoom(2, 6, -2, 2, CELL_WALL_WOOD, 2, 0, 2);
+
+    // Posiziona il giocatore al centro della Stanza 1 rivolto verso Nord
+    player.x = 0;
+    player.z = 0;
+    player.yaw = 0;
+    player.pitch = 0;
+
+    state.dead = false;
+    state.health = 100;
+    state.score = 0;
+    state.ammo = 99;
+    switchWeapon(1);
+    updateHUD();
+  }
+
+  /* ============================================================================
+     GESTIONE INPUT (PLAY OVERLAY, POINTER LOCK, TASTIERA, MOUSE)
+     ============================================================================ */
+  var playOverlay = document.getElementById('play-overlay');
+  var playBtn = document.getElementById('play-btn');
+  var deathMsg = document.getElementById('death-msg');
+  var screenFlash = document.getElementById('screen-flash');
+
+  function triggerScreenFlash(rgbaColor) {
+    screenFlash.style.background = rgbaColor;
+    screenFlash.style.opacity = '1';
+    setTimeout(function() {
+      screenFlash.style.opacity = '0';
+    }, 110);
+  }
+
+  function startPlay() {
+    if (state.dead) {
+      deathMsg.style.display = 'none';
+      initInitialLevel();
+    }
+    state.playing = true;
+    playOverlay.style.display = 'none';
+    if (glCanvas.requestPointerLock) {
+      glCanvas.requestPointerLock();
+    }
+  }
+
+  playBtn.addEventListener('click', startPlay);
+  
+    if (keys['KeyE']) {
+      for (var ep = 0; ep < droppedPickups.length; ep++) {
+        var dPk = droppedPickups[ep];
+        if (!dPk.collected && Math.hypot(dPk.x - player.x, dPk.z - player.z) < 2.4) {
+          collectPickup(dPk);
+        }
+      }
+    }
+  ////////});
+  
+  //ALB
+    document.addEventListener('pointerlockchange', function() {
+    var locked = (document.pointerLockElement === glCanvas);
+    if (!locked && !state.dead) {
+      state.playing = false;
+      mouseDown = false;
+      playOverlay.style.display = 'flex';
+	   
+    }
+  });
+  
+
+  document.addEventListener('mousemove', function(e) {
+    if (!state.playing || state.dead) return;
+    if (document.pointerLockElement === glCanvas) {
+      player.yaw -= e.movementX * 0.0024;
+      player.pitch = Math.max(-MAX_PITCH, Math.min(MAX_PITCH, player.pitch - e.movementY * 0.0016));
+    }
+  });
+
+  document.addEventListener('mousedown', function(e) {
+    if (!state.playing || state.dead) return;
+    if (e.button === 0) {
+      mouseDown = true;
+      fireWeapon();
+    }
+  });
+
+  document.addEventListener('mouseup', function(e) {
+    if (e.button === 0) {
+      mouseDown = false;
+    }
+  });
+
+  document.addEventListener('wheel', function(e) {
+    if (!state.playing || state.dead) return;
+    var next = state.currentWeapon + (e.deltaY > 0 ? 1 : -1);
+    if (next > 3) next = 1;
+    if (next < 1) next = 3;
+    switchWeapon(next);
+  }, { passive: true });
+
+  document.addEventListener('keydown', function(e) {
+    keys[e.code] = true;
+    if (!state.playing) return;
+    if (e.code === 'Digit1') switchWeapon(1);
+    if (e.code === 'Digit2') switchWeapon(2);
+    if (e.code === 'Digit3') switchWeapon(3);
+    if (e.code === 'Space') fireWeapon();
+  });
+
+  document.addEventListener('keyup', function(e) {
+    keys[e.code] = false;
+  });
+
+  window.addEventListener('resize', function() {
+    var w = viewportWrap.clientWidth;
+    var h = viewportWrap.clientHeight;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+  });
+
+  /* ============================================================================
+     LOOP DI AGGIORNAMENTO FISICA, PORTE, GUARDIE & ILLUMINAZIONE
+     ============================================================================ */
+  function damagePlayer(amount) {
+    if (state.dead) return;
+    state.health = Math.max(0, state.health - amount);
+    state.facePainTimer = 0.45;
+    triggerScreenFlash('rgba(220, 0, 0, 0.42)');
+    updateHUD();
+
+    if (state.health <= 0) {
+      state.dead = true;
+      state.playing = false;
+      mouseDown = false;
+      if (document.exitPointerLock) {
+        document.exitPointerLock();
+      }
+      deathMsg.style.display = 'block';
+      playOverlay.style.display = 'flex';
+    }
+  }
+
+  function updateSimulation(dt) {
+    state.time += dt;
+
+for (var c = 0; c < chandeliers.length; c++) {
+      var ch = chandeliers[c];
+
+      if (ch.broken) {
+        ch.flickerTimer -= dt;
+        if (ch.flickerTimer <= 0) {
+          var roll = Math.random();
+          if (roll < 0.28) {
+            // Falso contatto / buio quasi totale o spento
+            ch.flickerFactor = Math.random() < 0.65 ? 0.0 : 0.12;
+            ch.flickerTimer = 0.03 + Math.random() * 0.14;
+          } else if (roll < 0.62) {
+            // Luce fioca o instabile
+            ch.flickerFactor = 0.25 + Math.random() * 0.45;
+            ch.flickerTimer = 0.04 + Math.random() * 0.18;
+          } else {
+            // Breve picco normale prima del prossimo difetto
+            ch.flickerFactor = 0.85 + Math.random() * 0.25;
+            ch.flickerTimer = 0.05 + Math.random() * 0.25;
+          }
+        }
+
+        var buzz = Math.sin(state.time * 47 + ch.phase) * 0.05;
+        ch.light.intensity = Math.max(0, ch.baseIntensity * ch.flickerFactor + buzz);
+      } else {
+        var flicker = Math.sin(state.time * 9.5 + ch.phase) * 0.12 +
+                      Math.sin(state.time * 23.0 + ch.phase * 2.1) * 0.06;
+        ch.light.intensity = ch.baseIntensity + flicker;
+      }
+
+      // Sincronizza cono luminoso e candele con l'intensità attuale
+      var ratio = Math.max(0, Math.min(1.25, ch.light.intensity / ch.baseIntensity));
+      if (ch.coneMat) {
+        ch.coneMat.opacity = ch.coneBaseOpacity * ratio;
+        ch.cone.visible = ratio > 0.02;
+      }
+      if (ch.cone && ch.broken) {
+        var jitter = (ratio < 0.2) ? 0.04 : 0.01;
+        ch.cone.rotation.z = Math.sin(state.time * 38 + ch.phase) * jitter;
+        ch.cone.rotation.x = Math.cos(state.time * 31 + ch.phase) * jitter;
+      }
+      if (ch.bulbMat && ch.baseColor) {
+        var dim = 0.15 + 0.85 * Math.min(1, ratio);
+        ch.bulbMat.color.setRGB(
+          ch.baseColor.r * dim,
+          ch.baseColor.g * dim,
+          ch.baseColor.b * dim
+        );
+      }
+    }
+
+    // Decadimento lampo di sparo
+    if (state.muzzleLightTimer > 0) {
+      state.muzzleLightTimer -= dt;
+      if (state.muzzleLightTimer <= 0) {
+        muzzleLight.intensity = 0;
+        muzzleMesh.visible = false;
+      }
+    }
+
+    // Animazione volto B.J. Blazkowicz
+    state.faceTimer -= dt;
+    if (state.faceTimer <= 0) {
+      state.faceTimer = 0.8 + Math.random() * 1.4;
+      var dirs = [-1, 0, 1, 0];
+      state.faceLookDir = dirs[Math.floor(Math.random() * dirs.length)];
+      drawBJFace();
+    }
+    if (state.faceGrinTimer > 0) {
+      state.faceGrinTimer -= dt;
+      if (state.faceGrinTimer <= 0) drawBJFace();
+    }
+    if (state.facePainTimer > 0) {
+      state.facePainTimer -= dt;
+      if (state.facePainTimer <= 0) drawBJFace();
+    }
+
+
+//ALB
+// Cooldown e fuoco automatico mitragliatore
+    if (state.fireCooldown > 0) {
+      state.fireCooldown -= dt;
+    }
+    if (state.playing && !state.dead && mouseDown && state.currentWeapon === 3 && state.fireCooldown <= 0) {
+      fireWeapon();
+    }
+
+    // Animazione porte scorrevoli
+    for (var d = 0; d < doors.length; d++) {
+      var door = doors[d];
+      if (door.opening && door.openAmount < 1) {
+        door.openAmount = Math.min(1, door.openAmount + dt * 2.1);
+        // L'anta scorre lateralmente dentro lo stipite
+        door.slab.position.x = door.openAmount * (CELL_SIZE - 0.62);
+        if (door.openAmount >= 0.72) {
+          setCell(door.gx, door.gz, CELL_DOOR_OPEN);
+        }
+      }
+    }
+
+    // Aggiornamento particelle e bossoli
+    for (var p = particles.length - 1; p >= 0; p--) {
+      var pt = particles[p];
+      pt.life -= dt;
+      if (pt.life <= 0) {
+        scene.remove(pt.mesh);
+        particles.splice(p, 1);
+        continue;
+      }
+      pt.vy -= pt.gravity * dt;
+      pt.mesh.position.x += pt.vx * dt;
+      pt.mesh.position.y += pt.vy * dt;
+      pt.mesh.position.z += pt.vz * dt;
+      if (pt.mesh.position.y < 0.03) {
+        pt.mesh.position.y = 0.03;
+        pt.vy *= -0.35;
+        pt.vx *= 0.7;
+        pt.vz *= 0.7;
+      }
+      if (pt.spin) {
+        pt.mesh.rotation.x += 12 * dt;
+        pt.mesh.rotation.z += 9 * dt;
+											 
+
+												  
+											 
+									   
+									  
+						   
+						   
+				
+					   
+						   
+						   
+		 
+      }
+
+											  
+											  
+											  
+    }
+//ALB ^^^
+
+    // Raccolta armi e munizioni cadute passando sopra o premendo E
+    for (var pkIdx = 0; pkIdx < droppedPickups.length; pkIdx++) {
+      var pk = droppedPickups[pkIdx];
+      if (pk.collected) continue;
+      pk.group.rotation.y += dt * 1.4;
+      if (Math.hypot(pk.x - player.x, pk.z - player.z) < 1.35) {
+        collectPickup(pk);
+      }
+    }
+
+    // Aggiornamento frammenti smembrati con gravità e rimbalzo sul pavimento
+    // Aggiornamento frammenti smembrati con gravità e rimbalzo sul pavimento
+    for (var gp = gorePieces.length - 1; gp >= 0; gp--) {
+      var piece = gorePieces[gp];
+      var speedSq = piece.vx * piece.vx + piece.vz * piece.vz + piece.vy * piece.vy;
+
+      piece.vy -= 15.5 * dt;
+      piece.mesh.position.x += piece.vx * dt;
+      piece.mesh.position.y += piece.vy * dt;
+      piece.mesh.position.z += piece.vz * dt;
+
+      if (piece.mesh.position.y <= piece.floorY) {
+        piece.mesh.position.y = piece.floorY;
+        if (Math.abs(piece.vy) > 0.8) {
+          piece.vy = -piece.vy * 0.36;
+          piece.vx *= 0.65;
+          piece.vz *= 0.65;
+        } else {
+          piece.vy = 0;
+          piece.vx *= 0.72;
+          piece.vz *= 0.72;
+        }
+      }
+
+      // Lascia sangue solo mentre il pezzo è ancora in movimento e distanziato dall'ultima macchia
+      var horizSpeedSq = piece.vx * piece.vx + piece.vz * piece.vz;
+      if (horizSpeedSq > 0.15) {
+        var lastX = (piece.lastBloodX !== undefined) ? piece.lastBloodX : piece.mesh.position.x + 999;
+        var lastZ = (piece.lastBloodZ !== undefined) ? piece.lastBloodZ : piece.mesh.position.z + 999;
+        if (Math.hypot(piece.mesh.position.x - lastX, piece.mesh.position.z - lastZ) > 0.28) {
+          addBloodStain(piece.mesh.position.x, piece.mesh.position.z);
+          piece.lastBloodX = piece.mesh.position.x;
+          piece.lastBloodZ = piece.mesh.position.z;
+        }
+      }
+
+      var spinDamping = Math.exp(-5 * dt);
+      piece.rvx *= spinDamping;
+      piece.rvy *= spinDamping;
+      piece.rvz *= spinDamping;
+      if (piece.mesh.position.y <= piece.floorY && Math.abs(piece.vy) < 0.8) {
+        if (Math.abs(piece.vx) < 0.04) piece.vx = 0;
+        if (Math.abs(piece.vz) < 0.04) piece.vz = 0;
+        if (Math.abs(piece.rvx) < 0.08) piece.rvx = 0;
+        if (Math.abs(piece.rvy) < 0.08) piece.rvy = 0;
+        if (Math.abs(piece.rvz) < 0.08) piece.rvz = 0;
+      }
+
+      piece.mesh.rotation.x += piece.rvx * dt;
+      piece.mesh.rotation.y += piece.rvy * dt;
+      piece.mesh.rotation.z += piece.rvz * dt;
+    }
+
+    // Aggiornamento Guardie (AI, movimento, sparo, crollo realistico a terra)
+    for (var gIdx = 0; gIdx < guards.length; gIdx++) {
+      var g = guards[gIdx];
+
+      if (!g.alive) {
+	  // Movimento e attrito del torso a terra quando viene colpito
+        if (Math.abs(g.vx) > 0.05 || Math.abs(g.vz) > 0.05) {
+          var nextGx = g.x + g.vx * dt;
+          var nextGz = g.z + g.vz * dt;
+          if (isWalkable(nextGx, g.z, 0.45)) g.x = nextGx;
+          else g.vx *= -0.3;
+
+          if (isWalkable(g.x, nextGz, 0.45)) g.z = nextGz;
+          else g.vz *= -0.3;
+
+          g.root.position.set(g.x, 0, g.z);
+          addBloodStain(g.x, g.z);
+
+          var friction = Math.exp(-5.5 * dt);
+          g.vx *= friction;
+          g.vz *= friction;
+        } else {
+          g.vx = 0;
+          g.vz = 0;
+        }
+        // Crollo in avanti/di lato a terra con l'arma che scende lungo il corpo (mai dritta verticale)
+        if (g.deathProgress < 1) {
+          g.deathProgress = Math.min(1, g.deathProgress + dt * 3.2);
+          var ease = 1 - Math.pow(1 - g.deathProgress, 2);
+          g.bodyPivot.rotation.x = ease * (Math.PI * 0.48);
+          g.bodyPivot.rotation.z = ease * 0.24;
+          g.bodyPivot.position.y = ease * 0.24;
+          g.rifleGroup.rotation.x = 0.14 + ease * 0.95;
+          g.rifleGroup.position.y = -0.06 - ease * 0.14;
+        }
+        continue;
+      }
+
+      if (g.painTimer > 0) {
+        g.painTimer -= dt;
+        g.torso.material = matDoor; // Flash visivo hit
+      } else {
+        g.torso.material = matGuardUniform;
+      }
+
+      if (g.flashTimer > 0) {
+        g.flashTimer -= dt;
+        if (g.flashTimer <= 0) g.enemyFlash.visible = false;
+      }
+
+      var dx = player.x - g.x;
+      var dz = player.z - g.z;
+      var dist = Math.hypot(dx, dz);
+
+      // Linea di vista verso il giocatore
+      var hasLOS = false;
+      if (dist < CELL_SIZE * 5.2) {
+        hasLOS = true;
+        var steps = Math.floor(dist / 0.35);
+        for (var s = 1; s < steps; s++) {
+          var t = s / steps;
+          var c = getCell(worldToGridX(g.x + dx * t), worldToGridZ(g.z + dz * t));
+          if (c !== CELL_FLOOR && c !== CELL_DOOR_OPEN) {
+            hasLOS = false;
+            break;
+          }
+        }
+      }
+
+      if (hasLOS && state.playing) {
+        g.alerted = true;
+      }
+
+      if (g.alerted && state.playing && !state.dead && g.painTimer <= 0) {
+        var targetYaw = Math.atan2(dx, dz);
+        g.yaw = targetYaw;
+        g.root.rotation.y = g.yaw;
+
+        // Avanza se lontano, fermati a distanza di tiro
+        if (dist > 3.2) {
+          var moveSpd = 2.35 * dt;
+          var nx = g.x + Math.sin(g.yaw) * moveSpd;
+          var nz = g.z + Math.cos(g.yaw) * moveSpd;
+                    if (isWalkable(nx, g.z, 0.42) && isGuardPositionClear(nx, g.z, g)) g.x = nx;
+          if (isWalkable(g.x, nz, 0.42) && isGuardPositionClear(g.x, nz, g)) g.z = nz;
+          g.root.position.set(g.x, 0, g.z);
+
+          g.walkPhase += dt * 9;
+          g.legL.rotation.x = Math.sin(g.walkPhase) * 0.45;
+          g.legR.rotation.x = -Math.sin(g.walkPhase) * 0.45;
+        } else {
+          g.legL.rotation.x = 0;
+          g.legR.rotation.x = 0;
+        }
+
+        // Spara al giocatore se ha linea di vista
+        if (hasLOS) {
+          g.shootCooldown -= dt;
+          if (g.shootCooldown <= 0) {
+            g.shootCooldown = 1.35 + Math.random() * 0.9;
+            g.enemyFlash.visible = true;
+            g.flashTimer = 0.08;
+            if (Math.random() < 0.65) {
+              damagePlayer(10 + Math.floor(Math.random() * 8));
+            }
+          }
+        }
+      }
+    }
+
+    // Aggiornamento Cani Pastori Tedeschi (AI corsa veloce, morso, caduta)
+    for (var dIdx = 0; dIdx < dogs.length; dIdx++) {
+      var dg = dogs[dIdx];
+      if (!dg.alive) {
+        if (dg.deathProgress < 1) {
+          dg.deathProgress = Math.min(1, dg.deathProgress + dt * 3.8);
+          dg.body.rotation.z = dg.deathProgress * (Math.PI * 0.48);
+          dg.body.position.y = -dg.deathProgress * 0.24;
+        }
+        continue;
+      }
+
+      if (dg.painTimer > 0) {
+        dg.painTimer -= dt;
+      }
+
+      var ddx = player.x - dg.x;
+      var ddz = player.z - dg.z;
+      var dDist = Math.hypot(ddx, ddz);
+
+      var dHasLOS = false;
+      if (dDist < CELL_SIZE * 5.5) {
+        dHasLOS = true;
+        var dSteps = Math.floor(dDist / 0.35);
+        for (var ds = 1; ds < dSteps; ds++) {
+          var dtRatio = ds / dSteps;
+          var dc = getCell(worldToGridX(dg.x + ddx * dtRatio), worldToGridZ(dg.z + ddz * dtRatio));
+          if (dc !== CELL_FLOOR && dc !== CELL_DOOR_OPEN) {
+            dHasLOS = false;
+            break;
+          }
+        }
+      }
+
+      if (dHasLOS && state.playing) {
+        dg.alerted = true;
+      }
+
+      if (dg.alerted && state.playing && !state.dead && dg.painTimer <= 0) {
+        dg.yaw = Math.atan2(ddx, ddz);
+        dg.root.rotation.y = dg.yaw;
+
+        if (dDist > 1.55) {
+          var dogSpd = 4.35 * dt;
+          var dnx = dg.x + Math.sin(dg.yaw) * dogSpd;
+          var dnz = dg.z + Math.cos(dg.yaw) * dogSpd;
+          if (isWalkable(dnx, dg.z, 0.38)) dg.x = dnx;
+          if (isWalkable(dg.x, dnz, 0.38)) dg.z = dnz;
+          dg.root.position.set(dg.x, 0, dg.z);
+
+          dg.runPhase += dt * 16;
+          var swing = Math.sin(dg.runPhase) * 0.65;
+          dg.flLeg.rotation.x = swing;
+          dg.brLeg.rotation.x = swing;
+          dg.frLeg.rotation.x = -swing;
+          dg.blLeg.rotation.x = -swing;
+          dg.tail.rotation.y = Math.sin(dg.runPhase * 1.4) * 0.45;
+        } else {
+          dg.flLeg.rotation.x = 0;
+          dg.frLeg.rotation.x = 0;
+          dg.blLeg.rotation.x = 0;
+          dg.brLeg.rotation.x = 0;
+          dg.biteCooldown -= dt;
+          if (dg.biteCooldown <= 0) {
+            dg.biteCooldown = 1.05;
+            dg.body.position.z = 0.22;
+            damagePlayer(9 + Math.floor(Math.random() * 6));
+          } else {
+            dg.body.position.z = Math.max(0, dg.body.position.z - dt * 1.2);
+          }
+        }
+      }
+    }
+	
+	
+	//alb
+	// Movimento Giocatore
+    if (state.playing && !state.dead) {
+      if (keys['ArrowLeft']) player.yaw += 2.1 * dt;
+      if (keys['ArrowRight']) player.yaw -= 2.1 * dt;
+								   
+																	  
+																   
+														
+		 
+				 
+	   
+
+      var forward = 0;
+      var strafe = 0;
+      if (keys['KeyW'] || keys['ArrowUp']) forward += 1;
+      if (keys['KeyS'] || keys['ArrowDown']) forward -= 1;
+      if (keys['KeyD']) strafe += 1;
+      if (keys['KeyA']) strafe -= 1;
+
+      var moveSpeed = 6.2;
+      var sinY = Math.sin(player.yaw);
+      var cosY = Math.cos(player.yaw);
+
+      var vx = (-sinY * forward + cosY * strafe);
+      var vz = (-cosY * forward - sinY * strafe);
+      var len = Math.hypot(vx, vz);
+      if (len > 0) {
+        vx = (vx / len) * moveSpeed * dt;
+        vz = (vz / len) * moveSpeed * dt;
+																								   
+														   
+							
+				  
+		   
+		 
+	   
+
+        // Controlla porte sul percorso
+        checkDoorBump(player.x + vx * 2.2, player.z + vz * 2.2);
+	   
+
+        // Collisione separata su X e Z per scivolamento fluido lungo i muri
+        if (isWalkable(player.x + vx, player.z, PLAYER_RADIUS)) {
+          player.x += vx;
+        }
+        if (isWalkable(player.x, player.z + vz, PLAYER_RADIUS)) {
+          player.z += vz;
+        }
+
+        player.bobPhase += dt * 11.5;
+        player.bobAmount = Math.min(1, player.bobAmount + dt * 6);
+													 
+													 
+													  
+													  
+											  
+
+								 
+												   
+									  
+									  
+									   
+									   
+																  
+				
+								  
+								  
+								  
+								  
+								
+									 
+								   
+									  
+															
+      } else {
+        player.bobAmount = Math.max(0, player.bobAmount - dt * 6);
+		   
+		 
+      }
+    }
+	//ALB ^^^^
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+
+    // Aggiornamento Camera & Oscillazione Armi
+    var headBob = Math.sin(player.bobPhase) * 0.055 * player.bobAmount;
+    camera.position.set(player.x, PLAYER_HEIGHT + headBob, player.z);
+    camera.rotation.order = 'YXZ';
+    camera.rotation.y = player.yaw;
+    camera.rotation.x = player.pitch;
+
+    // Rinculo e movimento arma in mano
+    state.weaponRecoil = Math.max(0, state.weaponRecoil - dt * 6.5);
+    var swayX = Math.cos(player.bobPhase * 0.5) * 0.014 * player.bobAmount;
+    var swayY = Math.abs(Math.sin(player.bobPhase * 0.5)) * 0.014 * player.bobAmount;
+
+    weaponHolder.position.set(
+      swayX,
+      -swayY + state.weaponRecoil * 0.025,
+      state.weaponRecoil * 0.075
+    );
+    // Animazione ricarica lenta e azione a pompa dello Shotgun a 2 mani
+
+									 
+    if (state.pumpProgress > 0) {
+      state.pumpProgress = Math.max(0, state.pumpProgress - dt * 0.85);
+      var pumpCycle = Math.sin(state.pumpProgress * Math.PI);
+      sgPumpAssembly.position.z = pumpCycle * 0.14;
+      sgPumpAssembly.position.y = -pumpCycle * 0.025;
+      shotgunGroup.rotation.x = pumpCycle * 0.14;
+      shotgunGroup.rotation.z = -pumpCycle * 0.22;
+    } else {
+      sgPumpAssembly.position.set(0, 0, 0);
+      shotgunGroup.rotation.set(0, 0, 0);
+    }
+  }
+
+  /* ============================================================================
+     AVVIO DEL MOTORE & MAIN LOOP
+     ============================================================================ */
+  var lastTime = performance.now();
+
+  function animate(now) {
+    requestAnimationFrame(animate);
+    var dt = Math.min(0.05, (now - lastTime) / 1000);
+    lastTime = now;
+
+    updateSimulation(dt);
+    drawMinimap();
+    renderer.render(scene, camera);
+  }
+
+  window.onload = function() {
+    initInitialLevel();
+    drawWeaponSilhouette();
+    drawBJFace();
+    requestAnimationFrame(animate);
+  };
+})();
+
+</script>
+</body>
+</html>
