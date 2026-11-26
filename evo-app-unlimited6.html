@@ -178,9 +178,19 @@
 	    position: fixed;
 	    right: max(4px, env(safe-area-inset-right));
 	    bottom: calc(max(4px, env(safe-area-inset-bottom)) + 208px);  /* sopra i pedali (gas 150px + 8px) */
-		width: 80px;
+		width: 78px;
 		height: 40px;
-				font-size: 8px;
+		font-size: 8px;
+		color: #fff;		 
+	  }
+	  
+	  #colorsBtn {
+	    position: fixed;
+	    right: max(4px, env(safe-area-inset-right) + 86px);
+	    bottom: calc(max(4px, env(safe-area-inset-bottom)) + 208px);  /* sopra i pedali (gas 150px + 8px) */
+		width: 78px;
+		height: 40px;
+		xxxfont-size: 8px;
 		color: #fff;		 
 	  }
 
@@ -532,7 +542,7 @@
 		  <button class="btn toggled-red"  id="assistBtn"   title="Guida assistita">AIUTO<br>FULL</button>
 		  <button class="btn toggled-red"  id="physBtn"     title="Fisica PRO/EASY">FISICA<br>PRO</button-->
 		  
-		  <button class="btn"              id="colorsBtn"   title="Pulsante Cambia colore">🎨</button>
+		  <!--button class="btn"              id="colorsBtn"   title="Pulsante Cambia colore">🎨</button-->
 		  <button class="btn toggled-red"  id="numberBtn"   title="Interruttore Numeri di Gara">🔢</button>
 		  <button class="btn"              id="hoodBtn"     title="Camera cofano">🚘</button>
 		  <button class="btn"              id="cockpitBtn"  title="Camera abitacolo">💺</button>
@@ -548,7 +558,8 @@
     </div>
     
 	<button class="btn" id="showCamBoxBtn" title="Configura">⚙️</button>
-	<button class="btn"             id="carBtn"     title="Cambia auto">🚗</button>
+	<button class="btn"   id="colorsBtn"   title="Pulsante Cambia colore">🎨</button>
+	<button class="btn"   id="carBtn"      title="Cambia auto">🚗</button>	
 	<button id="resetBtn" title="Rimetti in strada">🧑‍🔧 RESET 🔧</button>
 	
     <div id="pad"><span>◀ STERZO ▶</span>
@@ -1957,7 +1968,7 @@ const pineMat=new THREE.MeshLambertMaterial({vertexColors:true});
 
 const oakGeo = mergeGeos([
     colorize(new THREE.CylinderGeometry(0.22, 0.32, 2.4, TREE_TRUNK_GEO).translate(0, 1.2, 0), 0.35, 0.25, 0.15),
-    colorize(new THREE.DodecahedronGeometry(1.5, 0).scale(1, 1.5, 1).translate(0, 3.6, 0), 0.14, 0.42, 0.18)
+    colorize(new THREE.DodecahedronGeometry(1.5, 0).scale(0.60, 1.5, 0.60).translate(0, 3.6, 0), 0.14, 0.42, 0.18)
 ]);
 const oakMat=new THREE.MeshLambertMaterial({vertexColors:true});
 
@@ -3796,7 +3807,7 @@ const CAR_SPECS={
   centododici:     {name:'VELOCE 70HP', power: 80000, fmax:6500, mass: 780, drag:.85, tops:[45,70,95,125,150,170],  maxSpeed: 160,  maxRpm: 7000, startSkidSpeed: 0,  CAM_COCKPIT_X: 0.40, CAM_COCKPIT_Y: 1.30, wheelbase:2.60, track:1.55, exhaust:{x:.55,y:.28,z:-1.95}, stop:{x:.70,y:.78,z:-1.87}, rev:{x:.50,y:.78,z:-1.87}},
   tipozza:         {name:'TYPE V16',    power:100000, fmax:7500, mass:1050, drag:.85, tops:[45,75,105,135,165,195], maxSpeed: 180,  maxRpm: 7000, startSkidSpeed: 0,  CAM_COCKPIT_X: 0.45, CAM_COCKPIT_Y: 1.30, wheelbase:2.60, track:1.60, exhaust:{x:.60,y:.27,z:-1.97}, stop:{x:.78,y:.78,z:-1.82}, rev:{x:.80,y:.66,z:-1.84}},
   deltona:         {name:'X-STRADALE',  power:150000, fmax:9000, mass:1300, drag:.80, tops:[55,85,115,145,180,215], maxSpeed: 200,  maxRpm: 9000, startSkidSpeed: 16, CAM_COCKPIT_X: 0.50, CAM_COCKPIT_Y: 1.25, wheelbase:2.50, track:1.52, exhaust:{x:.62,y:.29,z:-1.86}, stop:{x:.73,y:.76,z:-1.78}, rev:{x:.63,y:.63,z:-1.81}},
-  evo:             {name:'LA LEGGENDA', power:160000, fmax:9900, mass:1300, drag:.80, tops:[55,85,115,145,180,215], maxSpeed: 200,  maxRpm: 9000, startSkidSpeed: 16, CAM_COCKPIT_X: 0.50, CAM_COCKPIT_Y: 1.30, wheelbase:2.60, track:1.60, exhaust:{x:.60,y:.40,z:-2.10}, stop:{x:.70,y:.90,z:-2.10}, rev:{x:.35,y:.90,z:-2.10}}   // evo: valori originali, da misurare su buildCarEvo
+  evo:             {name:'LEGGENDA TRICOLORE', power:160000, fmax:9900, mass:1300, drag:.80, tops:[55,85,115,145,180,215], maxSpeed: 200,  maxRpm: 9000, startSkidSpeed: 16, CAM_COCKPIT_X: 0.50, CAM_COCKPIT_Y: 1.30, wheelbase:2.60, track:1.60, exhaust:{x:.60,y:.40,z:-2.10}, stop:{x:.70,y:.90,z:-2.10}, rev:{x:.35,y:.90,z:-2.10}}   // evo: valori originali, da misurare su buildCarEvo
 };
 
 let layoutReady = false;   // le costanti WO/luci sono dichiarate piu' in basso: il primo spawnCar() parte prima
